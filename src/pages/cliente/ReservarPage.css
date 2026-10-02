@@ -1,0 +1,119 @@
+.reserva-horario-dica {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--color-slate);
+}
+
+.reserva-etapa-categoria {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.reserva-etapa-categoria-intro {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--color-slate);
+}
+
+.reserva-seletor-carregando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  border-radius: 1.75rem;
+  background: linear-gradient(165deg, #121826 0%, #0a0e18 100%);
+  color: rgba(247, 242, 232, 0.65);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.reserva-categoria {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 1rem;
+  padding: 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.reserva-categoria--ativa {
+  border-color: var(--color-gold);
+  background: rgba(184, 149, 108, 0.12);
+}
+
+.reserva-categoria--off {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.reserva-categoria--elite {
+  order: -1;
+  padding: 1.2rem 1.15rem 1.15rem;
+  border-width: 2px;
+  border-color: var(--color-gold-deep);
+  background:
+    linear-gradient(135deg, rgba(12, 18, 34, 0.92), rgba(28, 36, 54, 0.88)),
+    #0c1222;
+  box-shadow: 0 16px 36px rgba(12, 18, 34, 0.18);
+}
+
+.reserva-categoria--elite .font-medium,
+.reserva-categoria--elite .reserva-categoria-desc,
+.reserva-categoria--elite .reserva-categoria-meta {
+  color: #f7f4ef;
+}
+
+.reserva-categoria--elite .reserva-categoria-desc,
+.reserva-categoria--elite .reserva-categoria-meta {
+  color: rgba(247, 244, 239, 0.78);
+}
+
+.reserva-categoria--elite.reserva-categoria--ativa {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px rgba(184, 149, 108, 0.35), 0 16px 36px rgba(12, 18, 34, 0.22);
+}
+
+.reserva-categoria--elite.reserva-categoria--off {
+  opacity: 0.55;
+}
+
+.reserva-categoria-selo {
+  display: inline-block;
+  margin-bottom: 0.45rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, var(--color-gold), var(--color-gold-deep));
+  color: #fff;
+}
+
+.reserva-categoria-desc {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.reserva-categoria-meta {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-slate);
+}
+
+html[data-tema='escuro'] .reserva-categoria {
+  background: #000000;
+  border-color: #2f2f2f;
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .reserva-categoria--ativa {
+  background: #1a1a1a;
+  border-color: #ffffff;
+}

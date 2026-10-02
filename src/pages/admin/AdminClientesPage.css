@@ -1,0 +1,40 @@
+.admin-clientes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-cliente-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.15s ease;
+}
+
+.admin-cliente-card:hover {
+  transform: translateY(-2px);
+}
+
+.admin-cliente-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.admin-cliente-contagem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+  color: var(--color-slate);
+}
+
+.admin-cliente-contagem strong {
+  font-size: 0.95rem;
+  color: var(--color-ink);
+}

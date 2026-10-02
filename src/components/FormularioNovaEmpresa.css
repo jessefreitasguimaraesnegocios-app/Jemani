@@ -1,0 +1,43 @@
+.formulario-nova-empresa {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.formulario-nova-empresa-dica {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.formulario-nova-empresa-grade {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 720px) {
+  .formulario-nova-empresa-grade {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.formulario-nova-empresa-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.35rem;
+}
+
+.formulario-nova-empresa-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+}
+
+.formulario-nova-empresa-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

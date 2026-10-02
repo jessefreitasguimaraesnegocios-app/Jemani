@@ -1,0 +1,98 @@
+.campo-endereco {
+  position: relative;
+}
+
+.campo-endereco-dica {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--color-slate);
+}
+
+.campo-endereco-erro {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--color-danger);
+}
+
+.campo-endereco-lista {
+  position: absolute;
+  z-index: 30;
+  margin-top: 0.25rem;
+  max-height: 14rem;
+  width: 100%;
+  overflow: auto;
+  border: 1px solid var(--color-line);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(12, 18, 34, 0.12);
+  list-style: none;
+  padding: 0;
+}
+
+.campo-endereco-item {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.campo-endereco-item:hover {
+  background: rgba(184, 149, 108, 0.12);
+}
+
+.campo-endereco-detalhe {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.campo-endereco-grade {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+
+@media (min-width: 640px) {
+  .campo-endereco-grade {
+    grid-template-columns: 1fr 7.5rem;
+  }
+}
+
+.campo-endereco-obrigatorio {
+  border-color: var(--color-danger) !important;
+  box-shadow: 0 0 0 2px rgba(155, 59, 59, 0.12);
+}
+
+.campo-endereco-ok {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-success);
+}
+
+html[data-tema='escuro'] .campo-endereco-lista {
+  background: #121212;
+  border-color: #2f2f2f;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .campo-endereco-item {
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .campo-endereco-item:hover {
+  background: #1a1a1a;
+}
+
+html[data-tema='escuro'] .campo-endereco-detalhe {
+  background: #000000;
+  border-color: #2f2f2f;
+}

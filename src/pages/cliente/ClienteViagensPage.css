@@ -1,0 +1,119 @@
+.cliente-viagens {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.cliente-viagens-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cliente-viagens-titulo {
+  margin: 0;
+  font-size: 1.85rem;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.cliente-viagens-nova {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.65rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c9a46c, #8a6a3e);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-decoration: none;
+  box-shadow: 0 8px 20px rgba(138, 106, 62, 0.28);
+  white-space: nowrap;
+}
+
+.cliente-viagens-grupo-titulo {
+  margin: 0 0 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+}
+
+.cliente-viagens-vazio {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-slate);
+}
+
+.cliente-viagens-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.cliente-viagens-cartao {
+  display: block;
+  padding: 1rem 1.05rem;
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(12, 18, 34, 0.06);
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 8px 18px rgba(12, 18, 34, 0.04);
+  transition: transform 0.2s ease;
+}
+
+.cliente-viagens-cartao:active {
+  transform: scale(0.985);
+}
+
+.cliente-viagens-cartao-linha {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.cliente-viagens-cartao-titulo {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.cliente-viagens-cartao-texto {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-slate);
+  line-height: 1.35;
+}
+
+.cliente-viagens-cartao-extra {
+  margin: 0.3rem 0 0;
+  font-size: 0.72rem;
+  color: var(--color-slate);
+}
+
+html[data-tema='escuro'] .cliente-viagens-nova {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: none;
+}
+
+html[data-tema='escuro'] .cliente-viagens-cartao {
+  background: #121212;
+  border-color: #2f2f2f;
+  box-shadow: none;
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .cliente-viagens-cartao-texto,
+html[data-tema='escuro'] .cliente-viagens-cartao-extra,
+html[data-tema='escuro'] .cliente-viagens-vazio,
+html[data-tema='escuro'] .cliente-viagens-grupo-titulo {
+  color: #c2c2c2;
+}

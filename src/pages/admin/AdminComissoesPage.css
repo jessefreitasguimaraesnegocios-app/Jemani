@@ -1,0 +1,133 @@
+.comissoes-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.comissoes-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.comissoes-padrao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.comissoes-padrao-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.comissoes-padrao-linha .campo {
+  max-width: 8rem;
+}
+
+.comissoes-dica {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-slate);
+}
+
+.comissoes-empresas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.comissoes-empresa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.comissoes-empresa-info {
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+.comissoes-empresa-meta {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-slate);
+}
+
+.comissoes-empresa-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.comissoes-empresa-acoes .campo {
+  width: 6.5rem;
+}
+
+.comissoes-selo {
+  display: inline-flex;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(184, 149, 108, 0.16);
+  color: var(--color-gold-deep);
+}
+
+.comissoes-historico {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.comissoes-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.comissoes-grupo-cabeca {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.comissoes-grupo-totais {
+  font-size: 0.8rem;
+  color: var(--color-slate);
+}
+
+.comissoes-item {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0;
+  border-top: 1px dashed var(--color-line);
+  font-size: 0.85rem;
+}
+
+.comissoes-item:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.comissoes-item-meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-slate);
+}
+
+.comissoes-vazio {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}

@@ -1,0 +1,493 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: #0c1222;
+  --color-ink-soft: #1a2336;
+  --color-cream: #f7f4ef;
+  --color-sand: #e8e1d5;
+  --color-gold: #b8956c;
+  --color-gold-deep: #8c6a45;
+  --color-gold-soft: #d4b896;
+  --color-slate: #5c6578;
+  --color-line: #d9d2c6;
+  --color-success: #2f6b4f;
+  --color-danger: #9b3b3b;
+  --color-info: #3a5a7a;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background:
+      radial-gradient(ellipse 80% 50% at 10% -10%, rgba(184, 149, 108, 0.18), transparent 50%),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(26, 35, 54, 0.06), transparent 45%),
+      linear-gradient(180deg, #faf8f5 0%, var(--color-cream) 40%, #f3efe8 100%);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html[data-tema='escuro'] {
+    color-scheme: dark;
+    --color-ink: #ffffff;
+    --color-ink-soft: #f5f5f5;
+    --color-cream: #000000;
+    --color-sand: #121212;
+    --color-slate: #c2c2c2;
+    --color-line: #2f2f2f;
+    --color-gold: #c9a87c;
+    --color-gold-deep: #e0c49a;
+    --color-gold-soft: #8c6a45;
+    --color-success: #06c167;
+    --color-danger: #ff5a5f;
+    --color-info: #276ef1;
+    --color-surface: #121212;
+    --color-surface-2: #1a1a1a;
+    --color-sidebar: #000000;
+  }
+
+  html[data-tema='escuro'] body {
+    color: var(--color-ink);
+    background: #000000;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .fonte-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  .btn-primario {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.4rem;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(135deg, var(--color-ink) 0%, var(--color-ink-soft) 100%);
+    color: #fff;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    box-shadow: 0 10px 30px rgba(12, 18, 34, 0.18);
+  }
+
+  .btn-primario:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 34px rgba(12, 18, 34, 0.22);
+  }
+
+  .btn-primario:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-secundario {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.4rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-line);
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--color-ink);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+
+  .btn-secundario:hover {
+    background: #fff;
+    border-color: var(--color-gold);
+  }
+
+  .btn-ouro {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.4rem;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-deep) 100%);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 10px 28px rgba(140, 106, 69, 0.28);
+  }
+
+  .btn-ouro:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-perigo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.2rem;
+    border-radius: 999px;
+    border: 1px solid rgba(155, 59, 59, 0.25);
+    background: rgba(155, 59, 59, 0.08);
+    color: var(--color-danger);
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .campo {
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border-radius: 14px;
+    border: 1px solid var(--color-line);
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--color-ink);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .campo:focus {
+    border-color: var(--color-gold);
+    box-shadow: 0 0 0 3px rgba(184, 149, 108, 0.18);
+  }
+
+  .rotulo {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--color-slate);
+    letter-spacing: 0.02em;
+  }
+
+  .cartao {
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(217, 210, 198, 0.8);
+    border-radius: 22px;
+    padding: 1.25rem;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 50px rgba(12, 18, 34, 0.05);
+  }
+
+  .badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: rgba(184, 149, 108, 0.14);
+    color: var(--color-gold-deep);
+  }
+
+  .animar-entrada {
+    animation: entrada 0.45s ease both;
+  }
+
+  @keyframes entrada {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .painel-lateral {
+    background: var(--color-sidebar, var(--color-ink));
+    color: #fff;
+    border-right: 1px solid transparent;
+  }
+
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 14px;
+    color: rgba(255, 255, 255, 0.72);
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .sidebar-link:hover,
+  .sidebar-link.ativo {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  .nav-inferior {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.15rem;
+    padding: 0.55rem 0.4rem calc(0.55rem + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.92);
+    border-top: 1px solid var(--color-line);
+    backdrop-filter: blur(14px);
+  }
+
+  .nav-inferior a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    padding: 0.35rem;
+    text-decoration: none;
+    color: var(--color-slate);
+    font-size: 0.68rem;
+  }
+
+  .nav-inferior a.ativo {
+    color: var(--color-ink);
+  }
+}
+
+/* Fora da @layer para vencer o CSS das páginas (cartões claros + texto claro) */
+html[data-tema='escuro'] .painel-lateral {
+  background: #000000;
+  border-right-color: #222222;
+}
+
+html[data-tema='escuro'] .sidebar-link {
+  color: #b3b3b3;
+  border-radius: 8px;
+}
+
+html[data-tema='escuro'] .sidebar-link:hover {
+  background: #121212;
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .sidebar-link.ativo {
+  background: #ffffff;
+  color: #000000;
+}
+
+html[data-tema='escuro'] .cartao,
+html[data-tema='escuro'] .quadro-card,
+html[data-tema='escuro'] .admin-ranking-item,
+html[data-tema='escuro'] .reserva-categoria,
+html[data-tema='escuro'] .config-toggle,
+html[data-tema='escuro'] .motorista-acesso,
+html[data-tema='escuro'] .motorista-campo-shield,
+html[data-tema='escuro'] .campo-endereco-detalhe,
+html[data-tema='escuro'] .campo-endereco-lista {
+  background: #1a1a1a;
+  border-color: #333333;
+  box-shadow: none;
+  backdrop-filter: none;
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .cartao,
+html[data-tema='escuro'] .quadro-card {
+  border: 1px solid #333333;
+  border-radius: 12px;
+}
+
+html[data-tema='escuro'] .quadro-card-codigo,
+html[data-tema='escuro'] .fonte-display {
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .quadro-card-rota,
+html[data-tema='escuro'] .quadro-card-meta,
+html[data-tema='escuro'] .quadro-sub,
+html[data-tema='escuro'] .quadro-vazio,
+html[data-tema='escuro'] .motorista-meta,
+html[data-tema='escuro'] .config-sub,
+html[data-tema='escuro'] .fin-sub,
+html[data-tema='escuro'] .fin-resumo-meta,
+html[data-tema='escuro'] .fin-resumo-rotulo,
+html[data-tema='escuro'] .lista-historico-meta,
+html[data-tema='escuro'] .lista-historico-rota,
+html[data-tema='escuro'] .lista-historico-vazio {
+  color: #c2c2c2;
+}
+
+html[data-tema='escuro'] .campo {
+  background: #000000;
+  border: 1px solid #3a3a3a;
+  color: #ffffff;
+  border-radius: 8px;
+}
+
+html[data-tema='escuro'] .campo:focus {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+
+html[data-tema='escuro'] .campo::placeholder {
+  color: #6b6b6b;
+}
+
+html[data-tema='escuro'] .rotulo {
+  color: #d6d6d6;
+}
+
+html[data-tema='escuro'] .btn-primario,
+html[data-tema='escuro'] .btn-ouro {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: none;
+  border-radius: 8px;
+}
+
+html[data-tema='escuro'] .btn-primario:hover,
+html[data-tema='escuro'] .btn-ouro:hover {
+  background: #e8e8e8;
+  box-shadow: none;
+  transform: none;
+}
+
+html[data-tema='escuro'] .btn-secundario {
+  background: #121212;
+  border: 1px solid #3a3a3a;
+  color: #ffffff;
+  border-radius: 8px;
+}
+
+html[data-tema='escuro'] .btn-secundario:hover {
+  background: #1a1a1a;
+  border-color: #ffffff;
+}
+
+html[data-tema='escuro'] .btn-perigo {
+  background: rgba(255, 90, 95, 0.12);
+  border-color: rgba(255, 90, 95, 0.45);
+  color: #ff8a8e;
+  border-radius: 8px;
+}
+
+html[data-tema='escuro'] .badge-status {
+  border: 1px solid #444444;
+}
+
+html[data-tema='escuro'] .nav-inferior {
+  background: #000000;
+  border-top-color: #222222;
+  backdrop-filter: none;
+}
+
+html[data-tema='escuro'] .nav-inferior a {
+  color: #8a8a8a;
+}
+
+html[data-tema='escuro'] .nav-inferior a.ativo {
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] select.campo option {
+  background: #121212;
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .quadro-pill,
+html[data-tema='escuro'] .fin-visao,
+html[data-tema='escuro'] .fin-chip {
+  background: #1a1a1a;
+  border-color: #333333;
+  color: #d0d0d0;
+}
+
+html[data-tema='escuro'] .quadro-pill--ativa,
+html[data-tema='escuro'] .fin-visao--ativa {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+
+html[data-tema='escuro'] .fin-chip--ativa {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+
+html[data-tema='escuro'] .quadro-coluna {
+  background: #121212;
+  border-color: #2f2f2f;
+}
+
+html[data-tema='escuro'] .quadro-card:hover,
+html[data-tema='escuro'] .quadro-card--ativo {
+  border-color: #ffffff;
+  box-shadow: none;
+  background: #222222;
+}
+
+html[data-tema='escuro'] .quadro-coluna-cabeca {
+  border-bottom-color: #2f2f2f;
+}
+
+html[data-tema='escuro'] .quadro-coluna-titulo,
+html[data-tema='escuro'] .quadro-coluna-qtd {
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .painel-detalhe {
+  background: #121212;
+  color: #ffffff;
+  border-left: 1px solid #2f2f2f;
+}
+
+html[data-tema='escuro'] .painel-detalhe-fundo {
+  background: rgba(0, 0, 0, 0.72);
+}
+
+html[data-tema='escuro'] .config-switch {
+  background: #3a3a3a;
+}
+
+html[data-tema='escuro'] .config-switch--ligado {
+  background: #ffffff;
+}
+
+html[data-tema='escuro'] .config-switch--ligado .config-switch-bola {
+  background: #000000;
+}
+
+html[data-tema='escuro'] .config-toggle-texto strong,
+html[data-tema='escuro'] .config-link,
+html[data-tema='escuro'] .admin-empresa-historico-link {
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .config-toggle-texto span {
+  color: #c2c2c2;
+}
