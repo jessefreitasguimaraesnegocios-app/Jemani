@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { BadgeStatus } from '@/components/BadgeStatus'
+import { MapaCorrida } from '@/components/MapaCorrida'
 import { useAuth } from '@/contexts/AuthContext'
 import { stripeCheckoutDisponivel } from '@/lib/stripeApi'
 import { criarIntencaoPagamento, permitirSimulacaoPagamentoDev } from '@/services/pagamentoService'
@@ -194,6 +195,24 @@ export function ClienteViagemDetalhePage() {
                 STRIPE_SECRET_KEY (sk_test_...).
               </p>
             )}
+          </div>
+        )}
+
+        {['empresa_confirmada', 'motorista_atribuido', 'motorista_a_caminho', 'motorista_chegou', 'passageiro_embarcou', 'viagem_em_andamento'].includes(viagem.status) && (
+          <div className="mt-4">
+            <MapaCorrida
+              origemLat={viagem.origem_lat}
+              origemLng={viagem.origem_lng}
+              destinoLat={viagem.destino_lat}
+              destinoLng={viagem.destino_lng}
+              motoristaLat={viagem.motorista_lat}
+              motoristaLng={viagem.motorista_lng}
+              legenda={
+                viagem.motorista_lat
+                  ? 'Motorista no mapa, a caminho do embarque.'
+                  : 'Rota da corrida. A posição do motorista aparece quando ele sai.'
+              }
+            />
           </div>
         )}
 

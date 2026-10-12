@@ -2,6 +2,119 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { useDemoStore } from '@/store/demoStore'
+import type { AgendamentoVeiculo, StatusEntidade, TipoServicoVeiculo } from '@/types'
+import { formatarData } from '@/utils/format'
+import './EmpresaVeiculosPage.css'
+
+function hojeLocal() {
+  const fuso = import.meta.env.VITE_TIMEZONE || 'America/Los_Angeles'
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: fuso,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date())
+}
+
+function passou(data: string, horario: string) {
+  const instante = new Date(`${data}T${horario.length === 5 ? horario : horario.slice(0, 5)}:00`)
+  return !Number.isNaN(instante.getTime()) && instante.getTime() < Date.now()
+}
+
+function PainelServico({
+  titulo,
+  itens,
+  aoAgendar,
+  aoRemover,
+  nomeAutor,
+}: {
+  titulo: string
+  itens: AgendamentoVeiculo[]
+  aoAgendar: (data: string, horario: string, observacao: string) => void
+  aoRemover: (id: string) => void
+  nomeAutor?: (motoristaId?: string) => string
+}) {
+  const { t, locale } = usarIdioma()
+  const [data, setData] = useState(hojeLocal)
+  const [horario, setHorario] = useState('09:00')
+  const [observacao, setObservacao] = useState('')
+
+  function enviar(e: FormEvent) {
+    e.preventDefault()
+    if (!data || !horario) return
+    aoAgendar(data, horario, observacao.trim())
+    setObservacao('')
+  }
+
+  return (
+    <section className="cartao veiculo-servico">
+      <h2 className="fonte-display text-2xl">{titulo}</h2>
+      {itens.length === 0 && <p className="veiculo-vazio">{t('empresa.veiculos.semAgendamento')}</p>}
+      {itens.map((item) => {
+        const autor = nomeAutor?.(item.motorista_id) ?? ''
+        return (
+        <div
+          key={item.id}
+          className={passou(item.data, item.horario) ? 'veiculo-agendamento veiculo-agendamento--passado' : 'veiculo-agendamento'}
+        >
+          <div>
+            <p>
+              {formatarData(item.data, locale)} · {item.horario.slice(0, 5)}
+            </p>
+            {item.observacao && <p className="veiculo-agendamento-nota">{item.observacao}</p>}
+            {autor && <p className="veiculo-agendamento-nota">{autor}</p>}
+          </div>
+          <button type="button" className="btn-secundario !py-2" onClick={() => aoRemover(item.id)}>
+            {t('empresa.veiculos.remover')}
+          </button>
+        </div>
+        )
+      })}
+      <form className="veiculo-grade" onSubmit={enviar}>
+        <div>
+          <label className="rotulo" htmlFor={`dia-${titulo}`}>
+            {t('empresa.veiculos.dia')}
+          </label>
+          <input
+            id={`dia-${titulo}`}
+            className="campo"
+            type="date"
+            value={data}
+            onChange={(e) => setData(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <label className="rotulo" htmlFor={`hora-${titulo}`}>
+            {t('empresa.veiculos.horario')}
+          </label>
+          <input
+            id={`hora-${titulo}`}
+            className="campo"
+            type="time"
+            value={horario}
+            onChange={(e) => setHorario(e.target.value)}
+            required
+          />
+        </div>
+        <div className="veiculo-campo-largo">
+          <label className="rotulo" htmlFor={`nota-${titulo}`}>
+            {t('empresa.veiculos.observacao')}
+          </label>
+          <input
+            id={`nota-${titulo}`}
+            className="campo"
+            value={observacao}
+            onChange={(e) => setObservacao(e.target.value)}
+          />
+        </div>
+        <button type="submit" className="btn-primario veiculo-campo-largo">
+          {t('empresa.veiculos.agendar')}
+        </button>
+      </form>
+    </section>
+  )
+}
 
 export function EmpresaVeiculosPage() {
   const { t } = usarIdioma()
@@ -13,71 +126,247 @@ export function EmpresaVeiculosPage() {
     [todosVeiculos, empresa?.id],
   )
   const categorias = useDemoStore((s) => s.categorias)
+  const motoristas = useDemoStore((s) => s.motoristas)
+  const agendamentos = useDemoStore((s) => s.agendamentosVeiculo)
   const salvarVeiculo = useDemoStore((s) => s.salvarVeiculo)
+  const agendarServicoVeiculo = useDemoStore((s) => s.agendarServicoVeiculo)
+  const removerAgendamentoVeiculo = useDemoStore((s) => s.removerAgendamentoVeiculo)
   const [marca, setMarca] = useState('')
   const [modelo, setModelo] = useState('')
   const [ano, setAno] = useState(new Date().getFullYear())
   const [categoriaId, setCategoriaId] = useState(categorias[0]?.id ?? '')
   const [capacidade, setCapacidade] = useState(4)
   const [placa, setPlaca] = useState('')
+  const [cadastroAberto, setCadastroAberto] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [veiculoId, setVeiculoId] = useState<string | null>(null)
+
+  const mapaCategorias = useMemo(() => new Map(categorias.map((c) => [c.id, c.nome])), [categorias])
+  const porVeiculo = useMemo(() => {
+    const mapa = new Map<string, AgendamentoVeiculo[]>()
+    for (const item of agendamentos ?? []) {
+      if (empresa && item.empresa_id !== empresa.id) continue
+      const lista = mapa.get(item.veiculo_id)
+      if (lista) lista.push(item)
+      else mapa.set(item.veiculo_id, [item])
+    }
+    for (const lista of mapa.values()) {
+      lista.sort((a, b) => `${a.data}T${a.horario}`.localeCompare(`${b.data}T${b.horario}`))
+    }
+    return mapa
+  }, [agendamentos, empresa])
 
   if (!empresa) return null
 
-  function handleSubmit(e: FormEvent) {
+  const aberto = veiculos.find((v) => v.id === veiculoId) ?? null
+
+  function rotuloStatus(status: StatusEntidade) {
+    if (status === 'disponivel') return t('comum.disponivel')
+    if (status === 'ocupado') return t('comum.ocupado')
+    return t('empresa.veiculos.inativo')
+  }
+
+  function enviar(e: FormEvent) {
     e.preventDefault()
     salvarVeiculo({
       empresa_id: empresa!.id,
-      marca,
-      modelo,
+      marca: marca.trim(),
+      modelo: modelo.trim(),
       ano,
       categoria_id: categoriaId,
       capacidade,
-      placa,
+      placa: placa.trim(),
       ar_condicionado: true,
       bagageiro: true,
     })
     setMarca('')
     setModelo('')
     setPlaca('')
+    setCadastroAberto(false)
+    setMsg(t('empresa.veiculos.salvo'))
+  }
+
+  function agendar(tipo: TipoServicoVeiculo, data: string, horario: string, observacao: string) {
+    if (!aberto) return
+    agendarServicoVeiculo({
+      veiculoId: aberto.id,
+      empresaId: empresa!.id,
+      tipo,
+      data,
+      horario,
+      observacao,
+    })
+  }
+
+  if (aberto) {
+    const lista = porVeiculo.get(aberto.id) ?? []
+    return (
+      <div className="animar-entrada space-y-4">
+        <div>
+          <button type="button" className="btn-secundario veiculo-voltar" onClick={() => setVeiculoId(null)}>
+            {t('empresa.veiculos.voltar')}
+          </button>
+          <h1 className="fonte-display text-3xl">
+            {aberto.marca} {aberto.modelo} ({aberto.ano})
+          </h1>
+          <p className="veiculo-sub">
+            {mapaCategorias.get(aberto.categoria_id) ?? ''} · {t('empresa.veiculos.lugares', { n: aberto.capacidade })}
+            {aberto.placa ? ` · ${aberto.placa}` : ''}
+          </p>
+        </div>
+        <span className="badge-status">{rotuloStatus(aberto.status)}</span>
+        <div className="veiculo-servicos">
+          <PainelServico
+            titulo={t('empresa.veiculos.mecanica')}
+            itens={lista.filter((item) => item.tipo === 'mecanica')}
+            aoAgendar={(data, horario, observacao) => agendar('mecanica', data, horario, observacao)}
+            aoRemover={removerAgendamentoVeiculo}
+            nomeAutor={(id) => motoristas.find((m) => m.id === id)?.nome ?? ''}
+          />
+          <PainelServico
+            titulo={t('empresa.veiculos.lavaJato')}
+            itens={lista.filter((item) => item.tipo === 'lava_jato')}
+            aoAgendar={(data, horario, observacao) => agendar('lava_jato', data, horario, observacao)}
+            aoRemover={removerAgendamentoVeiculo}
+            nomeAutor={(id) => motoristas.find((m) => m.id === id)?.nome ?? ''}
+          />
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="animar-entrada space-y-4">
       <h1 className="fonte-display text-3xl">{t('empresa.veiculos.titulo')}</h1>
-      <div className="space-y-3">
+      <div className="veiculo-lista">
         {veiculos.map((v) => (
-          <div key={v.id} className="cartao flex flex-wrap justify-between gap-2">
+          <div key={v.id} className="cartao veiculo-card">
             <div>
-              <p className="font-medium">
+              <button type="button" className="veiculo-nome" onClick={() => setVeiculoId(v.id)}>
                 {v.marca} {v.modelo} ({v.ano})
-              </p>
-              <p className="text-sm text-[var(--color-slate)]">
-                {categorias.find((c) => c.id === v.categoria_id)?.nome} · {v.capacidade} lugares ·{' '}
-                {v.placa}
+              </button>
+              <p className="veiculo-meta">
+                {mapaCategorias.get(v.categoria_id) ?? ''} · {t('empresa.veiculos.lugares', { n: v.capacidade })}
+                {v.placa ? ` · ${v.placa}` : ''}
               </p>
             </div>
-            <span className="badge-status">{v.status}</span>
+            <span className="badge-status">{rotuloStatus(v.status)}</span>
           </div>
         ))}
       </div>
-      <form className="cartao grid gap-3 sm:grid-cols-2" onSubmit={handleSubmit}>
-        <h2 className="fonte-display text-2xl sm:col-span-2">Cadastrar veículo</h2>
-        <input className="campo" placeholder="Marca" value={marca} onChange={(e) => setMarca(e.target.value)} required />
-        <input className="campo" placeholder="Modelo" value={modelo} onChange={(e) => setModelo(e.target.value)} required />
-        <input className="campo" type="number" placeholder="Ano" value={ano} onChange={(e) => setAno(Number(e.target.value))} />
-        <input className="campo" type="number" placeholder="Capacidade" value={capacidade} onChange={(e) => setCapacidade(Number(e.target.value))} />
-        <select className="campo" value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
-          {categorias.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nome}
-            </option>
-          ))}
-        </select>
-        <input className="campo" placeholder="Placa" value={placa} onChange={(e) => setPlaca(e.target.value)} />
-        <button type="submit" className="btn-primario sm:col-span-2">
-          Salvar
-        </button>
-      </form>
+
+      {!cadastroAberto && (
+        <div className="veiculo-cadastro">
+          <button
+            type="button"
+            className="btn-primario"
+            onClick={() => {
+              setCadastroAberto(true)
+              setMsg('')
+            }}
+          >
+            {t('empresa.veiculos.cadastrar')}
+          </button>
+          {msg && <p className="veiculo-ok">{msg}</p>}
+        </div>
+      )}
+
+      {cadastroAberto && (
+        <form className="cartao veiculo-form" onSubmit={enviar}>
+          <h2 className="fonte-display text-2xl">{t('empresa.veiculos.cadastrar')}</h2>
+          <div className="veiculo-grade">
+            <div>
+              <label className="rotulo" htmlFor="vei-marca">
+                {t('empresa.veiculos.marca')}
+              </label>
+              <input
+                id="vei-marca"
+                className="campo"
+                value={marca}
+                onChange={(e) => setMarca(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="rotulo" htmlFor="vei-modelo">
+                {t('empresa.veiculos.modelo')}
+              </label>
+              <input
+                id="vei-modelo"
+                className="campo"
+                value={modelo}
+                onChange={(e) => setModelo(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="rotulo" htmlFor="vei-ano">
+                {t('empresa.veiculos.ano')}
+              </label>
+              <input
+                id="vei-ano"
+                className="campo"
+                type="number"
+                value={ano}
+                onChange={(e) => setAno(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="rotulo" htmlFor="vei-capacidade">
+                {t('empresa.veiculos.capacidade')}
+              </label>
+              <input
+                id="vei-capacidade"
+                className="campo"
+                type="number"
+                min={1}
+                value={capacidade}
+                onChange={(e) => setCapacidade(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="rotulo" htmlFor="vei-categoria">
+                {t('empresa.veiculos.categoria')}
+              </label>
+              <select
+                id="vei-categoria"
+                className="campo"
+                value={categoriaId}
+                onChange={(e) => setCategoriaId(e.target.value)}
+              >
+                {categorias.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="rotulo" htmlFor="vei-placa">
+                {t('empresa.veiculos.placa')}
+              </label>
+              <input
+                id="vei-placa"
+                className="campo"
+                value={placa}
+                onChange={(e) => setPlaca(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="veiculo-form-acoes">
+            <button type="submit" className="btn-primario">
+              {t('empresa.veiculos.salvar')}
+            </button>
+            <button
+              type="button"
+              className="btn-secundario"
+              onClick={() => setCadastroAberto(false)}
+            >
+              {t('comum.cancelar')}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   )
 }

@@ -1,76 +1,77 @@
+export type TipoFrota =
+  | 'classe-s'
+  | 'lucid'
+  | 'volvo'
+  | 'escalade'
+  | 'expedition'
+  | 'sprinter'
+  | 'shuttle'
+  | 'charter'
+  | 'shield'
+
 export type EstiloCarro = {
+  tipo: TipoFrota
+  arquivo: string
   corCarroceria: string
   luzAmbiente: string
   luzPonto: string
-  escala: number
-  alongamento: [number, number, number]
+  cameraY: number
+  cameraZ: number
+  olharY: number
+}
+
+const PRETO = '#050608'
+const LUZ = '#f3ead8'
+
+function estilo(tipo: TipoFrota, arquivo: string, cameraZ = 5.2): EstiloCarro {
+  return {
+    tipo,
+    arquivo,
+    corCarroceria: PRETO,
+    luzAmbiente: '#1a1c22',
+    luzPonto: LUZ,
+    cameraY: 1.15,
+    cameraZ,
+    olharY: 0.42,
+  }
 }
 
 export function obterEstiloCarro(slug: string): EstiloCarro {
   switch (slug) {
     case 'jemani-executive':
-      return {
-        corCarroceria: '#2c3348',
-        luzAmbiente: '#2a3040',
-        luzPonto: '#e8d4b0',
-        escala: 1.05,
-        alongamento: [1, 1, 1],
-      }
+      return estilo('classe-s', '/modelos/carros/classe-s.glb')
     case 'jemani-black':
-      return {
-        corCarroceria: '#0a0a0c',
-        luzAmbiente: '#1a1820',
-        luzPonto: '#c4a574',
-        escala: 1.05,
-        alongamento: [1, 1, 1],
-      }
-    case 'jemani-suv':
-      return {
-        corCarroceria: '#1f2a24',
-        luzAmbiente: '#1a2820',
-        luzPonto: '#a8c4a0',
-        escala: 1.08,
-        alongamento: [0.95, 1.22, 1.08],
-      }
+      return estilo('lucid', '/modelos/carros/lucid.glb')
     case 'jemani-luxe':
-      return {
-        corCarroceria: '#3a2f28',
-        luzAmbiente: '#2a2218',
-        luzPonto: '#f0e0c0',
-        escala: 1.1,
-        alongamento: [1.05, 1, 1],
-      }
-    case 'jemani-limo':
-      return {
-        corCarroceria: '#111318',
-        luzAmbiente: '#1a1520',
-        luzPonto: '#c9a878',
-        escala: 0.95,
-        alongamento: [1.45, 0.95, 1],
-      }
+      return estilo('volvo', '/modelos/carros/volvo.glb')
+    case 'jemani-suv':
+      return estilo('escalade', '/modelos/carros/escalade.glb')
+    case 'jemani-expedition':
+      return estilo('expedition', '/modelos/carros/expedition.glb')
     case 'jemani-van':
-      return {
-        corCarroceria: '#243040',
-        luzAmbiente: '#1c2838',
-        luzPonto: '#9eb4c8',
-        escala: 1.05,
-        alongamento: [1.15, 1.35, 1.15],
-      }
+      return estilo('sprinter', '/modelos/carros/sprinter.glb', 5.6)
+    case 'jemani-limo':
+      return estilo('shuttle', '/modelos/carros/shuttle.glb', 5.8)
+    case 'jemani-charter':
+      return estilo('charter', '/modelos/carros/charter.glb', 6.4)
     case 'jemani-shield':
-      return {
-        corCarroceria: '#0c1222',
-        luzAmbiente: '#1a140c',
-        luzPonto: '#e8c878',
-        escala: 1.12,
-        alongamento: [1, 1.18, 1.1],
-      }
+      return estilo('shield', '/modelos/carros/escalade.glb')
     default:
-      return {
-        corCarroceria: '#1a1f2e',
-        luzAmbiente: '#2a2438',
-        luzPonto: '#e8d4b0',
-        escala: 1.05,
-        alongamento: [1, 1, 1],
-      }
+      return estilo('classe-s', '/modelos/carros/classe-s.glb')
   }
+}
+
+export function rotuloCurtoFrota(slug: string, nome: string) {
+  const mapa: Record<string, string> = {
+    'jemani-executive': 'Classe S',
+    'jemani-black': 'Lucid Air',
+    'jemani-luxe': 'Volvo',
+    'jemani-suv': 'Escalade',
+    'jemani-expedition': 'Expedition',
+    'jemani-van': 'Sprinter',
+    'jemani-limo': 'Shuttle',
+    'jemani-charter': 'Charter',
+    'jemani-shield': 'Shield',
+  }
+  return mapa[slug] ?? nome.replace(/^JEMANI\s+/i, '')
 }

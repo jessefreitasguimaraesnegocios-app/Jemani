@@ -1,20 +1,52 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { BadgeStatus } from '@/components/BadgeStatus'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
+import {
+  dataEstaNoPeriodo,
+  filtrarCorridas,
+  montarHistoricoMotorista,
+  type PeriodoMotorista,
+} from '@/services/historicoMotorista'
 import { useDemoStore } from '@/store/demoStore'
+import { cn, formatarData, formatarDuracao, formatarMoeda } from '@/utils/format'
 import './EmpresaMotoristasPage.css'
 
+const PERIODOS: PeriodoMotorista[] = ['dia', 'semana', 'mes', 'tudo']
+
+const ROTULO_PERIODO: Record<PeriodoMotorista, 'empresa.motoristas.hoje' | 'empresa.motoristas.semana' | 'empresa.motoristas.mes' | 'empresa.motoristas.tudo'> = {
+  dia: 'empresa.motoristas.hoje',
+  semana: 'empresa.motoristas.semana',
+  mes: 'empresa.motoristas.mes',
+  tudo: 'empresa.motoristas.tudo',
+}
+
+function textoKm(km: number | null, locale: string) {
+  if (km == null) return '—'
+  const numero = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: Number.isInteger(km) ? 0 : 1,
+  }).format(km)
+  return `${numero} km`
+}
+
 export function EmpresaMotoristasPage() {
-  const { t } = usarIdioma()
+  const { t, locale } = usarIdioma()
   const { usuario } = useAuth()
   const empresa = useDemoStore((s) => s.obterEmpresaDoUsuario(usuario?.id ?? ''))
   const todosMotoristas = useDemoStore((s) => s.motoristas)
   const perfis = useDemoStore((s) => s.perfis)
+  const viagens = useDemoStore((s) => s.viagens)
+  const historicos = useDemoStore((s) => s.historicos)
+  const turnos = useDemoStore((s) => s.turnos)
+  const veiculos = useDemoStore((s) => s.veiculos)
+  const agendamentos = useDemoStore((s) => s.agendamentosVeiculo)
   const motoristas = useMemo(
     () => todosMotoristas.filter((m) => m.empresa_id === empresa?.id),
     [todosMotoristas, empresa?.id],
   )
   const mapaPerfis = useMemo(() => new Map(perfis.map((p) => [p.id, p])), [perfis])
+  const mapaVeiculos = useMemo(() => new Map(veiculos.map((v) => [v.id, v])), [veiculos])
   const salvarMotorista = useDemoStore((s) => s.salvarMotorista)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -25,6 +57,37 @@ export function EmpresaMotoristasPage() {
   const [ehShield, setEhShield] = useState(false)
   const [erro, setErro] = useState('')
   const [msg, setMsg] = useState('')
+  const [cadastroAberto, setCadastroAberto] = useState(false)
+  const [motoristaId, setMotoristaId] = useState<string | null>(null)
+  const [periodo, setPeriodo] = useState<PeriodoMotorista>('tudo')
+
+  const motoristaAberto = motoristas.find((m) => m.id === motoristaId) ?? null
+  const historico = useMemo(() => {
+    if (!empresa || !motoristaAberto) return null
+    return montarHistoricoMotorista({
+      motoristaId: motoristaAberto.id,
+      empresaId: empresa.id,
+      viagens,
+      historicos,
+      turnos,
+    })
+  }, [empresa, motoristaAberto, viagens, historicos, turnos])
+
+  const corridasPeriodo = useMemo(
+    () => (historico ? filtrarCorridas(historico.corridas, periodo) : []),
+    [historico, periodo],
+  )
+  const agendamentosPeriodo = useMemo(() => {
+    if (!empresa || !motoristaAberto) return []
+    return (agendamentos ?? [])
+      .filter(
+        (item) =>
+          item.motorista_id === motoristaAberto.id &&
+          item.empresa_id === empresa.id &&
+          dataEstaNoPeriodo(item.data, periodo),
+      )
+      .sort((a, b) => `${b.data}T${b.horario}`.localeCompare(`${a.data}T${a.horario}`))
+  }, [agendamentos, empresa, motoristaAberto, periodo])
 
   if (!empresa) return null
 
@@ -50,6 +113,7 @@ export function EmpresaMotoristasPage() {
       setTelefone('')
       setCnh('')
       setEhShield(false)
+      setCadastroAberto(false)
       setMsg(t('empresa.motoristas.acessoDica'))
     } catch (err) {
       setErro(err instanceof Error ? err.message : t('cadastrar.falha'))
@@ -65,6 +129,138 @@ export function EmpresaMotoristasPage() {
     })
   }
 
+  function abrirHistorico(id: string) {
+    setMotoristaId(id)
+    setPeriodo('tudo')
+  }
+
+  if (motoristaAberto && historico) {
+    const perfil = motoristaAberto.usuario_id
+      ? mapaPerfis.get(motoristaAberto.usuario_id)
+      : undefined
+    const resumo = historico.resumos[periodo]
+    return (
+      <div className="animar-entrada space-y-4">
+        <div>
+          <button type="button" className="btn-secundario motorista-voltar" onClick={() => setMotoristaId(null)}>
+            {t('empresa.motoristas.voltar')}
+          </button>
+          <h1 className="fonte-display text-3xl">{motoristaAberto.nome}</h1>
+          <p className="motorista-historico-sub">
+            {perfil?.email ? `${perfil.email} · ` : ''}
+            {motoristaAberto.telefone} · CNH {motoristaAberto.categoria_cnh} · {motoristaAberto.experiencia_anos} anos
+          </p>
+        </div>
+
+        <div className="motorista-periodos">
+          {PERIODOS.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={cn('motorista-periodo', periodo === item && 'motorista-periodo--ativo')}
+              onClick={() => setPeriodo(item)}
+            >
+              <span>{t(ROTULO_PERIODO[item])}</span>
+              <strong>{historico.resumos[item].corridas}</strong>
+            </button>
+          ))}
+        </div>
+
+        <div className="motorista-metricas">
+          <div className="motorista-metrica">
+            <span>{t('empresa.motoristas.horasCorrida')}</span>
+            <strong>{formatarDuracao(resumo.horasCorridaMs)}</strong>
+          </div>
+          <div className="motorista-metrica">
+            <span>{t('empresa.motoristas.km')}</span>
+            <strong>{textoKm(resumo.km, locale)}</strong>
+          </div>
+          <div className="motorista-metrica">
+            <span>{t('empresa.motoristas.horasInativo')}</span>
+            <strong>{formatarDuracao(resumo.horasInativasMs)}</strong>
+          </div>
+          <div className="motorista-metrica">
+            <span>{t('empresa.motoristas.horasTurno')}</span>
+            <strong>{formatarDuracao(resumo.horasTurnoMs)}</strong>
+          </div>
+          <div className="motorista-metrica">
+            <span>{t('empresa.veiculos.mecanica')}</span>
+            <strong>{agendamentosPeriodo.filter((item) => item.tipo === 'mecanica').length}</strong>
+          </div>
+          <div className="motorista-metrica">
+            <span>{t('empresa.veiculos.lavaJato')}</span>
+            <strong>{agendamentosPeriodo.filter((item) => item.tipo === 'lava_jato').length}</strong>
+          </div>
+        </div>
+
+        <div className="cartao motorista-corridas">
+          <p className="font-medium">{t('empresa.motoristas.corridas')}</p>
+          {corridasPeriodo.length === 0 && <p className="motorista-vazio">{t('empresa.motoristas.semCorrida')}</p>}
+          {corridasPeriodo.map((corrida) => {
+            const veiculo = corrida.veiculoId ? mapaVeiculos.get(corrida.veiculoId) : undefined
+            const detalhes = [
+              `${formatarData(corrida.data, locale)} · ${corrida.horario}`,
+              textoKm(corrida.km, locale),
+              formatarDuracao(corrida.duracaoMs),
+              formatarMoeda(corrida.preco, locale),
+              t(
+                corrida.passageiros === 1
+                  ? 'empresa.motoristas.passageiro'
+                  : 'empresa.motoristas.passageiros',
+                { n: corrida.passageiros },
+              ),
+              veiculo ? `${veiculo.marca} ${veiculo.modelo}` : '',
+              corrida.nomePassageiro ?? '',
+              corrida.numeroVoo ? t('empresa.motoristas.voo', { codigo: corrida.numeroVoo }) : '',
+            ].filter(Boolean)
+            return (
+              <article key={corrida.id} className="motorista-corrida">
+                <div className="motorista-corrida-topo">
+                  <strong>{corrida.codigo}</strong>
+                  <BadgeStatus status={corrida.status} />
+                </div>
+                <p className="motorista-corrida-rota">
+                  {corrida.origem} → {corrida.destino}
+                </p>
+                <p className="motorista-corrida-detalhe">{detalhes.join(' · ')}</p>
+              </article>
+            )
+          })}
+        </div>
+
+        <div className="cartao motorista-corridas">
+          <p className="font-medium">{t('empresa.motoristas.agendamentos')}</p>
+          {agendamentosPeriodo.length === 0 && (
+            <p className="motorista-vazio">{t('empresa.motoristas.semAgendamento')}</p>
+          )}
+          {agendamentosPeriodo.map((item) => {
+            const veiculo = mapaVeiculos.get(item.veiculo_id)
+            return (
+              <article key={item.id} className="motorista-corrida">
+                <div className="motorista-corrida-topo">
+                  <strong>
+                    {item.tipo === 'mecanica'
+                      ? t('empresa.veiculos.mecanica')
+                      : t('empresa.veiculos.lavaJato')}
+                  </strong>
+                </div>
+                <p className="motorista-corrida-detalhe">
+                  {[
+                    `${formatarData(item.data, locale)} · ${item.horario.slice(0, 5)}`,
+                    veiculo ? `${veiculo.marca} ${veiculo.modelo}` : '',
+                    item.observacao ?? '',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              </article>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="animar-entrada space-y-4">
       <h1 className="fonte-display text-3xl">{t('empresa.motoristas.titulo')}</h1>
@@ -74,7 +270,9 @@ export function EmpresaMotoristasPage() {
           return (
             <div key={m.id} className="cartao motorista-card">
               <div>
-                <p className="font-medium">{m.nome}</p>
+                <button type="button" className="motorista-nome" onClick={() => abrirHistorico(m.id)}>
+                  {m.nome}
+                </button>
                 <p className="motorista-meta">
                   {perfil?.email ? `${perfil.email} · ` : ''}
                   {m.telefone} · CNH {m.categoria_cnh} · {m.experiencia_anos} anos
@@ -100,6 +298,24 @@ export function EmpresaMotoristasPage() {
         })}
       </div>
 
+      {!cadastroAberto && (
+        <div className="motorista-cadastro">
+          <button
+            type="button"
+            className="btn-primario"
+            onClick={() => {
+              setCadastroAberto(true)
+              setMsg('')
+              setErro('')
+            }}
+          >
+            {t('empresa.motoristas.cadastrar')}
+          </button>
+          {msg && <p className="motorista-ok">{msg}</p>}
+        </div>
+      )}
+
+      {cadastroAberto && (
       <form className="cartao motorista-form" onSubmit={enviar}>
         <div>
           <h2 className="fonte-display text-2xl">{t('empresa.motoristas.cadastrar')}</h2>
@@ -215,10 +431,23 @@ export function EmpresaMotoristasPage() {
         {erro && <p className="motorista-erro">{erro}</p>}
         {msg && <p className="motorista-ok">{msg}</p>}
 
-        <button type="submit" className="btn-primario">
-          {t('empresa.motoristas.salvar')}
-        </button>
+        <div className="motorista-form-acoes">
+          <button type="submit" className="btn-primario">
+            {t('empresa.motoristas.salvar')}
+          </button>
+          <button
+            type="button"
+            className="btn-secundario"
+            onClick={() => {
+              setCadastroAberto(false)
+              setErro('')
+            }}
+          >
+            {t('comum.cancelar')}
+          </button>
+        </div>
       </form>
+      )}
     </div>
   )
 }

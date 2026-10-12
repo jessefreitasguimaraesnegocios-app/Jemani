@@ -69,10 +69,23 @@ html[data-tema='escuro'] .motorista-selo-shield {
   color: var(--color-slate);
 }
 
+.motorista-cadastro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
 .motorista-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.motorista-form-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
 .motorista-form-sub {
@@ -127,4 +140,137 @@ html[data-tema='escuro'] .motorista-campo-shield {
 html[data-tema='escuro'] .motorista-acesso {
   border-color: #2f2f2f;
   background: #000000;
+}
+
+.motorista-nome {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.motorista-voltar {
+  margin-bottom: 0.85rem;
+}
+
+.motorista-historico-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.motorista-periodos,
+.motorista-metricas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.motorista-periodo,
+.motorista-metrica {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.95rem;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.motorista-periodo {
+  cursor: pointer;
+}
+
+.motorista-periodo span,
+.motorista-metrica span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-slate);
+}
+
+.motorista-periodo strong,
+.motorista-metrica strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.motorista-periodo--ativo {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.motorista-periodo--ativo span {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.motorista-corridas {
+  margin-top: 0.35rem;
+}
+
+.motorista-corrida {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.95rem 0;
+  border-top: 1px solid var(--color-line);
+}
+
+.motorista-corrida-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.motorista-corrida-rota {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.motorista-corrida-detalhe {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-slate);
+}
+
+.motorista-vazio {
+  margin: 0.85rem 0 0;
+  color: var(--color-slate);
+}
+
+@media (min-width: 860px) {
+  .motorista-periodos {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .motorista-metricas {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+html[data-tema='escuro'] .motorista-periodo,
+html[data-tema='escuro'] .motorista-metrica,
+html[data-tema='escuro'] .motorista-corrida {
+  border-color: #2f2f2f;
+}
+
+html[data-tema='escuro'] .motorista-periodo--ativo {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+
+html[data-tema='escuro'] .motorista-periodo--ativo span {
+  color: rgba(0, 0, 0, 0.62);
 }

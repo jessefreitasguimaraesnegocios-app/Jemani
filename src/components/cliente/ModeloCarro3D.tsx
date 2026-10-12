@@ -1,53 +1,36 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Center, useGLTF } from '@react-three/drei'
-import {
-  Color,
-  type Group,
-  type Mesh,
-  type MeshStandardMaterial,
-  type Object3D,
-} from 'three'
+import { Box3, Color, Vector3, type Group, type Mesh, type MeshStandardMaterial, type Object3D } from 'three'
 import { obterEstiloCarro } from './paletaCarro'
-
-const CAMINHO_MODELO = '/modelos/carros/ferrari.glb'
 
 type Props = {
   slug: string
   girando?: boolean
 }
 
-function ehMaterialCarroceria(nome: string) {
+const PRETO = '#07080c'
+
+function ehCarroceria(nome: string) {
   const n = nome.toLowerCase()
-  return (
-    n === 'body_color' ||
-    n.includes('body') ||
-    n.includes('paint') ||
-    n.includes('carpaint') ||
-    n.includes('carroceria')
-  )
+  return n.startsWith('paint') || n === 'teal' || n === 'cream' || n === 'orange'
 }
 
 function clonarCena(cena: Object3D) {
   const clone = cena.clone(true)
   clone.traverse((obj) => {
     const mesh = obj as Mesh
-    if (!mesh.isMesh) return
+    if (!mesh.isMesh || !mesh.material) return
     mesh.castShadow = true
     mesh.receiveShadow = true
-    if (Array.isArray(mesh.material)) {
-      mesh.material = mesh.material.map((m) => m.clone())
-    } else if (mesh.material) {
-      mesh.material = mesh.material.clone()
-    }
+    if (Array.isArray(mesh.material)) mesh.material = mesh.material.map((m) => m.clone())
+    else mesh.material = mesh.material.clone()
   })
   return clone
 }
 
-function aplicarTinta(raiz: Object3D, corHex: string) {
-  const cor = new Color(corHex)
-  const candidatos: MeshStandardMaterial[] = []
-
+function pintarDePreto(raiz: Object3D) {
+  const cor = new Color(PRETO)
   raiz.traverse((obj) => {
     const mesh = obj as Mesh
     if (!mesh.isMesh) return
@@ -55,76 +38,71 @@ function aplicarTinta(raiz: Object3D, corHex: string) {
     for (const mat of materiais) {
       if (!mat || !('color' in mat)) continue
       const std = mat as MeshStandardMaterial
-      if (ehMaterialCarroceria(std.name || mesh.name || '')) {
-        candidatos.push(std)
+      if (!ehCarroceria(std.name || '')) continue
+      std.color.copy(cor)
+      std.metalness = 0.82
+      std.roughness = 0.22
+      const verniz = std as MeshStandardMaterial & { clearcoat?: number; clearcoatRoughness?: number }
+      if (typeof verniz.clearcoat === 'number') {
+        verniz.clearcoat = 1
+        verniz.clearcoatRoughness = 0.08
       }
+      std.needsUpdate = true
     }
   })
-
-  const alvo =
-    candidatos.length > 0
-      ? candidatos
-      : (() => {
-          const todos: MeshStandardMaterial[] = []
-          raiz.traverse((obj) => {
-            const mesh = obj as Mesh
-            if (!mesh.isMesh) return
-            const materiais = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-            for (const mat of materiais) {
-              if (!mat || !('metalness' in mat)) continue
-              const std = mat as MeshStandardMaterial
-              if ((std.metalness ?? 0) >= 0.2 && (std.roughness ?? 1) <= 0.7) {
-                todos.push(std)
-              }
-            }
-          })
-          return todos.slice(0, 2)
-        })()
-
-  for (const mat of alvo) {
-    mat.color.copy(cor)
-    mat.metalness = Math.max(mat.metalness ?? 0.6, 0.55)
-    mat.roughness = Math.min(mat.roughness ?? 0.35, 0.4)
-    mat.needsUpdate = true
-  }
 }
 
-export function ModeloCarro3D({ slug, girando = true }: Props) {
-  const grupoRef = useRef<Group>(null)
-  const { scene } = useGLTF(CAMINHO_MODELO)
-  const estilo = useMemo(() => obterEstiloCarro(slug), [slug])
-
+function ModeloGlb({ arquivo, slug }: { arquivo: string; slug: string }) {
+  const giroRef = useRef<Group>(null)
+  const escalaRef = useRef<Group>(null)
+  const { scene } = useGLTF(arquivo)
   const modelo = useMemo(() => {
     const clone = clonarCena(scene)
-    aplicarTinta(clone, estilo.corCarroceria)
+    pintarDePreto(clone)
     return clone
-  }, [scene, estilo.corCarroceria])
+  }, [scene])
 
   useLayoutEffect(() => {
-    aplicarTinta(modelo, estilo.corCarroceria)
-  }, [modelo, estilo.corCarroceria])
+    const grupo = escalaRef.current
+    if (!grupo) return
+    grupo.scale.setScalar(1)
+    grupo.updateWorldMatrix(true, true)
+    const caixa = new Box3().setFromObject(grupo)
+    const tamanho = caixa.getSize(new Vector3())
+    const maior = Math.max(tamanho.x, tamanho.y, tamanho.z, 0.001)
+    grupo.scale.setScalar(2.85 / maior)
+  }, [modelo, slug])
 
   useFrame((_, delta) => {
-    if (!grupoRef.current || !girando) return
-    grupoRef.current.rotation.y += delta * 0.45
+    if (!giroRef.current) return
+    giroRef.current.rotation.y += delta * 0.35
   })
 
   return (
-    <group ref={grupoRef} key={slug}>
-      <Center cacheKey={slug} precise>
-        <group
-          scale={[
-            estilo.escala * estilo.alongamento[0],
-            estilo.escala * estilo.alongamento[1],
-            estilo.escala * estilo.alongamento[2],
-          ]}
-          rotation={[0, Math.PI * 0.18, 0]}
-        >
+    <group ref={giroRef}>
+      <group ref={escalaRef} rotation={[0, Math.PI * 0.22, 0]}>
+        <Center precise>
           <primitive object={modelo} />
-        </group>
-      </Center>
+        </Center>
+      </group>
     </group>
   )
 }
 
-useGLTF.preload(CAMINHO_MODELO)
+export function ModeloCarro3D({ slug }: Props) {
+  const estilo = obterEstiloCarro(slug)
+  return <ModeloGlb key={estilo.arquivo + slug} arquivo={estilo.arquivo} slug={slug} />
+}
+
+for (const arquivo of [
+  '/modelos/carros/classe-s.glb',
+  '/modelos/carros/lucid.glb',
+  '/modelos/carros/volvo.glb',
+  '/modelos/carros/escalade.glb',
+  '/modelos/carros/expedition.glb',
+  '/modelos/carros/sprinter.glb',
+  '/modelos/carros/shuttle.glb',
+  '/modelos/carros/charter.glb',
+]) {
+  useGLTF.preload(arquivo)
+}

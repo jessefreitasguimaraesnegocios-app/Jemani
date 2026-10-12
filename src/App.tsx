@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { SincronizarIdioma } from '@/components/SincronizarIdioma'
+import { SincronizarNuvem } from '@/components/SincronizarNuvem'
 import { RotaProtegida } from '@/components/RotaProtegida'
 import { LayoutCliente } from '@/layouts/LayoutCliente'
 import { LayoutEmpresa } from '@/layouts/LayoutEmpresa'
@@ -17,6 +18,7 @@ import { ClienteNotificacoesPage } from '@/pages/cliente/ClienteNotificacoesPage
 import { ClientePerfilPage } from '@/pages/cliente/ClientePerfilPage'
 import { EmpresaDashboardPage } from '@/pages/empresa/EmpresaDashboardPage'
 import { EmpresaSolicitacoesPage } from '@/pages/empresa/EmpresaSolicitacoesPage'
+import { EmpresaAoVivoPage } from '@/pages/empresa/EmpresaAoVivoPage'
 import { EmpresaViagensPage } from '@/pages/empresa/EmpresaViagensPage'
 import { EmpresaViagemDetalhePage } from '@/pages/empresa/EmpresaViagemDetalhePage'
 import { EmpresaMotoristasPage } from '@/pages/empresa/EmpresaMotoristasPage'
@@ -41,6 +43,8 @@ export default function App() {
   return (
     <AuthProvider>
       <SincronizarIdioma>
+      <>
+      <SincronizarNuvem />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -62,6 +66,7 @@ export default function App() {
             <Route path="/empresa" element={<LayoutEmpresa />}>
               <Route index element={<EmpresaDashboardPage />} />
               <Route path="solicitacoes" element={<EmpresaSolicitacoesPage />} />
+              <Route path="ao-vivo" element={<EmpresaAoVivoPage />} />
               <Route path="viagens" element={<EmpresaViagensPage />} />
               <Route path="viagens/:id" element={<EmpresaViagemDetalhePage />} />
               <Route path="motoristas" element={<EmpresaMotoristasPage />} />
@@ -97,6 +102,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </>
       </SincronizarIdioma>
     </AuthProvider>
   )

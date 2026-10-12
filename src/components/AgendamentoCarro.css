@@ -1,0 +1,98 @@
+.carro-painel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.carro-servico {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  background: #141414;
+}
+
+.carro-servico h2 {
+  margin: 0;
+  font-family: var(--fonte-display, Georgia, serif);
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+.carro-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.carro-rotulo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(246, 241, 232, 0.55);
+}
+
+.carro-rotulo-largo,
+.carro-agendar {
+  grid-column: 1 / -1;
+}
+
+.carro-campo {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(246, 241, 232, 0.16);
+  border-radius: 0.8rem;
+  background: #070707;
+  color: #f6f1e8;
+  color-scheme: dark;
+  font-size: 0.95rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.carro-agendar,
+.carro-remover {
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.carro-agendar {
+  padding: 0.9rem 1rem;
+  background: #c9a46c;
+  color: #111;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.carro-agendamento {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(246, 241, 232, 0.1);
+}
+
+.carro-agendamento p,
+.carro-vazio {
+  margin: 0;
+}
+
+.carro-nota,
+.carro-vazio {
+  font-size: 0.82rem;
+  color: rgba(246, 241, 232, 0.62);
+}
+
+.carro-remover {
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  color: #f6f1e8;
+  border: 1px solid rgba(246, 241, 232, 0.2);
+  font-size: 0.78rem;
+}

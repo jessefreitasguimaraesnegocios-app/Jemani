@@ -1,0 +1,29 @@
+.layout-motorista {
+  min-height: 100dvh;
+  background: #070707;
+  color: #f6f1e8;
+}
+
+.layout-motorista-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(0.7rem + env(safe-area-inset-top)) 1rem 0.4rem;
+}
+
+.layout-motorista-topo p {
+  margin: 0;
+  font-family: var(--fonte-display, Georgia, serif);
+  font-size: 1.6rem;
+}
+
+.layout-motorista-topo button {
+  border: 0;
+  background: transparent;
+  color: rgba(246, 241, 232, 0.7);
+  font-size: 0.85rem;
+}
+
+.layout-motorista main {
+  padding: 0 0 0;
+}

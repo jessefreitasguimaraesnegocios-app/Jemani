@@ -1,10 +1,11 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Building2,
   CalendarDays,
   Car,
   LayoutDashboard,
   LogOut,
+  MapPinned,
   Users,
   Wallet,
   Inbox,
@@ -19,6 +20,7 @@ import { cn } from '@/utils/format'
 const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Car; end?: boolean }> = [
   { to: '/empresa', chave: 'nav.empresa.dashboard', icon: LayoutDashboard, end: true },
   { to: '/empresa/solicitacoes', chave: 'nav.empresa.solicitacoes', icon: Inbox },
+  { to: '/empresa/ao-vivo', chave: 'nav.empresa.viagens', icon: MapPinned },
   { to: '/empresa/viagens', chave: 'nav.empresa.historico', icon: Car },
   { to: '/empresa/motoristas', chave: 'nav.empresa.motoristas', icon: Users },
   { to: '/empresa/veiculos', chave: 'nav.empresa.veiculos', icon: Building2 },
@@ -30,8 +32,10 @@ const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Car; end?: b
 export function LayoutEmpresa() {
   const { usuario, sair } = useAuth()
   const navigate = useNavigate()
+  const caminho = useLocation()
   const { t } = usarIdioma()
   const empresa = useDemoStore((s) => s.obterEmpresaDoUsuario(usuario?.id ?? ''))
+  const aoVivo = caminho.pathname.startsWith('/empresa/ao-vivo')
 
   async function handleSair() {
     await sair()
@@ -80,7 +84,14 @@ export function LayoutEmpresa() {
           {t('comum.sair')}
         </button>
       </aside>
-      <main className="mx-auto w-full max-w-6xl px-4 py-6 lg:px-8">
+      <main
+        className={cn(
+          'mx-auto w-full px-4 lg:px-8',
+          aoVivo
+            ? 'flex max-w-[92rem] flex-col py-3 lg:h-dvh lg:overflow-hidden'
+            : 'max-w-6xl py-6',
+        )}
+      >
         <Outlet />
       </main>
     </div>

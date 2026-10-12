@@ -1,24 +1,47 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { AgendamentoCarro } from '@/components/AgendamentoCarro'
 import { BadgeStatus } from '@/components/BadgeStatus'
+import { ChatEmpresa } from '@/components/ChatEmpresa'
+import { linkMapa, MapaCorrida } from '@/components/MapaCorrida'
 import { ModalFinalizarViagem } from '@/components/ModalFinalizarViagem'
 import { useAuth } from '@/contexts/AuthContext'
+import { usarAvisoDoSistema } from '@/hooks/usarAvisoDoSistema'
 import { usarIdioma } from '@/i18n/usarIdioma'
+import { turnoAberto } from '@/services/turnoEmpresa'
 import { useDemoStore } from '@/store/demoStore'
 import type { StatusViagem } from '@/types'
-import { formatarData, formatarMoeda } from '@/utils/format'
+import './MotoristaDashboardPage.css'
 
 const ACOES: Array<{ statusAtual: StatusViagem; proximo: StatusViagem; label: string }> = [
-  { statusAtual: 'motorista_atribuido', proximo: 'motorista_a_caminho', label: 'A caminho' },
-  { statusAtual: 'motorista_a_caminho', proximo: 'motorista_chegou', label: 'Cheguei' },
+  { statusAtual: 'motorista_atribuido', proximo: 'motorista_a_caminho', label: 'Estou a caminho' },
+  { statusAtual: 'motorista_a_caminho', proximo: 'motorista_chegou', label: 'Cheguei no embarque' },
   { statusAtual: 'motorista_chegou', proximo: 'passageiro_embarcou', label: 'Passageiro embarcou' },
   { statusAtual: 'passageiro_embarcou', proximo: 'viagem_em_andamento', label: 'Iniciar viagem' },
 ]
 
+const COM_GPS: StatusViagem[] = [
+  'motorista_a_caminho',
+  'motorista_chegou',
+  'passageiro_embarcou',
+  'viagem_em_andamento',
+]
+
+function telefoneDiscavel(telefone?: string) {
+  if (!telefone) return ''
+  const digitos = telefone.replace(/[^\d+]/g, '')
+  return digitos ? `tel:${digitos}` : ''
+}
+
 export function MotoristaDashboardPage() {
-  const { t, locale } = usarIdioma()
+  const { t } = usarIdioma()
   const { usuario } = useAuth()
+  usarAvisoDoSistema(usuario?.id)
   const motorista = useDemoStore((s) => s.obterMotoristaDoUsuario(usuario?.id ?? ''))
   const todasViagens = useDemoStore((s) => s.viagens)
+  const turnos = useDemoStore((s) => s.turnos)
+  const iniciarTurno = useDemoStore((s) => s.iniciarTurno)
+  const encerrarTurno = useDemoStore((s) => s.encerrarTurno)
+  const atualizarPosicaoTurno = useDemoStore((s) => s.atualizarPosicaoTurno)
   const viagens = useMemo(
     () =>
       todasViagens
@@ -32,104 +55,187 @@ export function MotoristaDashboardPage() {
         ),
     [todasViagens, motorista?.id],
   )
-  const veiculos = useDemoStore((s) => s.veiculos)
   const perfis = useDemoStore((s) => s.perfis)
-  const empresas = useDemoStore((s) => s.empresas)
   const atualizarStatus = useDemoStore((s) => s.atualizarStatus)
+  const atualizarPosicaoMotorista = useDemoStore((s) => s.atualizarPosicaoMotorista)
   const solicitarFinalizacao = useDemoStore((s) => s.solicitarFinalizacao)
   const confirmarFinalizacao = useDemoStore((s) => s.confirmarFinalizacao)
   const [mostrarFinalizar, setMostrarFinalizar] = useState(false)
   const [erro, setErro] = useState('')
-
-  if (!motorista) {
-    return <div className="cartao">Motorista não vinculado a este usuário.</div>
-  }
+  const [aba, setAba] = useState<'corrida' | 'chat' | 'carro'>('corrida')
 
   const proxima = viagens[0]
-  const veiculo = veiculos.find((x) => x.id === proxima?.veiculo_id)
+  const cliente = perfis.find((p) => p.id === proxima?.cliente_id)
+  const nomePassageiro = proxima?.nome_passageiro ?? cliente?.nome ?? 'Passageiro'
+  const telefone = cliente?.telefone
+  const ligar = telefoneDiscavel(telefone)
+  const online = motorista ? Boolean(turnoAberto(turnos, motorista.id)) : false
+
+  useEffect(() => {
+    const seguirCorrida = Boolean(proxima && COM_GPS.includes(proxima.status))
+    const viagemId = proxima?.id
+    const motoristaId = motorista?.id
+    if ((!seguirCorrida && !online) || !navigator.geolocation) return
+    const id = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (seguirCorrida && viagemId) {
+          atualizarPosicaoMotorista(viagemId, pos.coords.latitude, pos.coords.longitude)
+        }
+        if (online && motoristaId) {
+          atualizarPosicaoTurno(motoristaId, pos.coords.latitude, pos.coords.longitude)
+        }
+      },
+      () => undefined,
+      { enableHighAccuracy: true, maximumAge: 8000 },
+    )
+    return () => navigator.geolocation.clearWatch(id)
+  }, [
+    proxima?.id,
+    proxima?.status,
+    online,
+    motorista?.id,
+    atualizarPosicaoMotorista,
+    atualizarPosicaoTurno,
+  ])
+
+  if (!motorista) {
+    return <div className="corrida-tela corrida-vazia">Motorista não vinculado a este usuário.</div>
+  }
+
+  const acao = ACOES.find((a) => a.statusAtual === proxima?.status)
 
   return (
-    <div className="animar-entrada space-y-4">
-      <h1 className="fonte-display text-3xl">
-        {t('comum.olaNome', { nome: motorista.nome.split(' ')[0] })}
-      </h1>
+    <section className="corrida-tela">
+      <div className="corrida-abas">
+        <button
+          type="button"
+          className={`corrida-aba ${aba === 'corrida' ? 'corrida-aba--ativa' : ''}`}
+          onClick={() => setAba('corrida')}
+        >
+          {t('motorista.corrida')}
+        </button>
+        <button
+          type="button"
+          className={`corrida-aba ${aba === 'chat' ? 'corrida-aba--ativa' : ''}`}
+          onClick={() => setAba('chat')}
+        >
+          {t('motorista.chat')}
+        </button>
+        <button
+          type="button"
+          className={`corrida-aba ${aba === 'carro' ? 'corrida-aba--ativa' : ''}`}
+          onClick={() => setAba('carro')}
+        >
+          {t('motorista.carro')}
+        </button>
+        <button
+          type="button"
+          className={`corrida-online ${online ? 'corrida-online--ativo' : ''}`}
+          onClick={() => (online ? encerrarTurno(motorista.id) : iniciarTurno(motorista.id))}
+        >
+          {online ? t('motorista.encerrarTurno') : t('motorista.ficarOnline')}
+        </button>
+      </div>
 
-      {!proxima ? (
-        <div className="cartao text-[var(--color-slate)]">Nenhuma viagem atribuída no momento.</div>
+      {aba === 'chat' ? (
+        <div className="corrida-chat">
+          <ChatEmpresa
+            empresaId={motorista.empresa_id}
+            autor="motorista"
+            motoristaId={motorista.id}
+            telaCheia
+          />
+        </div>
+      ) : aba === 'carro' ? (
+        <AgendamentoCarro motoristaId={motorista.id} empresaId={motorista.empresa_id} />
+      ) : !proxima ? (
+        <p className="corrida-vazia">Nenhuma viagem atribuída no momento.</p>
       ) : (
-        <div className="cartao space-y-4">
-          <div className="flex flex-wrap justify-between gap-2">
+        <>
+          <header className="corrida-topo">
             <div>
-              <p className="text-sm text-[var(--color-slate)]">Próxima viagem</p>
-              <h2 className="fonte-display text-3xl">{proxima.codigo}</h2>
+              <p className="corrida-kicker">Corrida atual</p>
+              <h1 className="corrida-codigo">{proxima.codigo}</h1>
             </div>
             <BadgeStatus status={proxima.status} />
-          </div>
-          <div className="grid gap-2 text-sm">
-            <p>
-              <strong>Data:</strong> {formatarData(proxima.data_viagem, locale)} · {proxima.horario}
-            </p>
-            <p>
-              <strong>Passageiro:</strong>{' '}
-              {proxima.nome_passageiro ??
-                perfis.find((p) => p.id === proxima.cliente_id)?.nome ??
-                '—'}
-            </p>
-            <p>
-              <strong>Origem:</strong> {proxima.origem}
-            </p>
-            <p>
-              <strong>Destino:</strong> {proxima.destino}
-            </p>
-            <p>
-              <strong>Veículo:</strong>{' '}
-              {veiculo ? `${veiculo.marca} ${veiculo.modelo}` : '—'}
-            </p>
-            <p>
-              <strong>Valor serviço:</strong> {formatarMoeda(proxima.preco_total, locale)}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {ACOES.filter((a) => a.statusAtual === proxima.status).map((a) => (
-              <button
-                key={a.proximo}
-                type="button"
-                className="btn-ouro"
-                onClick={() => atualizarStatus(proxima.id, a.proximo, usuario?.id)}
-              >
-                {a.label}
-              </button>
-            ))}
-            {proxima.status === 'viagem_em_andamento' && (
-              <button
-                type="button"
-                className="btn-primario"
-                onClick={() => {
-                  const check = solicitarFinalizacao(proxima.id)
-                  if (!check.ok) {
-                    setErro(check.mensagem)
-                    return
-                  }
-                  setErro('')
-                  setMostrarFinalizar(true)
-                }}
-              >
-                Finalizar viagem
-              </button>
-            )}
-          </div>
-          {erro && <p className="text-sm text-[var(--color-danger)]">{erro}</p>}
-        </div>
+          </header>
+
+          <MapaCorrida
+            origemLat={proxima.origem_lat}
+            origemLng={proxima.origem_lng}
+            destinoLat={proxima.destino_lat}
+            destinoLng={proxima.destino_lng}
+            motoristaLat={proxima.motorista_lat}
+            motoristaLng={proxima.motorista_lng}
+            legenda={`${proxima.origem} até ${proxima.destino}`}
+          />
+
+          <a
+            className="corrida-endereco"
+            href={linkMapa(proxima.origem, proxima.origem_lat, proxima.origem_lng)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span>Embarque</span>
+            <strong>{proxima.origem}</strong>
+          </a>
+          <a
+            className="corrida-endereco"
+            href={linkMapa(proxima.destino, proxima.destino_lat, proxima.destino_lng)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span>Destino</span>
+            <strong>{proxima.destino}</strong>
+          </a>
+
+          {ligar ? (
+            <a className="corrida-contato" href={ligar}>
+              <span>Contato do passageiro</span>
+              <strong>{nomePassageiro}</strong>
+              <em>{telefone}</em>
+            </a>
+          ) : (
+            <div className="corrida-contato">
+              <span>Contato do passageiro</span>
+              <strong>{nomePassageiro}</strong>
+            </div>
+          )}
+
+          {acao && (
+            <button
+              type="button"
+              className="corrida-acao"
+              onClick={() => atualizarStatus(proxima.id, acao.proximo, usuario?.id)}
+            >
+              {acao.label}
+            </button>
+          )}
+          {proxima.status === 'viagem_em_andamento' && (
+            <button
+              type="button"
+              className="corrida-acao corrida-acao-secundaria"
+              onClick={() => {
+                const check = solicitarFinalizacao(proxima.id)
+                if (!check.ok) {
+                  setErro(check.mensagem)
+                  return
+                }
+                setErro('')
+                setMostrarFinalizar(true)
+              }}
+            >
+              Finalizar viagem
+            </button>
+          )}
+          {erro && <p className="corrida-erro">{erro}</p>}
+        </>
       )}
 
       {mostrarFinalizar && proxima && (
         <ModalFinalizarViagem
           viagem={proxima}
-          clienteNome={
-            proxima.nome_passageiro ?? perfis.find((p) => p.id === proxima.cliente_id)?.nome
-          }
-          empresaNome={empresas.find((e) => e.id === proxima.empresa_id)?.nome_comercial}
-          veiculoLabel={veiculo ? `${veiculo.marca} ${veiculo.modelo}` : undefined}
+          clienteNome={nomePassageiro}
           onCancelar={() => setMostrarFinalizar(false)}
           onConfirmar={() => {
             if (!usuario) return
@@ -142,20 +248,6 @@ export function MotoristaDashboardPage() {
           }}
         />
       )}
-
-      {viagens.length > 1 && (
-        <div className="space-y-2">
-          <h3 className="font-medium">Outras viagens</h3>
-          {viagens.slice(1).map((v) => (
-            <div key={v.id} className="cartao flex justify-between">
-              <span>
-                {v.codigo} · {formatarData(v.data_viagem, locale)} {v.horario}
-              </span>
-              <BadgeStatus status={v.status} />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </section>
   )
 }

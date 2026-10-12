@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CampoEndereco } from '@/components/CampoEndereco'
+import { SeletorCategoria3D } from '@/components/cliente/SeletorCategoria3D'
 import { useAuth } from '@/contexts/AuthContext'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -16,12 +17,6 @@ import { enderecoEhAeroporto, enderecoProntoParaReserva } from '@/utils/endereco
 import { SLUG_SHIELD } from '@/data/seed'
 import { formatarMoeda } from '@/utils/format'
 import './ReservarPage.css'
-
-const SeletorCategoria3D = lazy(() =>
-  import('@/components/cliente/SeletorCategoria3D').then((m) => ({
-    default: m.SeletorCategoria3D,
-  })),
-)
 
 const ETAPAS: ChaveTraducao[] = [
   'reserva.etapaTrecho',
@@ -402,21 +397,13 @@ export function ReservarPage() {
 
         {etapa === 3 && (
           <div className="reserva-etapa-categoria">
-            <p className="reserva-etapa-categoria-intro">
-              {passageiros} passageiro{passageiros === 1 ? '' : 's'} — gire o carro e escolha a
-              experiência:
-            </p>
-            <Suspense
-              fallback={<div className="reserva-seletor-carregando">Preparando o showroom…</div>}
-            >
-              <SeletorCategoria3D
-                categorias={categorias}
-                categoriaId={categoriaId}
-                passageiros={passageiros}
-                aoSelecionar={setCategoriaId}
-                formatarAdicional={(valor) => formatarMoeda(valor, locale)}
-              />
-            </Suspense>
+            <SeletorCategoria3D
+              categorias={categorias}
+              categoriaId={categoriaId}
+              passageiros={passageiros}
+              aoSelecionar={setCategoriaId}
+              formatarAdicional={(valor) => formatarMoeda(valor, locale)}
+            />
           </div>
         )}
 

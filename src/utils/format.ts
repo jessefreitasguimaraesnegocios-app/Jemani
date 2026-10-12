@@ -32,6 +32,15 @@ export function formatarData(data: string, locale = 'pt-BR'): string {
   }).format(dataObj)
 }
 
+export function formatarDuracao(ms: number | null): string {
+  if (ms == null || !Number.isFinite(ms) || ms < 0) return '—'
+  const totalMin = Math.round(ms / 60000)
+  const horas = Math.floor(totalMin / 60)
+  const minutos = totalMin % 60
+  if (horas <= 0) return `${minutos} min`
+  return `${horas}h ${String(minutos).padStart(2, '0')}min`
+}
+
 export function amanhaIso(): string {
   const d = new Date()
   d.setDate(d.getDate() + 1)

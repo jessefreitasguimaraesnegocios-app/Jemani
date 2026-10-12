@@ -116,6 +116,20 @@ export interface Veiculo {
   updated_at: string
 }
 
+export type TipoServicoVeiculo = 'mecanica' | 'lava_jato'
+
+export interface AgendamentoVeiculo {
+  id: string
+  veiculo_id: string
+  empresa_id: string
+  motorista_id?: string
+  tipo: TipoServicoVeiculo
+  data: string
+  horario: string
+  observacao?: string
+  created_at: string
+}
+
 export interface Motorista {
   id: string
   empresa_id: string
@@ -132,6 +146,26 @@ export interface Motorista {
   avaliacao_media: number
   created_at: string
   updated_at: string
+}
+
+export interface TurnoMotorista {
+  motorista_id: string
+  empresa_id: string
+  veiculo_id?: string
+  inicio: string
+  fim?: string
+  online: boolean
+  latitude?: number
+  longitude?: number
+}
+
+export interface MensagemEmpresa {
+  id: string
+  empresa_id: string
+  motorista_id: string
+  autor: 'empresa' | 'motorista'
+  texto: string
+  created_at: string
 }
 
 export interface ConfiguracaoPlataforma {
@@ -173,6 +207,8 @@ export interface Viagem {
   origem_lng?: number
   destino_lat?: number
   destino_lng?: number
+  motorista_lat?: number
+  motorista_lng?: number
   origem_place_id?: string
   destino_place_id?: string
   data_viagem: string

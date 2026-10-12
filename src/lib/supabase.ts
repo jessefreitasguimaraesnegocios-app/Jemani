@@ -5,6 +5,9 @@ const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
 export const supabaseConfigurado = Boolean(url && anon && import.meta.env.VITE_DEMO_MODE === 'false')
 
-export const supabase: SupabaseClient | null = supabaseConfigurado
-  ? createClient(url!, anon!)
-  : null
+export const supabase: SupabaseClient | null =
+  url && anon
+    ? createClient(url, anon, {
+        auth: { persistSession: true, autoRefreshToken: true },
+      })
+    : null

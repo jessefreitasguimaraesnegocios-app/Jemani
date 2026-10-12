@@ -1,0 +1,126 @@
+.corrida-tela {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: calc(100dvh - 4.5rem);
+  margin: -0.5rem -1rem 0;
+  padding: 0.85rem 1rem calc(1rem + env(safe-area-inset-bottom));
+  background: #070707;
+  color: #f6f1e8;
+}
+
+.corrida-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.corrida-kicker {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #c9a46c;
+}
+
+.corrida-codigo {
+  margin: 0.2rem 0 0;
+  font-family: var(--fonte-display, Georgia, serif);
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.corrida-endereco,
+.corrida-contato {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  background: #141414;
+  color: inherit;
+  text-decoration: none;
+}
+
+.corrida-endereco span,
+.corrida-contato span {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(246, 241, 232, 0.5);
+}
+
+.corrida-endereco strong,
+.corrida-contato strong {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.corrida-contato em {
+  font-style: normal;
+  color: #c9a46c;
+}
+
+.corrida-acao {
+  width: 100%;
+  margin-top: auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 1.05rem 1rem;
+  background: #c9a46c;
+  color: #111;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.corrida-acao-secundaria {
+  background: transparent;
+  color: #f6f1e8;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.corrida-erro {
+  margin: 0;
+  color: #f0a8a8;
+  font-size: 0.85rem;
+}
+
+.corrida-vazia {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: rgba(246, 241, 232, 0.65);
+}
+
+.corrida-abas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.corrida-aba,
+.corrida-online {
+  border: 1px solid rgba(246, 241, 232, 0.16);
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  color: #f6f1e8;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.corrida-aba--ativa,
+.corrida-online--ativo {
+  border-color: transparent;
+  background: #c9a46c;
+  color: #111;
+}
+
+.corrida-chat {
+  display: flex;
+  flex: 1;
+  min-height: 18rem;
+}

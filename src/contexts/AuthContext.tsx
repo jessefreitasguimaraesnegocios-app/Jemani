@@ -5,6 +5,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useDemoStore } from '@/store/demoStore'
+import { sairNuvem } from '@/services/nuvemCorrida'
 import type { Perfil, TipoUsuario } from '@/types'
 import { SENHA_DEMO } from '@/data/seed'
 
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     cadastrar: async (dados) => cadastrarStore(dados),
     sair: async () => {
       sairStore()
+      await sairNuvem()
     },
   }
 

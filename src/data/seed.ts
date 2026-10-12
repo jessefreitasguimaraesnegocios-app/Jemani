@@ -1,4 +1,5 @@
 import type {
+  AgendamentoVeiculo,
   Avaliacao,
   AtribuicaoViagem,
   AuditLog,
@@ -9,10 +10,12 @@ import type {
   HistoricoDistribuicao,
   HistoricoStatus,
   Motorista,
+  MensagemEmpresa,
   Notificacao,
   Pagamento,
   Perfil,
   RegraPreco,
+  TurnoMotorista,
   Veiculo,
   Viagem,
 } from '@/types'
@@ -62,6 +65,8 @@ export const IDS = {
   catLimo: '77777777-7777-7777-7777-777777777704',
   catVan: '77777777-7777-7777-7777-777777777703',
   catShield: '77777777-7777-7777-7777-777777777707',
+  catExpedition: '77777777-7777-7777-7777-777777777708',
+  catCharter: '77777777-7777-7777-7777-777777777709',
   motorista11: '55555555-5555-5555-5555-555555555511',
   regraPreco: '88888888-8888-8888-8888-888888888801',
 }
@@ -75,7 +80,7 @@ export function criarCategoriaShield(agora = agoraIso()): CategoriaVeiculo {
     nome: 'JEMANI SHIELD',
     slug: SLUG_SHIELD,
     descricao:
-      'Motorista segurança de elite: defesa pessoal, combate e porte de arma. O serviço mais exclusivo da Jemani.',
+      'Cadillac Escalade preto com motorista de segurança de elite: defesa pessoal, combate e porte de arma.',
     capacidade_min: 1,
     capacidade_max: 3,
     adicional_preco: 280,
@@ -86,12 +91,125 @@ export function criarCategoriaShield(agora = agoraIso()): CategoriaVeiculo {
   }
 }
 
+const FROTA_LUXO: Array<Omit<CategoriaVeiculo, 'created_at' | 'updated_at' | 'ativo'>> = [
+  {
+    id: IDS.catShield,
+    nome: 'JEMANI SHIELD',
+    slug: SLUG_SHIELD,
+    descricao:
+      'Cadillac Escalade preto com motorista de segurança de elite: defesa pessoal, combate e porte de arma.',
+    capacidade_min: 1,
+    capacidade_max: 3,
+    adicional_preco: 280,
+    ordem: 0,
+  },
+  {
+    id: IDS.catExpedition,
+    nome: 'Ford Expedition',
+    slug: 'jemani-expedition',
+    descricao: 'SUV full-size preto, espaço de sobra para família e bagagem.',
+    capacidade_min: 1,
+    capacidade_max: 7,
+    adicional_preco: 70,
+    ordem: 1,
+  },
+  {
+    id: IDS.catLuxe,
+    nome: 'Volvo XC90',
+    slug: 'jemani-luxe',
+    descricao: 'Volvo XC90 preto, conforto escandinavo para a cidade e o aeroporto.',
+    capacidade_min: 1,
+    capacidade_max: 6,
+    adicional_preco: 140,
+    ordem: 2,
+  },
+  {
+    id: IDS.catExecutive,
+    nome: 'Mercedes-Benz Classe S',
+    slug: 'jemani-executive',
+    descricao: 'Classe S preto, o sedã executivo da Jemani para corporativo e aeroporto.',
+    capacidade_min: 1,
+    capacidade_max: 3,
+    adicional_preco: 0,
+    ordem: 3,
+  },
+  {
+    id: IDS.catBlack,
+    nome: 'Lucid Air',
+    slug: 'jemani-black',
+    descricao: 'Lucid Air preto, silêncio e presença para traslados exclusivos.',
+    capacidade_min: 1,
+    capacidade_max: 3,
+    adicional_preco: 95,
+    ordem: 4,
+  },
+  {
+    id: IDS.catSuv,
+    nome: 'Cadillac Escalade',
+    slug: 'jemani-suv',
+    descricao: 'Escalade preto, o SUV de luxo para grupos e chegadas marcantes.',
+    capacidade_min: 1,
+    capacidade_max: 6,
+    adicional_preco: 55,
+    ordem: 5,
+  },
+  {
+    id: IDS.catVan,
+    nome: 'Mercedes-Benz Sprinter',
+    slug: 'jemani-van',
+    descricao: 'Sprinter executiva preta para grupos, eventos e aeroporto.',
+    capacidade_min: 1,
+    capacidade_max: 14,
+    adicional_preco: 85,
+    ordem: 6,
+  },
+  {
+    id: IDS.catLimo,
+    nome: 'Shuttle Bus',
+    slug: 'jemani-limo',
+    descricao: 'Shuttle preto para traslados de grupo, hotel e evento.',
+    capacidade_min: 8,
+    capacidade_max: 20,
+    adicional_preco: 180,
+    ordem: 7,
+  },
+  {
+    id: IDS.catCharter,
+    nome: 'Charter Bus',
+    slug: 'jemani-charter',
+    descricao: 'Ônibus charter preto para grupos grandes, convenções e aeroporto.',
+    capacidade_min: 14,
+    capacidade_max: 40,
+    adicional_preco: 320,
+    ordem: 8,
+  },
+]
+
+export function sincronizarFrota(categorias: CategoriaVeiculo[], agora = agoraIso()): CategoriaVeiculo[] {
+  const porSlug = new Map(categorias.map((c) => [c.slug, c]))
+  const frota = FROTA_LUXO.map((def) => {
+    const atual = porSlug.get(def.slug)
+    return {
+      ...(atual ?? {
+        created_at: agora,
+        ativo: true,
+      }),
+      ...def,
+      ativo: true,
+      updated_at: agora,
+      created_at: atual?.created_at ?? agora,
+    }
+  })
+  const slugs = new Set(FROTA_LUXO.map((c) => c.slug))
+  return [...frota, ...categorias.filter((c) => !slugs.has(c.slug))]
+}
+
 export function criarVeiculoShield(agora = agoraIso()): Veiculo {
   return {
     id: ID_VEICULO_SHIELD,
     empresa_id: IDS.empresaLa,
-    marca: 'Mercedes-Benz',
-    modelo: 'G-Class',
+    marca: 'Cadillac',
+    modelo: 'Escalade',
     ano: 2024,
     categoria_id: IDS.catShield,
     capacidade: 3,
@@ -171,20 +289,13 @@ export function completarCatalogo<
   },
 >(estado: T): T {
   const agora = agoraIso()
-  let categorias = estado.categorias
-  if (!categorias.some((c) => c.id === IDS.catShield || c.slug === SLUG_SHIELD)) {
-    categorias = [...categorias, criarCategoriaShield(agora)]
-  }
-  categorias = categorias.map((categoria) =>
-    categoria.id === IDS.catShield || categoria.slug === SLUG_SHIELD
-      ? { ...categoria, ordem: 0, ativo: true }
-      : categoria,
-  )
+  let categorias = sincronizarFrota(estado.categorias, agora)
 
   const empresas = estado.empresas.map((empresa) => {
-    const comShield = empresa.categorias_ids.includes(IDS.catShield)
-      ? empresa.categorias_ids
-      : [...empresa.categorias_ids, IDS.catShield]
+    let comShield = empresa.categorias_ids
+    for (const id of [IDS.catShield, IDS.catExpedition, IDS.catCharter]) {
+      if (!comShield.includes(id)) comShield = [...comShield, id]
+    }
     return {
       ...empresa,
       categorias_ids: comShield,
@@ -195,9 +306,14 @@ export function completarCatalogo<
     }
   })
 
-  const veiculos = estado.veiculos.some((v) => v.id === ID_VEICULO_SHIELD)
+  const veiculosBase = estado.veiculos.some((v) => v.id === ID_VEICULO_SHIELD)
     ? estado.veiculos
     : [...estado.veiculos, criarVeiculoShield(agora)]
+  const veiculos = veiculosBase.map((veiculo) =>
+    veiculo.id === ID_VEICULO_SHIELD
+      ? { ...veiculo, marca: 'Cadillac', modelo: 'Escalade' }
+      : veiculo,
+  )
 
   const listaMotoristas = estado.motoristas.some((m) => m.id === IDS.motorista11)
     ? estado.motoristas
@@ -252,88 +368,11 @@ export function criarDadosIniciais(): {
   avaliacoes: Avaliacao[]
   distribuicoes: HistoricoDistribuicao[]
   auditLogs: AuditLog[]
+  turnos: TurnoMotorista[]
+  mensagensEmpresa: MensagemEmpresa[]
+  agendamentosVeiculo: AgendamentoVeiculo[]
 } {
-  const categorias: CategoriaVeiculo[] = [
-    {
-      id: IDS.catExecutive,
-      nome: 'JEMANI EXECUTIVE',
-      slug: 'jemani-executive',
-      descricao: 'Sedans executivos para viagens corporativas e aeroporto.',
-      capacidade_min: 1,
-      capacidade_max: 3,
-      adicional_preco: 0,
-      ativo: true,
-      ordem: 1,
-      created_at: agora,
-      updated_at: agora,
-    },
-    {
-      id: IDS.catBlack,
-      nome: 'JEMANI BLACK',
-      slug: 'jemani-black',
-      descricao: 'Carro premium com motorista, experiência mais exclusiva.',
-      capacidade_min: 1,
-      capacidade_max: 3,
-      adicional_preco: 95,
-      ativo: true,
-      ordem: 2,
-      created_at: agora,
-      updated_at: agora,
-    },
-    {
-      id: IDS.catSuv,
-      nome: 'JEMANI SUV',
-      slug: 'jemani-suv',
-      descricao: 'SUVs de luxo para famílias, grupos e bagagem.',
-      capacidade_min: 1,
-      capacidade_max: 6,
-      adicional_preco: 55,
-      ativo: true,
-      ordem: 3,
-      created_at: agora,
-      updated_at: agora,
-    },
-    {
-      id: IDS.catLuxe,
-      nome: 'JEMANI LUXE',
-      slug: 'jemani-luxe',
-      descricao: 'Veículos de altíssimo padrão.',
-      capacidade_min: 1,
-      capacidade_max: 3,
-      adicional_preco: 140,
-      ativo: true,
-      ordem: 4,
-      created_at: agora,
-      updated_at: agora,
-    },
-    {
-      id: IDS.catLimo,
-      nome: 'JEMANI LIMO',
-      slug: 'jemani-limo',
-      descricao: 'Limousines tradicionais para eventos e ocasiões especiais.',
-      capacidade_min: 2,
-      capacidade_max: 10,
-      adicional_preco: 180,
-      ativo: true,
-      ordem: 5,
-      created_at: agora,
-      updated_at: agora,
-    },
-    {
-      id: IDS.catVan,
-      nome: 'JEMANI VAN',
-      slug: 'jemani-van',
-      descricao: 'Vans executivas para grupos.',
-      capacidade_min: 4,
-      capacidade_max: 14,
-      adicional_preco: 85,
-      ativo: true,
-      ordem: 6,
-      created_at: agora,
-      updated_at: agora,
-    },
-    criarCategoriaShield(agora),
-  ]
+  const categorias = sincronizarFrota([], agora)
 
   const perfis: Perfil[] = [
     {
@@ -1211,6 +1250,9 @@ export function criarDadosIniciais(): {
     avaliacoes: [],
     distribuicoes: [],
     auditLogs: [],
+    turnos: [],
+    mensagensEmpresa: [],
+    agendamentosVeiculo: [],
   }
 }
 

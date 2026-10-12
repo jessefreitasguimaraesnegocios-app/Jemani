@@ -12,6 +12,12 @@ import {
 } from '@/services/distribuicaoService'
 import { calcularDistanciaKm } from '@/services/mapasService'
 import { transferirParaEmpresa } from '@/lib/stripeApi'
+import { emitirAvisoSistema } from '@/utils/avisoSistema'
+import {
+  gravarOfertasNuvem,
+  gravarPosicaoNuvem,
+  gravarViagemNuvem,
+} from '@/services/nuvemCorrida'
 import {
   confirmarSessaoCheckoutStripe,
   criarIntencaoPagamento,
@@ -26,6 +32,7 @@ import {
 import type {
   Avaliacao,
   AtribuicaoViagem,
+  AgendamentoVeiculo,
   AuditLog,
   CategoriaVeiculo,
   Comissao,
@@ -34,13 +41,16 @@ import type {
   EnderecoLocal,
   HistoricoDistribuicao,
   HistoricoStatus,
+  MensagemEmpresa,
   Motorista,
   Notificacao,
   Pagamento,
   Perfil,
   RegraPreco,
   StatusViagem,
+  TipoServicoVeiculo,
   TipoUsuario,
+  TurnoMotorista,
   Veiculo,
   Viagem,
 } from '@/types'
@@ -82,6 +92,9 @@ interface EstadoDemo {
   avaliacoes: Avaliacao[]
   distribuicoes: HistoricoDistribuicao[]
   auditLogs: AuditLog[]
+  turnos: TurnoMotorista[]
+  mensagensEmpresa: MensagemEmpresa[]
+  agendamentosVeiculo: AgendamentoVeiculo[]
 
   resetarDemo: () => void
   obterUsuario: () => Perfil | null
@@ -117,6 +130,9 @@ interface EstadoDemo {
   recusarViagem: (viagemId: string, empresaId: string) => void
   atribuirEquipe: (viagemId: string, motoristaId: string, veiculoId: string) => Viagem
   atualizarStatus: (viagemId: string, status: StatusViagem, usuarioId?: string) => Viagem
+  atualizarPosicaoMotorista: (viagemId: string, latitude: number, longitude: number) => void
+  aplicarViagemNuvem: (viagem: Viagem, silencioso?: boolean) => void
+  aplicarOfertaNuvem: (oferta: AtribuicaoViagem, silencioso?: boolean) => void
   solicitarFinalizacao: (viagemId: string) => { ok: boolean; mensagem: string }
   confirmarFinalizacao: (viagemId: string, usuarioId: string, confirmado: boolean) => Viagem
   cancelarViagem: (viagemId: string, usuarioId: string, motivo: string) => Viagem
@@ -142,6 +158,25 @@ interface EstadoDemo {
   salvarVeiculo: (dados: Partial<Veiculo> & { empresa_id: string; marca: string; modelo: string; categoria_id: string }) => Veiculo
   obterEmpresaDoUsuario: (usuarioId: string) => Empresa | undefined
   obterMotoristaDoUsuario: (usuarioId: string) => Motorista | undefined
+  iniciarTurno: (motoristaId: string) => void
+  encerrarTurno: (motoristaId: string) => void
+  atualizarPosicaoTurno: (motoristaId: string, latitude: number, longitude: number) => void
+  enviarMensagemEmpresa: (dados: {
+    empresaId: string
+    motoristaId: string
+    autor: MensagemEmpresa['autor']
+    texto: string
+  }) => void
+  agendarServicoVeiculo: (dados: {
+    veiculoId: string
+    empresaId: string
+    tipo: TipoServicoVeiculo
+    data: string
+    horario: string
+    observacao?: string
+    motoristaId?: string
+  }) => void
+  removerAgendamentoVeiculo: (id: string) => void
 }
 
 function estadoInicial() {
@@ -173,6 +208,7 @@ function notificar(
   }
   set(() => ({ notificacoes: [n, ...get().notificacoes] }))
   dispararFeedbackAlerta(get().configuracoes)
+  emitirAvisoSistema(titulo, mensagem)
 }
 
 function registrarHistorico(
@@ -348,6 +384,7 @@ export const useDemoStore = create<EstadoDemo>()(
         })
 
         registrarHistorico(set, get, viagem.id, undefined, 'pending_payment', clienteId)
+        void gravarViagemNuvem(viagem)
 
         notificar(
           set,
@@ -530,6 +567,7 @@ export const useDemoStore = create<EstadoDemo>()(
             distribuicoes: [...hist, ...state.distribuicoes],
           })
           registrarHistorico(set, get, viagemId, viagem.status, 'aguardando_empresa')
+          void gravarViagemNuvem(atualizada)
           notificar(
             set,
             get,
@@ -576,6 +614,8 @@ export const useDemoStore = create<EstadoDemo>()(
         })
 
         registrarHistorico(set, get, viagemId, 'paid', 'aguardando_empresa')
+        void gravarViagemNuvem(atualizada)
+        void gravarOfertasNuvem(atribuicoes)
 
         for (const o of ordenadas) {
           notificar(
@@ -834,6 +874,10 @@ export const useDemoStore = create<EstadoDemo>()(
           'status',
           viagemId,
         )
+        void gravarViagemNuvem(atualizada)
+        void gravarOfertasNuvem(
+          get().atribuicoes.filter((a) => a.viagem_id === viagemId),
+        )
 
         if (empresa?.stripe_account_id && import.meta.env.VITE_STRIPE_ENABLED === 'true') {
           void transferirParaEmpresa({
@@ -957,6 +1001,7 @@ export const useDemoStore = create<EstadoDemo>()(
           )
         }
 
+        void gravarViagemNuvem(atualizada)
         return atualizada
       },
 
@@ -1001,7 +1046,29 @@ export const useDemoStore = create<EstadoDemo>()(
           )
         }
 
+        void gravarViagemNuvem(atualizada)
         return atualizada
+      },
+
+      atualizarPosicaoMotorista: (viagemId, latitude, longitude) => {
+        const viagem = get().viagens.find((v) => v.id === viagemId)
+        if (!viagem) return
+        if (
+          typeof viagem.motorista_lat === 'number' &&
+          typeof viagem.motorista_lng === 'number' &&
+          Math.abs(viagem.motorista_lat - latitude) < 0.00015 &&
+          Math.abs(viagem.motorista_lng - longitude) < 0.00015
+        ) {
+          return
+        }
+        set({
+          viagens: get().viagens.map((v) =>
+            v.id === viagemId
+              ? { ...v, motorista_lat: latitude, motorista_lng: longitude, updated_at: agoraIso() }
+              : v,
+          ),
+        })
+        void gravarPosicaoNuvem(viagemId, latitude, longitude)
       },
 
       solicitarFinalizacao: (viagemId) => {
@@ -1113,6 +1180,7 @@ export const useDemoStore = create<EstadoDemo>()(
           viagemId,
         )
 
+        void gravarViagemNuvem(atualizada)
         return atualizada
       },
 
@@ -1146,6 +1214,7 @@ export const useDemoStore = create<EstadoDemo>()(
         })
 
         registrarHistorico(set, get, viagemId, viagem.status, 'cancelada', usuarioId, motivo)
+        void gravarViagemNuvem(atualizada)
         return atualizada
       },
 
@@ -1389,21 +1458,245 @@ export const useDemoStore = create<EstadoDemo>()(
         return novo
       },
 
+      aplicarViagemNuvem: (viagem, silencioso = false) => {
+        const atual = get().viagens.find((v) => v.id === viagem.id)
+        const statusMudou = !atual || atual.status !== viagem.status
+        const fundida: Viagem = atual
+          ? {
+              ...atual,
+              status: viagem.status,
+              payment_status: viagem.payment_status,
+              empresa_id: viagem.empresa_id ?? atual.empresa_id,
+              motorista_id: viagem.motorista_id ?? atual.motorista_id,
+              veiculo_id: viagem.veiculo_id ?? atual.veiculo_id,
+              motorista_lat: viagem.motorista_lat ?? atual.motorista_lat,
+              motorista_lng: viagem.motorista_lng ?? atual.motorista_lng,
+              comissao_percentual: viagem.comissao_percentual,
+              valor_plataforma: viagem.valor_plataforma,
+              valor_empresa: viagem.valor_empresa,
+              version: viagem.version,
+              updated_at: viagem.updated_at,
+            }
+          : viagem
+
+        set({
+          viagens: atual
+            ? get().viagens.map((v) => (v.id === viagem.id ? fundida : v))
+            : [fundida, ...get().viagens],
+        })
+
+        if (silencioso || !statusMudou || !atual) return
+        const sessao = get().sessaoId
+        if (!sessao) return
+
+        const avisos: Partial<Record<StatusViagem, string>> = {
+          empresa_confirmada: 'Empresa confirmada',
+          motorista_atribuido: 'Motorista atribuído',
+          motorista_a_caminho: 'Motorista está a caminho',
+          motorista_chegou: 'Motorista chegou',
+          passageiro_embarcou: 'Passageiro embarcou',
+          viagem_em_andamento: 'Viagem iniciada',
+          viagem_finalizada: 'Viagem finalizada',
+          cancelada: 'Viagem cancelada',
+        }
+        const titulo = avisos[viagem.status]
+        if (titulo && sessao === viagem.cliente_id) {
+          notificar(set, get, sessao, titulo, `Atualização da viagem ${viagem.codigo}.`, 'status', viagem.id)
+        }
+
+        const motorista = get().motoristas.find((m) => m.id === viagem.motorista_id)
+        if (viagem.status === 'motorista_atribuido' && motorista?.usuario_id === sessao) {
+          notificar(
+            set,
+            get,
+            sessao,
+            'Nova viagem atribuída',
+            `${viagem.codigo}: ${viagem.origem} → ${viagem.destino}`,
+            'atribuicao',
+            viagem.id,
+          )
+        }
+      },
+
+      aplicarOfertaNuvem: (oferta, silencioso = false) => {
+        const lista = get().atribuicoes
+        const indice = lista.findIndex(
+          (a) => a.id === oferta.id || (a.viagem_id === oferta.viagem_id && a.empresa_id === oferta.empresa_id),
+        )
+        const nova = indice >= 0
+        set({
+          atribuicoes:
+            indice >= 0
+              ? lista.map((a, i) => (i === indice ? { ...a, ...oferta } : a))
+              : [oferta, ...lista],
+        })
+        if (silencioso || nova) return
+        const empresa = get().empresas.find((e) => e.id === oferta.empresa_id)
+        const sessao = get().sessaoId
+        if (!empresa || empresa.usuario_id !== sessao || oferta.status !== 'oferecida') return
+        const viagem = get().viagens.find((v) => v.id === oferta.viagem_id)
+        notificar(
+          set,
+          get,
+          sessao,
+          'Nova solicitação recebida',
+          viagem
+            ? `Corrida ${viagem.codigo}: ${viagem.origem} → ${viagem.destino}`
+            : 'Uma nova corrida foi oferecida à sua empresa.',
+          'nova_solicitacao',
+          oferta.viagem_id,
+        )
+      },
+
       obterEmpresaDoUsuario: (usuarioId) =>
         get().empresas.find((e) => e.usuario_id === usuarioId),
 
       obterMotoristaDoUsuario: (usuarioId) =>
         get().motoristas.find((m) => m.usuario_id === usuarioId),
+
+      iniciarTurno: (motoristaId) => {
+        const motorista = get().motoristas.find((m) => m.id === motoristaId)
+        if (!motorista) return
+        const aberto = get().turnos.find((t) => t.motorista_id === motoristaId && t.online)
+        if (aberto) return
+        const emServico = get().viagens.find(
+          (v) =>
+            v.motorista_id === motoristaId &&
+            [
+              'motorista_atribuido',
+              'motorista_a_caminho',
+              'motorista_chegou',
+              'passageiro_embarcou',
+              'viagem_em_andamento',
+            ].includes(v.status),
+        )
+        const emUso = new Set(
+          get()
+            .turnos.filter((turno) => turno.online && turno.veiculo_id)
+            .map((turno) => turno.veiculo_id),
+        )
+        const veiculo =
+          (emServico?.veiculo_id &&
+            get().veiculos.find((v) => v.id === emServico.veiculo_id)) ||
+          get().veiculos.find((v) => v.empresa_id === motorista.empresa_id && !emUso.has(v.id)) ||
+          get().veiculos.find((v) => v.empresa_id === motorista.empresa_id)
+        const ordem = get().turnos.length
+        set({
+          turnos: [
+            ...get().turnos,
+            {
+              motorista_id: motoristaId,
+              empresa_id: motorista.empresa_id,
+              veiculo_id: veiculo?.id,
+              inicio: agoraIso(),
+              online: true,
+              latitude: emServico?.motorista_lat ?? 34.05 + (ordem % 5) * 0.012,
+              longitude: emServico?.motorista_lng ?? -118.25 - (ordem % 4) * 0.015,
+            },
+          ],
+        })
+      },
+
+      encerrarTurno: (motoristaId) => {
+        const fim = agoraIso()
+        set({
+          turnos: get().turnos.map((t) =>
+            t.motorista_id === motoristaId && t.online ? { ...t, online: false, fim } : t,
+          ),
+        })
+      },
+
+      atualizarPosicaoTurno: (motoristaId, latitude, longitude) => {
+        const turno = get().turnos.find((t) => t.motorista_id === motoristaId && t.online)
+        if (!turno) return
+        if (
+          typeof turno.latitude === 'number' &&
+          Math.abs(turno.latitude - latitude) < 0.00015 &&
+          Math.abs((turno.longitude ?? 0) - longitude) < 0.00015
+        ) {
+          return
+        }
+        set({
+          turnos: get().turnos.map((t) =>
+            t.motorista_id === motoristaId && t.online ? { ...t, latitude, longitude } : t,
+          ),
+        })
+      },
+
+      enviarMensagemEmpresa: ({ empresaId, motoristaId, autor, texto }) => {
+        const limpo = texto.trim()
+        if (!limpo) return
+        const mensagem: MensagemEmpresa = {
+          id: gerarId(),
+          empresa_id: empresaId,
+          motorista_id: motoristaId,
+          autor,
+          texto: limpo,
+          created_at: agoraIso(),
+        }
+        set({ mensagensEmpresa: [...get().mensagensEmpresa, mensagem] })
+        const motorista = get().motoristas.find((m) => m.id === motoristaId)
+        const empresa = get().empresas.find((e) => e.id === empresaId)
+        const destino =
+          autor === 'motorista' ? empresa?.usuario_id : motorista?.usuario_id
+        if (!destino) return
+        notificar(
+          set,
+          get,
+          destino,
+          autor === 'motorista' ? motorista?.nome ?? 'Motorista' : empresa?.nome_comercial ?? 'Empresa',
+          limpo,
+          'mensagem',
+          motoristaId,
+        )
+      },
+
+      agendarServicoVeiculo: ({ veiculoId, empresaId, tipo, data, horario, observacao, motoristaId }) => {
+        const dia = data.trim()
+        const hora = horario.trim()
+        if (!dia || !hora) return
+        const nota = observacao?.trim()
+        const agendamento: AgendamentoVeiculo = {
+          id: gerarId(),
+          veiculo_id: veiculoId,
+          empresa_id: empresaId,
+          motorista_id: motoristaId,
+          tipo,
+          data: dia,
+          horario: hora,
+          observacao: nota || undefined,
+          created_at: agoraIso(),
+        }
+        set({ agendamentosVeiculo: [...(get().agendamentosVeiculo ?? []), agendamento] })
+      },
+
+      removerAgendamentoVeiculo: (id) => {
+        set({
+          agendamentosVeiculo: (get().agendamentosVeiculo ?? []).filter((item) => item.id !== id),
+        })
+      },
     }),
     {
       name: 'jemani-demo-v4',
       version: 10,
       migrate: (persistido) => completarCatalogo(persistido as ReturnType<typeof estadoInicial>),
-      merge: (persistido, atual) =>
-        completarCatalogo({
+      merge: (persistido, atual) => {
+        const base = completarCatalogo({
           ...atual,
           ...(persistido as object),
-        }),
+        })
+        const bruto = persistido as {
+          turnos?: TurnoMotorista[]
+          mensagensEmpresa?: MensagemEmpresa[]
+          agendamentosVeiculo?: AgendamentoVeiculo[]
+        }
+        return {
+          ...base,
+          turnos: Array.isArray(bruto?.turnos) ? bruto.turnos : [],
+          mensagensEmpresa: Array.isArray(bruto?.mensagensEmpresa) ? bruto.mensagensEmpresa : [],
+          agendamentosVeiculo: Array.isArray(bruto?.agendamentosVeiculo) ? bruto.agendamentosVeiculo : [],
+        }
+      },
     },
   ),
 )

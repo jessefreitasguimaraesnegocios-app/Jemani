@@ -1,6 +1,10 @@
 const apiLocal = () => {
-  const local = import.meta.env.VITE_STRIPE_API_URL as string | undefined
-  return local?.replace(/\/$/, '') || ''
+  const local = (import.meta.env.VITE_STRIPE_API_URL as string | undefined)?.trim()
+  if (local) return local.replace(/\/$/, '')
+  if (import.meta.env.DEV && import.meta.env.VITE_STRIPE_ENABLED === 'true') {
+    return 'http://127.0.0.1:8787'
+  }
+  return ''
 }
 
 const urlBaseSupabase = () => {
@@ -28,11 +32,20 @@ async function chamarFuncao<T>(nome: string, corpo: Record<string, unknown>): Pr
   const endpoint = local
     ? `${local}/${nome}`
     : `${urlBaseSupabase()}/functions/v1/${nome}`
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: cabecalhos(),
-    body: JSON.stringify(corpo),
-  })
+  let res: Response
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: cabecalhos(),
+      body: JSON.stringify(corpo),
+    })
+  } catch {
+    throw new Error(
+      local
+        ? 'Servidor Stripe de teste não está no ar. Rode npm run stripe:local e tente de novo.'
+        : 'Não foi possível falar com o Stripe.',
+    )
+  }
   const data = (await res.json()) as T & { erro?: string }
   if (!res.ok || data.erro) {
     throw new Error(data.erro ?? `Falha em ${nome}`)

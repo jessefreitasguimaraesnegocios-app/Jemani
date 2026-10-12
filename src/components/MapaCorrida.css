@@ -1,0 +1,25 @@
+.mapa-corrida {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: #111;
+}
+
+.mapa-corrida img {
+  display: block;
+  width: 100%;
+  height: min(42vh, 320px);
+  object-fit: cover;
+}
+
+.mapa-corrida-vazio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 1rem;
+  color: rgba(246, 241, 232, 0.7);
+  font-size: 0.85rem;
+  text-align: center;
+}

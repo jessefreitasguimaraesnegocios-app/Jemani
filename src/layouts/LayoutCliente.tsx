@@ -4,6 +4,7 @@ import { Bell, Car, Home, LogOut, User, CalendarPlus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { ChaveTraducao } from '@/i18n/mensagens'
+import { usarAvisoDoSistema } from '@/hooks/usarAvisoDoSistema'
 import { usarRolagemSuave } from '@/hooks/usarRolagemSuave'
 import { useDemoStore } from '@/store/demoStore'
 import { cn } from '@/utils/format'
@@ -19,6 +20,7 @@ const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Car; end?: b
 
 export function LayoutCliente() {
   const { usuario, sair } = useAuth()
+  usarAvisoDoSistema(usuario?.id)
   const navigate = useNavigate()
   const { t } = usarIdioma()
   const wrapperRef = useRef<HTMLDivElement>(null)

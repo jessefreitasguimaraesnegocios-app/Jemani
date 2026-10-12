@@ -1,0 +1,132 @@
+.veiculo-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.veiculo-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.veiculo-nome {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.veiculo-meta,
+.veiculo-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.veiculo-cadastro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.veiculo-form,
+.veiculo-servico {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.veiculo-grade {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.veiculo-form-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.veiculo-voltar {
+  margin-bottom: 0.85rem;
+}
+
+.veiculo-servicos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+}
+
+.veiculo-agendamento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-line);
+}
+
+.veiculo-agendamento p {
+  margin: 0;
+}
+
+.veiculo-agendamento-nota {
+  margin-top: 0.15rem;
+  font-size: 0.8rem;
+  color: var(--color-slate);
+}
+
+.veiculo-agendamento--passado {
+  opacity: 0.55;
+}
+
+.veiculo-vazio,
+.veiculo-ok {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.veiculo-vazio {
+  color: var(--color-slate);
+}
+
+.veiculo-ok {
+  color: var(--color-success);
+}
+
+.veiculo-campo-largo {
+  grid-column: 1 / -1;
+}
+
+.veiculo-grade > .btn-primario {
+  width: 100%;
+}
+
+@media (min-width: 720px) {
+  .veiculo-grade {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 860px) {
+  .veiculo-servicos {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+html[data-tema='escuro'] .veiculo-agendamento {
+  border-color: #2f2f2f;
+}
