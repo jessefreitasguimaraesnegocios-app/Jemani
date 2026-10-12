@@ -294,6 +294,9 @@ const pt = {
   'empresa.veiculos.remover': 'Remover',
   'empresa.veiculos.inativo': 'Inativo',
   'empresa.agenda.titulo': 'Agenda',
+  'empresa.agenda.vazio': 'Agenda livre.',
+  'empresa.agenda.servicos': 'Mecânica e lava-jato',
+  'empresa.agenda.vazioServico': 'Nenhum serviço marcado.',
   'empresa.financeiro.titulo': 'Financeiro',
   'empresa.perfil.titulo': 'Perfil',
 
@@ -619,6 +622,9 @@ const en: Record<ChaveTraducao, string> = {
   'empresa.veiculos.remover': 'Remove',
   'empresa.veiculos.inativo': 'Inactive',
   'empresa.agenda.titulo': 'Schedule',
+  'empresa.agenda.vazio': 'Nothing on the schedule.',
+  'empresa.agenda.servicos': 'Mechanic and car wash',
+  'empresa.agenda.vazioServico': 'No service scheduled.',
   'empresa.financeiro.titulo': 'Finance',
   'empresa.perfil.titulo': 'Profile',
 
@@ -943,6 +949,9 @@ const es: Record<ChaveTraducao, string> = {
   'empresa.veiculos.remover': 'Quitar',
   'empresa.veiculos.inativo': 'Inactivo',
   'empresa.agenda.titulo': 'Agenda',
+  'empresa.agenda.vazio': 'Agenda libre.',
+  'empresa.agenda.servicos': 'Mecánica y lavado',
+  'empresa.agenda.vazioServico': 'Ningún servicio marcado.',
   'empresa.financeiro.titulo': 'Finanzas',
   'empresa.perfil.titulo': 'Perfil',
 

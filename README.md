@@ -16,7 +16,19 @@ A plataforma capta clientes, distribui solicitações para empresas parceiras e 
 
 - Aba **Carro** para agendar mecânica e lava-jato. A empresa vê a quantidade no histórico do motorista.
 
+### Entre aparelhos
+
+- Chat, turno, GPS do motorista online e agendamentos de mecânica/lava-jato. A Agenda mostra esses serviços e a empresa é avisada quando o motorista agenda.
+
 Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
+
+### Próximos passos
+
+Ainda não feitos. A ordem está no [`CHANGELOG.md`](CHANGELOG.md) (12/10/2026):
+
+6. Stripe em produção só quando for pedido. Continua em teste.
+7. Políticas de acesso antes de ligar o RLS em `company_users` e `pickup_locations`.
+8. Conferir o deploy da Vercel depois desta etapa.
 
 ## Novidades — 01/10/2026
 

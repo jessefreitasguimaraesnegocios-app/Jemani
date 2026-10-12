@@ -19,6 +19,13 @@ import {
   gravarViagemNuvem,
 } from '@/services/nuvemCorrida'
 import {
+  apagarAgendamentoNuvem,
+  gravarAgendamentoNuvem,
+  gravarHistoricoNuvem,
+  gravarMensagemNuvem,
+  gravarTurnoNuvem,
+} from '@/services/nuvemOperacao'
+import {
   confirmarSessaoCheckoutStripe,
   criarIntencaoPagamento,
   permitirSimulacaoPagamentoDev,
@@ -133,6 +140,11 @@ interface EstadoDemo {
   atualizarPosicaoMotorista: (viagemId: string, latitude: number, longitude: number) => void
   aplicarViagemNuvem: (viagem: Viagem, silencioso?: boolean) => void
   aplicarOfertaNuvem: (oferta: AtribuicaoViagem, silencioso?: boolean) => void
+  aplicarMensagemNuvem: (mensagem: MensagemEmpresa) => void
+  aplicarTurnoNuvem: (turno: TurnoMotorista) => void
+  aplicarAgendamentoNuvem: (item: AgendamentoVeiculo, silencioso?: boolean) => void
+  removerAgendamentoNuvem: (id: string) => void
+  aplicarHistoricoNuvem: (item: HistoricoStatus) => void
   solicitarFinalizacao: (viagemId: string) => { ok: boolean; mensagem: string }
   confirmarFinalizacao: (viagemId: string, usuarioId: string, confirmado: boolean) => Viagem
   cancelarViagem: (viagemId: string, usuarioId: string, motivo: string) => Viagem
@@ -230,6 +242,7 @@ function registrarHistorico(
     created_at: agoraIso(),
   }
   set(() => ({ historicos: [h, ...get().historicos] }))
+  void gravarHistoricoNuvem(h)
 }
 
 export const useDemoStore = create<EstadoDemo>()(
@@ -1585,6 +1598,7 @@ export const useDemoStore = create<EstadoDemo>()(
           turnos: [
             ...get().turnos,
             {
+              id: gerarId(),
               motorista_id: motoristaId,
               empresa_id: motorista.empresa_id,
               veiculo_id: veiculo?.id,
@@ -1595,15 +1609,21 @@ export const useDemoStore = create<EstadoDemo>()(
             },
           ],
         })
+        const iniciado = get().turnos.find((t) => t.motorista_id === motoristaId && t.online)
+        if (iniciado) void gravarTurnoNuvem(iniciado)
       },
 
       encerrarTurno: (motoristaId) => {
         const fim = agoraIso()
-        set({
-          turnos: get().turnos.map((t) =>
-            t.motorista_id === motoristaId && t.online ? { ...t, online: false, fim } : t,
-          ),
-        })
+        const turnos = get().turnos.map((t) =>
+          t.motorista_id === motoristaId && t.online
+            ? { ...t, id: t.id || gerarId(), online: false, fim }
+            : t,
+        )
+        set({ turnos })
+        for (const turno of turnos) {
+          if (turno.motorista_id === motoristaId && turno.fim === fim) void gravarTurnoNuvem(turno)
+        }
       },
 
       atualizarPosicaoTurno: (motoristaId, latitude, longitude) => {
@@ -1616,11 +1636,13 @@ export const useDemoStore = create<EstadoDemo>()(
         ) {
           return
         }
+        const atualizado = { ...turno, id: turno.id || gerarId(), latitude, longitude }
         set({
           turnos: get().turnos.map((t) =>
-            t.motorista_id === motoristaId && t.online ? { ...t, latitude, longitude } : t,
+            t.motorista_id === motoristaId && t.online ? atualizado : t,
           ),
         })
+        void gravarTurnoNuvem(atualizado)
       },
 
       enviarMensagemEmpresa: ({ empresaId, motoristaId, autor, texto }) => {
@@ -1635,6 +1657,7 @@ export const useDemoStore = create<EstadoDemo>()(
           created_at: agoraIso(),
         }
         set({ mensagensEmpresa: [...get().mensagensEmpresa, mensagem] })
+        void gravarMensagemNuvem(mensagem)
         const motorista = get().motoristas.find((m) => m.id === motoristaId)
         const empresa = get().empresas.find((e) => e.id === empresaId)
         const destino =
@@ -1668,12 +1691,89 @@ export const useDemoStore = create<EstadoDemo>()(
           created_at: agoraIso(),
         }
         set({ agendamentosVeiculo: [...(get().agendamentosVeiculo ?? []), agendamento] })
+        void gravarAgendamentoNuvem(agendamento)
+        if (motoristaId) {
+          const motorista = get().motoristas.find((m) => m.id === motoristaId)
+          const empresa = get().empresas.find((e) => e.id === empresaId)
+          const veiculo = get().veiculos.find((v) => v.id === veiculoId)
+          if (empresa?.usuario_id) {
+            const servico = tipo === 'mecanica' ? 'mecânica' : 'lava-jato'
+            const carro = veiculo ? `${veiculo.marca} ${veiculo.modelo}` : 'veículo'
+            notificar(
+              set,
+              get,
+              empresa.usuario_id,
+              'Serviço agendado',
+              `${motorista?.nome ?? 'Motorista'} agendou ${servico} · ${carro} · ${dia} ${hora.slice(0, 5)}`,
+              'sistema',
+              agendamento.id,
+            )
+          }
+        }
       },
 
       removerAgendamentoVeiculo: (id) => {
         set({
           agendamentosVeiculo: (get().agendamentosVeiculo ?? []).filter((item) => item.id !== id),
         })
+        void apagarAgendamentoNuvem(id)
+      },
+
+      aplicarMensagemNuvem: (mensagem) => {
+        if (get().mensagensEmpresa.some((item) => item.id === mensagem.id)) return
+        set({ mensagensEmpresa: [...get().mensagensEmpresa, mensagem] })
+      },
+
+      aplicarTurnoNuvem: (turno) => {
+        const lista = get().turnos
+        const indice = lista.findIndex(
+          (item) => item.id === turno.id || (item.motorista_id === turno.motorista_id && item.inicio === turno.inicio),
+        )
+        if (indice < 0) {
+          set({ turnos: [...lista, turno] })
+          return
+        }
+        const copia = [...lista]
+        copia[indice] = { ...copia[indice], ...turno }
+        set({ turnos: copia })
+      },
+
+      aplicarAgendamentoNuvem: (item, silencioso = false) => {
+        const lista = get().agendamentosVeiculo ?? []
+        const existe = lista.some((atual) => atual.id === item.id)
+        set({
+          agendamentosVeiculo: existe
+            ? lista.map((atual) => (atual.id === item.id ? item : atual))
+            : [...lista, item],
+        })
+        if (silencioso || existe || !item.motorista_id) return
+        const empresa = get().empresas.find((e) => e.id === item.empresa_id)
+        const sessao = get().sessaoId
+        if (!empresa?.usuario_id || empresa.usuario_id !== sessao) return
+        const motorista = get().motoristas.find((m) => m.id === item.motorista_id)
+        const veiculo = get().veiculos.find((v) => v.id === item.veiculo_id)
+        const servico = item.tipo === 'mecanica' ? 'mecânica' : 'lava-jato'
+        const carro = veiculo ? `${veiculo.marca} ${veiculo.modelo}` : 'veículo'
+        notificar(
+          set,
+          get,
+          empresa.usuario_id,
+          'Serviço agendado',
+          `${motorista?.nome ?? 'Motorista'} agendou ${servico} · ${carro} · ${item.data} ${item.horario.slice(0, 5)}`,
+          'sistema',
+          item.id,
+        )
+      },
+
+      removerAgendamentoNuvem: (id) => {
+        set({
+          agendamentosVeiculo: (get().agendamentosVeiculo ?? []).filter((item) => item.id !== id),
+        })
+      },
+
+      aplicarHistoricoNuvem: (item) => {
+        if (get().historicos.some((atual) => atual.id === item.id)) return
+        set({ historicos: [item, ...get().historicos] })
       },
     }),
     {

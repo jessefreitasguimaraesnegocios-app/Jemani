@@ -149,6 +149,7 @@ export interface Motorista {
 }
 
 export interface TurnoMotorista {
+  id: string
   motorista_id: string
   empresa_id: string
   veiculo_id?: string

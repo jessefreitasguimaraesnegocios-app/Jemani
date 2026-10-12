@@ -10,6 +10,9 @@ export function EmpresaAgendaPage() {
   const { usuario } = useAuth()
   const empresa = useDemoStore((s) => s.obterEmpresaDoUsuario(usuario?.id ?? ''))
   const todasViagens = useDemoStore((s) => s.viagens)
+  const agendamentos = useDemoStore((s) => s.agendamentosVeiculo)
+  const veiculos = useDemoStore((s) => s.veiculos)
+  const motoristas = useDemoStore((s) => s.motoristas)
   const viagens = useMemo(
     () =>
       todasViagens
@@ -22,6 +25,13 @@ export function EmpresaAgendaPage() {
           `${a.data_viagem}${a.horario}`.localeCompare(`${b.data_viagem}${b.horario}`),
         ),
     [todasViagens, empresa?.id],
+  )
+  const servicos = useMemo(
+    () =>
+      (agendamentos ?? [])
+        .filter((item) => item.empresa_id === empresa?.id)
+        .sort((a, b) => `${a.data}${a.horario}`.localeCompare(`${b.data}${b.horario}`)),
+    [agendamentos, empresa?.id],
   )
 
   return (
@@ -40,7 +50,29 @@ export function EmpresaAgendaPage() {
           <BadgeStatus status={v.status} />
         </div>
       ))}
-      {viagens.length === 0 && <div className="cartao">Agenda livre.</div>}
+      {viagens.length === 0 && <div className="cartao">{t('empresa.agenda.vazio')}</div>}
+
+      <h2 className="fonte-display text-2xl">{t('empresa.agenda.servicos')}</h2>
+      {servicos.map((item) => {
+        const veiculo = veiculos.find((v) => v.id === item.veiculo_id)
+        const motorista = motoristas.find((m) => m.id === item.motorista_id)
+        const carro = veiculo ? `${veiculo.marca} ${veiculo.modelo}` : '—'
+        return (
+          <div key={item.id} className="cartao">
+            <p className="font-medium">
+              {item.tipo === 'mecanica' ? t('empresa.veiculos.mecanica') : t('empresa.veiculos.lavaJato')}
+              {' · '}
+              {formatarData(item.data, locale)} · {item.horario.slice(0, 5)}
+            </p>
+            <p className="text-sm text-[var(--color-slate)]">
+              {carro}
+              {motorista ? ` · ${motorista.nome}` : ''}
+              {item.observacao ? ` · ${item.observacao}` : ''}
+            </p>
+          </div>
+        )
+      })}
+      {servicos.length === 0 && <div className="cartao">{t('empresa.agenda.vazioServico')}</div>}
     </div>
   )
 }

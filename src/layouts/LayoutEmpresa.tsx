@@ -12,6 +12,7 @@ import {
   User,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { usarAvisoDoSistema } from '@/hooks/usarAvisoDoSistema'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import { useDemoStore } from '@/store/demoStore'
@@ -31,6 +32,7 @@ const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Car; end?: b
 
 export function LayoutEmpresa() {
   const { usuario, sair } = useAuth()
+  usarAvisoDoSistema(usuario?.id)
   const navigate = useNavigate()
   const caminho = useLocation()
   const { t } = usarIdioma()

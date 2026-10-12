@@ -11,15 +11,29 @@ Registro das mudanças do Jemani.
 - Empresa → Motoristas: clique no nome abre o **histórico** do motorista. Contagem de corridas em hoje, esta semana, este mês e tudo. Horas em corrida, quilômetros, horas inativas e horas no turno. Lista com código, rota, data, status, km, duração, valor, passageiros e veículo.
 - Empresa → Veículos: clique no veículo abre **Mecânica** e **Lava-jato**, com dia, horário e observação. A empresa vê quem agendou.
 - Área do motorista: aba **Carro** para escolher o veículo e agendar mecânica ou lava-jato. No histórico do motorista, a empresa vê a quantidade e a lista desses agendamentos no período.
+- Chat, turno (online, veículo, início e fim), GPS do motorista sem corrida e agendamentos de mecânica/lava-jato sincronizam pelo Supabase (`mensagens_empresa`, `turnos_motorista`, `agendamentos_veiculo`) e aparecem no outro aparelho.
+- A empresa recebe o aviso **Serviço agendado** quando o motorista marca mecânica ou lava-jato.
+- Empresa → Agenda lista mecânica e lava-jato junto com as corridas, com carro, motorista e observação.
+- A viagem grava `finalizado_em`. O histórico de status vai para `trip_status_history`.
 
 ### Alterado
 
 - Cadastro de motorista e cadastro de veículo ficam fechados. Só o botão aparece; o formulário abre ao clicar. **Cancelar** fecha sem salvar.
 - Turno do motorista guarda o fim ao encerrar, para calcular horas no turno e horas inativas. Turnos anteriores permanecem no histórico.
+- Mapa ao vivo usa o GPS do celular quando o motorista está online, com ou sem corrida. Sem GPS, o carro segue animado no trajeto.
+- Corrida finalizada sem saída e chegada, com distância entre 0,2 e 180 km, mostra duração estimada a 32 km/h. Trajeto fora dessa faixa continua com **—**. Horas inativas e horas no turno dependem de o motorista iniciar e encerrar o turno.
 
 ### Observação
 
-Chat, turno e agendamentos de mecânica/lava-jato ficam no navegador (estado DEMO). Corridas ao vivo entre aparelhos continuam no Supabase. Stripe segue em modo teste.
+Stripe segue em modo teste. `company_users` e `pickup_locations` continuam sem RLS; não ligar sem as políticas de acesso.
+
+### Próximos passos
+
+Ainda não feitos. Retomar nesta ordem:
+
+6. **Stripe em produção**, só quando for pedido: chaves live, conta Connect real e tirar o modo teste. Até lá permanece em teste.
+7. **Segurança do banco:** `company_users` e `pickup_locations` ainda estão sem RLS. Não ligar o RLS sem as políticas de acesso.
+8. **Deploy:** conferir se a Vercel publicou a `main` depois desta etapa.
 
 ## [2026-10-01]
 

@@ -314,7 +314,11 @@ export function montarHistoricoMotorista(entrada: {
         status: viagem.status,
         km,
         kmPercorrido: medida.percorreu ? km : null,
-        duracaoMs: medida.duracaoMs,
+        duracaoMs:
+          medida.duracaoMs ??
+          (viagem.status === 'viagem_finalizada' && km != null && km >= 0.2 && km <= 180
+            ? Math.round((km / 32) * 3_600_000)
+            : null),
         inicioMs: medida.inicioMs,
         fimMs: medida.fimMs,
         preco: viagem.preco_total,

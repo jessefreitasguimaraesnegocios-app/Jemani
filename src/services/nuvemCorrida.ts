@@ -35,6 +35,8 @@ type LinhaViagem = {
   payment_status: string
   motorista_lat: number | null
   motorista_lng: number | null
+  finalizado_em: string | null
+  finalizado_por: string | null
   version: number
   created_at: string
   updated_at: string
@@ -104,6 +106,8 @@ function paraLinha(viagem: Viagem): LinhaViagem {
     payment_status: viagem.payment_status,
     motorista_lat: viagem.motorista_lat ?? null,
     motorista_lng: viagem.motorista_lng ?? null,
+    finalizado_em: viagem.finalizado_em ?? null,
+    finalizado_por: viagem.finalizado_por ?? null,
     version: viagem.version,
     created_at: viagem.created_at,
     updated_at: viagem.updated_at,
@@ -144,6 +148,8 @@ export function viagemDaLinha(linha: LinhaViagem): Viagem {
     payment_status: linha.payment_status as Viagem['payment_status'],
     motorista_lat: linha.motorista_lat ?? undefined,
     motorista_lng: linha.motorista_lng ?? undefined,
+    finalizado_em: linha.finalizado_em ?? undefined,
+    finalizado_por: linha.finalizado_por ?? undefined,
     version: linha.version,
     created_at: linha.created_at,
     updated_at: linha.updated_at,
