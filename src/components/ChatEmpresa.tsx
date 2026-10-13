@@ -11,6 +11,7 @@ type Props = {
   motoristas?: Motorista[]
   aoTrocarMotorista?: (id: string) => void
   telaCheia?: boolean
+  titulo?: string
 }
 
 export function ChatEmpresa({
@@ -20,6 +21,7 @@ export function ChatEmpresa({
   motoristas,
   aoTrocarMotorista,
   telaCheia,
+  titulo,
 }: Props) {
   const { t, locale } = usarIdioma()
   const mensagens = useDemoStore((s) => s.mensagensEmpresa)
@@ -48,6 +50,7 @@ export function ChatEmpresa({
 
   return (
     <div className={`chat-empresa ${telaCheia ? 'chat-empresa--tela' : ''}`}>
+      {titulo && <p className="chat-empresa-titulo">{titulo}</p>}
       {motoristas && motoristas.length > 0 && (
         <div className="chat-empresa-pessoas">
           {motoristas.map((motorista) => (

@@ -1,4 +1,7 @@
 .layout-motorista {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
   min-height: 100dvh;
   background: #070707;
   color: #f6f1e8;
@@ -25,5 +28,9 @@
 }
 
 .layout-motorista main {
-  padding: 0 0 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
 }

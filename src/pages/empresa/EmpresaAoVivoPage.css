@@ -113,8 +113,80 @@
   font-size: 0.75rem;
 }
 
-.ao-vivo-painel .chat-empresa {
-  min-height: 16rem;
+.ao-vivo-chat {
+  display: flex;
+  min-width: 0;
+  min-height: 50dvh;
+  padding: 0.85rem 0.9rem 0.75rem;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: #101010;
+  color: #f6f1e8;
+}
+
+.ao-vivo-chat .chat-empresa {
+  flex: 1;
+  min-height: 0;
+}
+
+@media (min-width: 760px) {
+  .ao-vivo--chat {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(50%, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+    height: calc(100dvh - 11.5rem);
+    max-height: calc(100dvh - 11.5rem);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ao-vivo--chat .ao-vivo-cabeca {
+    grid-column: 1 / -1;
+  }
+
+  .ao-vivo--chat .ao-vivo-mapa {
+    grid-column: 1;
+    grid-row: 2;
+    height: auto;
+    min-height: 0;
+  }
+
+  .ao-vivo--chat .ao-vivo-quadro {
+    grid-column: 1;
+    grid-row: 3;
+    min-height: 0;
+  }
+
+  .ao-vivo--chat .ao-vivo-chat {
+    grid-column: 2;
+    grid-row: 2 / 4;
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ao-vivo--chat {
+    height: 100%;
+    max-height: none;
+  }
+}
+
+@media (max-width: 759px) {
+  .ao-vivo--chat .ao-vivo-mapa {
+    flex: 0 0 auto;
+    height: 28dvh;
+    min-height: 9rem;
+  }
+
+  .ao-vivo--chat .ao-vivo-quadro {
+    display: none;
+  }
+
+  .ao-vivo--chat .ao-vivo-chat {
+    flex: 1 1 auto;
+    min-height: 50dvh;
+  }
 }
 
 .ao-vivo-sub {

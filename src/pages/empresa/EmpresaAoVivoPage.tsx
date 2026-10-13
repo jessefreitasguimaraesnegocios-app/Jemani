@@ -95,7 +95,7 @@ export function EmpresaAoVivoPage() {
   }
 
   return (
-    <section className="ao-vivo">
+    <section className={`ao-vivo ${aba === 'chat' ? 'ao-vivo--chat' : ''}`}>
       <header className="ao-vivo-cabeca">
         <div>
           <div className="ao-vivo-titulo-linha">
@@ -164,17 +164,6 @@ export function EmpresaAoVivoPage() {
             </div>
           </aside>
         )}
-        {aba === 'chat' && empresa && (
-          <aside className="ao-vivo-painel">
-            <ChatEmpresa
-              empresaId={empresa.id}
-              autor="empresa"
-              motoristaId={motoristaId ?? daEmpresa[0]?.id ?? ''}
-              motoristas={daEmpresa}
-              aoTrocarMotorista={setMotoristaId}
-            />
-          </aside>
-        )}
         {selecionada && (
           <aside className="ao-vivo-ficha">
             <p className="ao-vivo-ficha-codigo">{selecionada.codigo}</p>
@@ -191,6 +180,20 @@ export function EmpresaAoVivoPage() {
           </aside>
         )}
       </div>
+
+      {aba === 'chat' && empresa && (
+        <aside className="ao-vivo-chat">
+          <ChatEmpresa
+            empresaId={empresa.id}
+            autor="empresa"
+            motoristaId={motoristaId ?? daEmpresa[0]?.id ?? ''}
+            motoristas={daEmpresa}
+            aoTrocarMotorista={setMotoristaId}
+            telaCheia
+            titulo={t('empresa.aoVivo.chat')}
+          />
+        </aside>
+      )}
 
       <div className="ao-vivo-quadro">
         <div className="quadro-colunas">

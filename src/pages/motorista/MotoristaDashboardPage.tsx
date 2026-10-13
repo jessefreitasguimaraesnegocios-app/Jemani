@@ -56,6 +56,7 @@ export function MotoristaDashboardPage() {
     [todasViagens, motorista?.id],
   )
   const perfis = useDemoStore((s) => s.perfis)
+  const empresas = useDemoStore((s) => s.empresas)
   const atualizarStatus = useDemoStore((s) => s.atualizarStatus)
   const atualizarPosicaoMotorista = useDemoStore((s) => s.atualizarPosicaoMotorista)
   const solicitarFinalizacao = useDemoStore((s) => s.solicitarFinalizacao)
@@ -105,7 +106,7 @@ export function MotoristaDashboardPage() {
   const acao = ACOES.find((a) => a.statusAtual === proxima?.status)
 
   return (
-    <section className="corrida-tela">
+    <section className={`corrida-tela ${aba === 'chat' ? 'corrida-tela--chat' : ''}`}>
       <div className="corrida-abas">
         <button
           type="button"
@@ -144,6 +145,7 @@ export function MotoristaDashboardPage() {
             autor="motorista"
             motoristaId={motorista.id}
             telaCheia
+            titulo={empresas.find((empresa) => empresa.id === motorista.empresa_id)?.nome_comercial}
           />
         </div>
       ) : aba === 'carro' ? (
