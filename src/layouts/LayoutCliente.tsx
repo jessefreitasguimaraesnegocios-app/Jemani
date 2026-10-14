@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Bell, Car, Home, LogOut, User, CalendarPlus } from 'lucide-react'
+import { Bell, CalendarCheck, Home, LogOut, User, CalendarPlus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { ChaveTraducao } from '@/i18n/mensagens'
@@ -10,9 +10,9 @@ import { useDemoStore } from '@/store/demoStore'
 import { cn } from '@/utils/format'
 import './LayoutCliente.css'
 
-const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Car; end?: boolean }> = [
+const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Home; end?: boolean }> = [
   { to: '/app', chave: 'nav.cliente.inicio', icon: Home, end: true },
-  { to: '/app/viagens', chave: 'nav.cliente.viagens', icon: Car },
+  { to: '/app/viagens', chave: 'nav.cliente.viagens', icon: CalendarCheck },
   { to: '/app/reservar', chave: 'nav.cliente.reservar', icon: CalendarPlus },
   { to: '/app/notificacoes', chave: 'nav.cliente.alertas', icon: Bell },
   { to: '/app/perfil', chave: 'nav.cliente.perfil', icon: User },

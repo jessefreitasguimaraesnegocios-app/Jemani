@@ -67,7 +67,7 @@ export function ClienteViagemDetalhePage() {
   if (!viagem || viagem.cliente_id !== usuario?.id) {
     return (
       <div className="cartao">
-        Viagem não encontrada. <Link to="/app/viagens">Voltar</Link>
+        Viagem não encontrada. <Link to="/app/viagens">Voltar ao agendamento</Link>
       </div>
     )
   }
@@ -134,7 +134,7 @@ export function ClienteViagemDetalhePage() {
   return (
     <div className="animar-entrada space-y-4">
       <Link to="/app/viagens" className="text-sm text-[var(--color-gold-deep)]">
-        ← Minhas viagens
+        ← Voltar ao agendamento
       </Link>
 
       <div className="cartao">

@@ -13,6 +13,7 @@ import { CadastrarPage } from '@/pages/CadastrarPage'
 import { ClienteInicioPage } from '@/pages/cliente/ClienteInicioPage'
 import { ReservarPage } from '@/pages/cliente/ReservarPage'
 import { ClienteViagensPage } from '@/pages/cliente/ClienteViagensPage'
+import { ClienteHistoricoViagensPage } from '@/pages/cliente/ClienteHistoricoViagensPage'
 import { ClienteViagemDetalhePage } from '@/pages/cliente/ClienteViagemDetalhePage'
 import { ClienteNotificacoesPage } from '@/pages/cliente/ClienteNotificacoesPage'
 import { ClientePerfilPage } from '@/pages/cliente/ClientePerfilPage'
@@ -56,6 +57,7 @@ export default function App() {
               <Route index element={<ClienteInicioPage />} />
               <Route path="reservar" element={<ReservarPage />} />
               <Route path="viagens" element={<ClienteViagensPage />} />
+              <Route path="viagens/historico" element={<ClienteHistoricoViagensPage />} />
               <Route path="viagens/:id" element={<ClienteViagemDetalhePage />} />
               <Route path="notificacoes" element={<ClienteNotificacoesPage />} />
               <Route path="perfil" element={<ClientePerfilPage />} />

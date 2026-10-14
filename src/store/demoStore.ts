@@ -807,7 +807,7 @@ export const useDemoStore = create<EstadoDemo>()(
         if (!['aguardando_empresa', 'oferta_enviada'].includes(viagem.status)) {
           throw new Error('Esta solicitação não está mais disponível')
         }
-        if (viagem.empresa_id) {
+        if (viagem.empresa_id && viagem.empresa_id !== empresaId) {
           throw new Error('Outra empresa já aceitou esta corrida')
         }
 
@@ -1480,7 +1480,7 @@ export const useDemoStore = create<EstadoDemo>()(
               status: viagem.status,
               payment_status: viagem.payment_status,
               empresa_id: viagem.empresa_id ?? atual.empresa_id,
-              motorista_id: viagem.motorista_id ?? atual.motorista_id,
+              motorista_id: viagem.motorista_id,
               veiculo_id: viagem.veiculo_id ?? atual.veiculo_id,
               motorista_lat: viagem.motorista_lat ?? atual.motorista_lat,
               motorista_lng: viagem.motorista_lng ?? atual.motorista_lng,
@@ -1593,7 +1593,10 @@ export const useDemoStore = create<EstadoDemo>()(
             get().veiculos.find((v) => v.id === emServico.veiculo_id)) ||
           get().veiculos.find((v) => v.empresa_id === motorista.empresa_id && !emUso.has(v.id)) ||
           get().veiculos.find((v) => v.empresa_id === motorista.empresa_id)
-        const ordem = get().turnos.length
+        const latitude =
+          typeof emServico?.motorista_lat === 'number' ? emServico.motorista_lat : undefined
+        const longitude =
+          typeof emServico?.motorista_lng === 'number' ? emServico.motorista_lng : undefined
         set({
           turnos: [
             ...get().turnos,
@@ -1604,8 +1607,8 @@ export const useDemoStore = create<EstadoDemo>()(
               veiculo_id: veiculo?.id,
               inicio: agoraIso(),
               online: true,
-              latitude: emServico?.motorista_lat ?? 34.05 + (ordem % 5) * 0.012,
-              longitude: emServico?.motorista_lng ?? -118.25 - (ordem % 4) * 0.015,
+              latitude,
+              longitude,
             },
           ],
         })

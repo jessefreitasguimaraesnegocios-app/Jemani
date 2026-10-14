@@ -111,7 +111,7 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder }: Props) {
     setErro('')
     setCarregando(true)
     try {
-      const base = await resolverPlaceId(placeId)
+      const base = await resolverPlaceId(placeId, description)
       const numeroDetectado =
         base.numero?.trim() ||
         extrairNumeroDoTexto(base.formatted) ||

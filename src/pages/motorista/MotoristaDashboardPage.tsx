@@ -7,7 +7,9 @@ import { ModalFinalizarViagem } from '@/components/ModalFinalizarViagem'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarAvisoDoSistema } from '@/hooks/usarAvisoDoSistema'
 import { usarIdioma } from '@/i18n/usarIdioma'
+import { usarAbaMotorista } from '@/layouts/LayoutMotorista'
 import { turnoAberto } from '@/services/turnoEmpresa'
+import { MotoristaMenuPainel } from '@/pages/motorista/MotoristaMenuPainel'
 import { useDemoStore } from '@/store/demoStore'
 import type { StatusViagem } from '@/types'
 import './MotoristaDashboardPage.css'
@@ -17,6 +19,14 @@ const ACOES: Array<{ statusAtual: StatusViagem; proximo: StatusViagem; label: st
   { statusAtual: 'motorista_a_caminho', proximo: 'motorista_chegou', label: 'Cheguei no embarque' },
   { statusAtual: 'motorista_chegou', proximo: 'passageiro_embarcou', label: 'Passageiro embarcou' },
   { statusAtual: 'passageiro_embarcou', proximo: 'viagem_em_andamento', label: 'Iniciar viagem' },
+]
+
+const NA_TELA_DO_MOTORISTA: StatusViagem[] = [
+  'motorista_atribuido',
+  'motorista_a_caminho',
+  'motorista_chegou',
+  'passageiro_embarcou',
+  'viagem_em_andamento',
 ]
 
 const COM_GPS: StatusViagem[] = [
@@ -33,14 +43,11 @@ function telefoneDiscavel(telefone?: string) {
 }
 
 export function MotoristaDashboardPage() {
-  const { t } = usarIdioma()
   const { usuario } = useAuth()
   usarAvisoDoSistema(usuario?.id)
   const motorista = useDemoStore((s) => s.obterMotoristaDoUsuario(usuario?.id ?? ''))
   const todasViagens = useDemoStore((s) => s.viagens)
   const turnos = useDemoStore((s) => s.turnos)
-  const iniciarTurno = useDemoStore((s) => s.iniciarTurno)
-  const encerrarTurno = useDemoStore((s) => s.encerrarTurno)
   const atualizarPosicaoTurno = useDemoStore((s) => s.atualizarPosicaoTurno)
   const viagens = useMemo(
     () =>
@@ -48,7 +55,7 @@ export function MotoristaDashboardPage() {
         .filter(
           (v) =>
             v.motorista_id === motorista?.id &&
-            !['cancelada', 'viagem_finalizada', 'expired'].includes(v.status),
+            NA_TELA_DO_MOTORISTA.includes(v.status),
         )
         .sort((a, b) =>
           `${a.data_viagem}${a.horario}`.localeCompare(`${b.data_viagem}${b.horario}`),
@@ -63,7 +70,9 @@ export function MotoristaDashboardPage() {
   const confirmarFinalizacao = useDemoStore((s) => s.confirmarFinalizacao)
   const [mostrarFinalizar, setMostrarFinalizar] = useState(false)
   const [erro, setErro] = useState('')
-  const [aba, setAba] = useState<'corrida' | 'chat' | 'carro'>('corrida')
+  const [avisoGps, setAvisoGps] = useState('')
+  const { aba } = usarAbaMotorista()
+  const { t } = usarIdioma()
 
   const proxima = viagens[0]
   const cliente = perfis.find((p) => p.id === proxima?.cliente_id)
@@ -76,9 +85,17 @@ export function MotoristaDashboardPage() {
     const seguirCorrida = Boolean(proxima && COM_GPS.includes(proxima.status))
     const viagemId = proxima?.id
     const motoristaId = motorista?.id
-    if ((!seguirCorrida && !online) || !navigator.geolocation) return
+    if (!seguirCorrida && !online) {
+      setAvisoGps('')
+      return
+    }
+    if (!navigator.geolocation) {
+      setAvisoGps(t('motorista.gps.indisponivel'))
+      return
+    }
     const id = navigator.geolocation.watchPosition(
       (pos) => {
+        setAvisoGps('')
         if (seguirCorrida && viagemId) {
           atualizarPosicaoMotorista(viagemId, pos.coords.latitude, pos.coords.longitude)
         }
@@ -86,7 +103,9 @@ export function MotoristaDashboardPage() {
           atualizarPosicaoTurno(motoristaId, pos.coords.latitude, pos.coords.longitude)
         }
       },
-      () => undefined,
+      (falha) => {
+        setAvisoGps(falha.code === 1 ? t('motorista.gps.negado') : t('motorista.gps.falha'))
+      },
       { enableHighAccuracy: true, maximumAge: 8000 },
     )
     return () => navigator.geolocation.clearWatch(id)
@@ -97,6 +116,7 @@ export function MotoristaDashboardPage() {
     motorista?.id,
     atualizarPosicaoMotorista,
     atualizarPosicaoTurno,
+    t,
   ])
 
   if (!motorista) {
@@ -107,38 +127,10 @@ export function MotoristaDashboardPage() {
 
   return (
     <section className={`corrida-tela ${aba === 'chat' ? 'corrida-tela--chat' : ''}`}>
-      <div className="corrida-abas">
-        <button
-          type="button"
-          className={`corrida-aba ${aba === 'corrida' ? 'corrida-aba--ativa' : ''}`}
-          onClick={() => setAba('corrida')}
-        >
-          {t('motorista.corrida')}
-        </button>
-        <button
-          type="button"
-          className={`corrida-aba ${aba === 'chat' ? 'corrida-aba--ativa' : ''}`}
-          onClick={() => setAba('chat')}
-        >
-          {t('motorista.chat')}
-        </button>
-        <button
-          type="button"
-          className={`corrida-aba ${aba === 'carro' ? 'corrida-aba--ativa' : ''}`}
-          onClick={() => setAba('carro')}
-        >
-          {t('motorista.carro')}
-        </button>
-        <button
-          type="button"
-          className={`corrida-online ${online ? 'corrida-online--ativo' : ''}`}
-          onClick={() => (online ? encerrarTurno(motorista.id) : iniciarTurno(motorista.id))}
-        >
-          {online ? t('motorista.encerrarTurno') : t('motorista.ficarOnline')}
-        </button>
-      </div>
-
-      {aba === 'chat' ? (
+      {aba === 'corrida' && avisoGps && <p className="corrida-gps">{avisoGps}</p>}
+      {aba === 'perfil' || aba === 'historico' || aba === 'configuracao' ? (
+        <MotoristaMenuPainel aba={aba} motorista={motorista} />
+      ) : aba === 'chat' ? (
         <div className="corrida-chat">
           <ChatEmpresa
             empresaId={motorista.empresa_id}

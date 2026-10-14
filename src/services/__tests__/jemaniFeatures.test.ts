@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcularDistanciaKm } from '@/services/mapasService'
+import { calcularDistanciaKm, interpretarFeatureMapbox } from '@/services/mapasService'
 import {
   empresaElegivel,
   ordenarEmpresasPorProximidade,
@@ -187,6 +187,31 @@ describe('haversine', () => {
     const km = calcularDistanciaKm(33.9416, -118.4085, 34.0407, -118.2468)
     expect(km).toBeGreaterThan(10)
     expect(km).toBeLessThan(40)
+  })
+})
+
+describe('endereço Mapbox', () => {
+  it('preserva o número de 8423 Wilshire Blvd', () => {
+    const endereco = interpretarFeatureMapbox({
+      id: 'address.wilshire',
+      place_name: '8423 Wilshire Boulevard, Beverly Hills, California 90211, United States',
+      text: 'Wilshire Boulevard',
+      address: '8423',
+      center: [-118.373, 34.065],
+      context: [
+        { id: 'postcode.90211', text: '90211' },
+        { id: 'place.beverly', text: 'Beverly Hills' },
+        { id: 'region.ca', text: 'California', short_code: 'US-CA' },
+      ],
+    })
+    expect(endereco?.numero).toBe('8423')
+    expect(endereco?.rua).toBe('Wilshire Boulevard')
+    expect(endereco?.cidade).toBe('Beverly Hills')
+    expect(endereco?.estado).toBe('CA')
+    expect(endereco?.cep).toBe('90211')
+    expect(endereco?.formatted).toContain('8423')
+    expect(endereco?.latitude).toBe(34.065)
+    expect(endereco?.longitude).toBe(-118.373)
   })
 })
 

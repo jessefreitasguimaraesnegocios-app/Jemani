@@ -38,6 +38,10 @@ export const COLUNAS_QUADRO: ColunaQuadro[] = [
   { id: 'encerradas', chaveTitulo: 'admin.viagens.col.encerradas', status: ['cancelada', 'expired'] },
 ]
 
+export const COLUNAS_EMPRESA = COLUNAS_QUADRO.filter(
+  (coluna) => coluna.id !== 'pagamento' && coluna.id !== 'fila',
+)
+
 const ORDEM_STATUS: StatusViagem[] = COLUNAS_QUADRO.flatMap((coluna) => coluna.status)
 
 export function acharColunaDoStatus(status: StatusViagem): ColunaQuadro | undefined {

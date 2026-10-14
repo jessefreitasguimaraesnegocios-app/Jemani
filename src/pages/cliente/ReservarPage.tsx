@@ -5,7 +5,7 @@ import { SeletorCategoria3D } from '@/components/cliente/SeletorCategoria3D'
 import { useAuth } from '@/contexts/AuthContext'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import { usarIdioma } from '@/i18n/usarIdioma'
-import { calcularDistanciaKm } from '@/services/mapasService'
+import { obterRotaRua, type RotaRua } from '@/services/mapasService'
 import {
   listarHorariosDisponiveis,
   primeiraDataDisponivel,
@@ -110,15 +110,29 @@ export function ReservarPage() {
     }
   }, [dataViagem, dataMinima, horariosDisponiveis, horario, agora])
 
-  const distanciaKm = useMemo(() => {
-    if (!origemEndereco || !destinoEndereco) return undefined
-    return calcularDistanciaKm(
-      origemEndereco.latitude,
-      origemEndereco.longitude,
-      destinoEndereco.latitude,
-      destinoEndereco.longitude,
-    )
-  }, [origemEndereco, destinoEndereco])
+  const [rota, setRota] = useState<RotaRua | null>(null)
+
+  useEffect(() => {
+    if (!origemEndereco || !destinoEndereco) {
+      setRota(null)
+      return
+    }
+    let ativo = true
+    setRota(null)
+    void obterRotaRua(origemEndereco, destinoEndereco).then((resultado) => {
+      if (ativo) setRota(resultado)
+    })
+    return () => {
+      ativo = false
+    }
+  }, [
+    origemEndereco?.latitude,
+    origemEndereco?.longitude,
+    destinoEndereco?.latitude,
+    destinoEndereco?.longitude,
+  ])
+
+  const aguardandoRota = Boolean(origemEndereco && destinoEndereco && !rota)
 
   const validacaoHorario = useMemo(
     () => validarAntecedenciaMinima(dataViagem, horario, agora),
@@ -129,12 +143,13 @@ export function ReservarPage() {
 
   const preco = useMemo(() => {
     if (!categoriaId || !horario) return null
+    if (origemEndereco && destinoEndereco && !rota) return null
     try {
-      return calcularPreco(categoriaId, horario, distanciaKm)
+      return calcularPreco(categoriaId, horario, rota?.distanciaKm)
     } catch {
       return null
     }
-  }, [calcularPreco, categoriaId, horario, distanciaKm])
+  }, [calcularPreco, categoriaId, horario, origemEndereco, destinoEndereco, rota])
 
   function montarObservacoes(): string | undefined {
     const partes: string[] = []
@@ -232,7 +247,7 @@ export function ReservarPage() {
 
   function confirmar(e: FormEvent) {
     e.preventDefault()
-    if (!usuario || !preco || !origemEndereco || !destinoEndereco) return
+    if (!usuario || !preco || !origemEndereco || !destinoEndereco || !rota) return
     const check = validarAntecedenciaMinima(dataViagem, horario)
     if (!check.valido || !listarHorariosDisponiveis(dataViagem).includes(horario)) {
       setErro(check.mensagem ?? 'Horário inválido — mínimo de 4 horas de antecedência.')
@@ -256,7 +271,7 @@ export function ReservarPage() {
         numero_voo: embarqueAeroporto && numeroVoo.trim() ? numeroVoo.trim().toUpperCase() : undefined,
         nome_passageiro: nomePassageiro.trim(),
         observacoes: montarObservacoes(),
-        distancia_km: distanciaKm,
+        distancia_km: rota.distanciaKm,
       })
       navigate(`/app/viagens/${viagem.id}`)
     } catch (err) {
@@ -311,9 +326,17 @@ export function ReservarPage() {
                 Destino em aeroporto: chegue com folga para check-in e segurança.
               </p>
             )}
-            {distanciaKm != null && (
+            {aguardandoRota && (
+              <p className="text-sm text-[var(--color-slate)]">Calculando a rota pelas ruas...</p>
+            )}
+            {rota?.provedor === 'mapbox' && (
               <p className="text-sm text-[var(--color-slate)]">
-                Distância estimada: {distanciaKm} km
+                Distância pela rota: {rota.distanciaKm} km · cerca de {rota.tempoMinutos} min
+              </p>
+            )}
+            {rota?.provedor === 'haversine' && (
+              <p className="text-sm text-[var(--color-slate)]">
+                Rota pelas ruas indisponível. Distância estimada em linha reta: {rota.distanciaKm} km
               </p>
             )}
           </>
@@ -534,7 +557,14 @@ export function ReservarPage() {
               <Linha label="Terminal" valor={terminal.trim()} />
             )}
             <Linha label="Categoria" valor={categoria?.nome ?? '—'} />
-            <Linha label="Distância" valor={`${preco.distancia_km} km`} />
+            <Linha
+              label="Distância"
+              valor={
+                rota?.provedor === 'mapbox'
+                  ? `${preco.distancia_km} km · ${rota.tempoMinutos} min`
+                  : `${preco.distancia_km} km`
+              }
+            />
             <hr className="border-[var(--color-line)]" />
             <Linha label="Total" valor={formatarMoeda(preco.total, locale)} destaque />
             <p className="text-xs text-[var(--color-slate)]">

@@ -4,6 +4,7 @@ import { ArrowRight, MapPin } from 'lucide-react'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
+import { separarAgendamentos } from '@/services/agendamentoCliente'
 import { useDemoStore } from '@/store/demoStore'
 import { formatarData, formatarMoeda } from '@/utils/format'
 import './ClienteInicioPage.css'
@@ -12,14 +13,10 @@ export function ClienteInicioPage() {
   const { usuario } = useAuth()
   const { t, locale } = usarIdioma()
   const todasViagens = useDemoStore((s) => s.viagens)
-  const viagens = useMemo(
-    () =>
-      todasViagens
-        .filter((v) => v.cliente_id === usuario?.id)
-        .sort((a, b) => b.created_at.localeCompare(a.created_at))
-        .slice(0, 3),
-    [todasViagens, usuario?.id],
-  )
+  const proxima = useMemo(() => {
+    const doCliente = todasViagens.filter((v) => v.cliente_id === usuario?.id)
+    return separarAgendamentos(doCliente).proxima
+  }, [todasViagens, usuario?.id])
 
   return (
     <div className="cliente-inicio animar-entrada">
@@ -39,30 +36,28 @@ export function ClienteInicioPage() {
             {t('cliente.inicio.verTodas')}
           </Link>
         </div>
-        {viagens.length === 0 ? (
+        {!proxima ? (
           <div className="cliente-inicio-vazio">{t('cliente.inicio.vazio')}</div>
         ) : (
           <div className="cliente-inicio-lista">
-            {viagens.map((v) => (
-              <Link key={v.id} to={`/app/viagens/${v.id}`} className="cliente-inicio-cartao">
-                <div className="cliente-inicio-cartao-linha">
-                  <div>
-                    <p className="cliente-inicio-cartao-codigo">{v.codigo}</p>
-                    <p className="cliente-inicio-cartao-rota">
-                      <MapPin size={14} className="mt-0.5 shrink-0" />
-                      <span>
-                        {v.origem} → {v.destino}
-                      </span>
-                    </p>
-                    <p className="cliente-inicio-cartao-meta">
-                      {formatarData(v.data_viagem, locale)} · {v.horario} ·{' '}
-                      {formatarMoeda(v.preco_total, locale)}
-                    </p>
-                  </div>
-                  <BadgeStatus status={v.status} />
+            <Link to={`/app/viagens/${proxima.id}`} className="cliente-inicio-cartao">
+              <div className="cliente-inicio-cartao-linha">
+                <div>
+                  <p className="cliente-inicio-cartao-codigo">{proxima.codigo}</p>
+                  <p className="cliente-inicio-cartao-rota">
+                    <MapPin size={14} className="mt-0.5 shrink-0" />
+                    <span>
+                      {proxima.origem} → {proxima.destino}
+                    </span>
+                  </p>
+                  <p className="cliente-inicio-cartao-meta">
+                    {formatarData(proxima.data_viagem, locale)} · {proxima.horario} ·{' '}
+                    {formatarMoeda(proxima.preco_total, locale)}
+                  </p>
                 </div>
-              </Link>
-            ))}
+                <BadgeStatus status={proxima.status} />
+              </div>
+            </Link>
           </div>
         )}
       </section>

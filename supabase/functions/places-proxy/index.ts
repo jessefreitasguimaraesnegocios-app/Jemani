@@ -21,6 +21,22 @@ type MapboxFeature = {
   context?: MapboxContext[]
 }
 
+const CENTRO_LOS_ANGELES = "-118.2437,34.0522"
+const CAIXA_LOS_ANGELES = "-118.95,33.65,-117.65,34.40"
+const limitePorIp = new Map<string, number[]>()
+
+function permitirConsulta(ip: string) {
+  const agora = Date.now()
+  const recentes = (limitePorIp.get(ip) ?? []).filter((marca) => agora - marca < 60_000)
+  if (recentes.length >= 60) {
+    limitePorIp.set(ip, recentes)
+    return false
+  }
+  recentes.push(agora)
+  limitePorIp.set(ip, recentes)
+  return true
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -63,8 +79,12 @@ function enderecoDeFeatureMapbox(feature: MapboxFeature) {
   const estadoRaw = contextoMapbox(feature, "region")
   const estado = estadoRaw?.short_code?.replace(/^US-/, "") || estadoRaw?.text
   const cep = contextoMapbox(feature, "postcode")?.text
-  const numero = feature.address
-  const rua = feature.text
+  const numero =
+    feature.address?.trim() || feature.place_name.match(/^\s*(\d+[\w-]*)/)?.[1]
+  let rua = feature.text?.trim()
+  if (numero && rua?.startsWith(numero)) {
+    rua = rua.slice(numero.length).trim()
+  }
 
   return {
     formatted: montarFormatted({
@@ -94,6 +114,8 @@ async function geocodeMapbox(token: string, query: string, types = "address") {
   )
   url.searchParams.set("access_token", token)
   url.searchParams.set("country", "us")
+  url.searchParams.set("proximity", CENTRO_LOS_ANGELES)
+  url.searchParams.set("bbox", CAIXA_LOS_ANGELES)
   url.searchParams.set("types", types)
   url.searchParams.set("language", "en")
   url.searchParams.set("limit", "6")
@@ -138,11 +160,20 @@ Deno.serve(async (req: Request) => {
     return json({ erro: "JSON inválido" }, 400)
   }
 
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("cf-connecting-ip") ||
+    "sem-ip"
+  if (!permitirConsulta(ip)) {
+    return json({ erro: "Muitas consultas de endereço. Aguarde um instante." }, 429)
+  }
+
   const acao = payload.acao
 
   if (acao === "autocomplete") {
     const termo = (payload.termo ?? "").trim()
-    if (!termo) return json({ sugestoes: [] })
+    if (termo.length < 2) return json({ sugestoes: [] })
+    if (termo.length > 140) return json({ erro: "Endereço longo demais." }, 400)
     try {
       const features = await geocodeMapbox(mapboxToken, termo, "address,poi")
       return json({
@@ -160,10 +191,17 @@ Deno.serve(async (req: Request) => {
 
   if (acao === "details") {
     const placeId = (payload.place_id ?? "").trim()
-    if (!placeId) return json({ erro: "place_id obrigatório" }, 400)
+    const termo = (payload.termo ?? "").trim()
+    if (!placeId && !termo) return json({ erro: "place_id obrigatório" }, 400)
+    if (termo.length > 140) return json({ erro: "Endereço longo demais." }, 400)
     try {
-      const features = await geocodeMapbox(mapboxToken, placeId, "address,poi")
-      const feature = features.find((f) => f.id === placeId) ?? features[0]
+      const consulta = termo || placeId
+      const features = await geocodeMapbox(mapboxToken, consulta, "address,poi")
+      const feature =
+        features.find((f) => f.id === placeId) ??
+        features.find((f) => f.place_name === termo) ??
+        features.find((f) => f.address) ??
+        features[0]
       const endereco = feature ? enderecoDeFeatureMapbox(feature) : null
       if (!endereco) {
         return json({ erro: "Não foi possível obter coordenadas do endereço" }, 502)

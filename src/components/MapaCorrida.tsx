@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { obterRotaRua, urlMapaEstatico } from '@/services/mapasService'
 import './MapaCorrida.css'
 
 type Props = {
@@ -10,11 +12,6 @@ type Props = {
   legenda: string
 }
 
-function pin(cor: string, lng?: number, lat?: number) {
-  if (typeof lat !== 'number' || typeof lng !== 'number') return ''
-  return `pin-s+${cor}(${lng},${lat})`
-}
-
 export function MapaCorrida({
   origemLat,
   origemLng,
@@ -24,22 +21,48 @@ export function MapaCorrida({
   motoristaLng,
   legenda,
 }: Props) {
-  const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as string | undefined
-  const marcas = [
-    pin('c9a46c', origemLng, origemLat),
-    pin('f6f1e8', destinoLng, destinoLat),
-    pin('3b82f6', motoristaLng, motoristaLat),
-  ].filter(Boolean)
+  const [polyline, setPolyline] = useState<string | undefined>()
+  const temTrecho =
+    typeof origemLat === 'number' &&
+    typeof origemLng === 'number' &&
+    typeof destinoLat === 'number' &&
+    typeof destinoLng === 'number'
 
-  if (!token || marcas.length === 0) {
+  useEffect(() => {
+    if (!temTrecho) {
+      setPolyline(undefined)
+      return
+    }
+    let ativo = true
+    void obterRotaRua(
+      { latitude: origemLat, longitude: origemLng },
+      { latitude: destinoLat, longitude: destinoLng },
+    ).then((rota) => {
+      if (!ativo) return
+      setPolyline(rota.provedor === 'mapbox' ? rota.polyline : undefined)
+    })
+    return () => {
+      ativo = false
+    }
+  }, [temTrecho, origemLat, origemLng, destinoLat, destinoLng])
+
+  const url = urlMapaEstatico({
+    origemLat,
+    origemLng,
+    destinoLat,
+    destinoLng,
+    motoristaLat,
+    motoristaLng,
+    polyline,
+  })
+
+  if (!url) {
     return (
       <div className="mapa-corrida">
         <p className="mapa-corrida-vazio">{legenda}</p>
       </div>
     )
   }
-
-  const url = `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${marcas.join(',')}/auto/800x500@2x?padding=70&access_token=${token}`
 
   return (
     <figure className="mapa-corrida">

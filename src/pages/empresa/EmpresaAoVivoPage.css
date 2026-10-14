@@ -257,11 +257,21 @@
   color: #c9a46c;
 }
 
-.ao-vivo-ficha a {
-  display: inline-block;
-  margin-top: 0.55rem;
+.ao-vivo-ficha-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 0.65rem;
+}
+
+.ao-vivo-ficha-acoes a,
+.ao-vivo-ficha-chat {
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: #c9a46c;
   font-size: 0.78rem;
+  cursor: pointer;
 }
 
 @media (max-width: 1023px) {
@@ -285,22 +295,30 @@
 }
 
 .ao-vivo-carro {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 64px;
   padding: 0;
   border: 0;
-  border-radius: 999px;
-  background: #111;
-  box-shadow: 0 0 0 2px #c9a46c;
+  background: transparent;
   cursor: pointer;
+}
+
+.ao-vivo-carro-giro {
+  display: block;
+  width: 40px;
+  height: 64px;
+  transform: rotate(var(--rumo, 0deg));
+  transform-origin: center center;
+  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.4));
 }
 
 .ao-vivo-carro svg {
   display: block;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 64px;
+  overflow: visible;
 }
 
-.ao-vivo-carro--ativo {
-  box-shadow: 0 0 0 3px #fff, 0 0 0 6px #c9a46c;
+.ao-vivo-carro--ativo .ao-vivo-carro-giro {
+  filter: drop-shadow(0 0 2px #c9a46c) drop-shadow(0 6px 4px rgba(0, 0, 0, 0.4));
 }

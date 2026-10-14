@@ -1,5 +1,5 @@
 import type { EnderecoLocal } from '@/types'
-import { montarTextoEndereco, numerosEnderecoIguais } from '@/utils/endereco'
+import { extrairNumeroDoTexto, montarTextoEndereco, numerosEnderecoIguais } from '@/utils/endereco'
 
 export interface ResultadoRota {
   distanciaKm: number
@@ -136,6 +136,19 @@ function tokenMapbox(): string | undefined {
   return token?.trim() || undefined
 }
 
+const CENTRO_LOS_ANGELES = '-118.2437,34.0522'
+const CAIXA_LOS_ANGELES = '-118.95,33.65,-117.65,34.40'
+
+const cacheEnderecos = new Map<string, EnderecoLocal>()
+
+function guardarEndereco(placeId: string, endereco: EnderecoLocal) {
+  if (cacheEnderecos.size > 80) {
+    const primeiro = cacheEnderecos.keys().next().value
+    if (primeiro) cacheEnderecos.delete(primeiro)
+  }
+  cacheEnderecos.set(placeId, endereco)
+}
+
 /** Mapbox local ou proxy Supabase disponível. */
 export function googleMapsConfigurado(): boolean {
   if (tokenMapbox() && import.meta.env.VITE_MAPS_PROVIDER !== 'none') return true
@@ -159,7 +172,7 @@ function contextoMapbox(feature: MapboxFeature, prefixo: string) {
   return feature.context?.find((c) => c.id.startsWith(prefixo))
 }
 
-function enderecoDeFeatureMapbox(feature: MapboxFeature): EnderecoLocal | null {
+export function interpretarFeatureMapbox(feature: MapboxFeature): EnderecoLocal | null {
   const [lng, lat] = feature.center ?? [undefined, undefined]
   if (typeof lat !== 'number' || typeof lng !== 'number') return null
   const cidade =
@@ -169,12 +182,13 @@ function enderecoDeFeatureMapbox(feature: MapboxFeature): EnderecoLocal | null {
   const estadoRaw = contextoMapbox(feature, 'region')
   const estado = estadoRaw?.short_code?.replace(/^US-/, '') || estadoRaw?.text
   const cep = contextoMapbox(feature, 'postcode')?.text
-  const numero = feature.address
-  const rua = feature.text
-  return {
-    formatted: numero && rua
-      ? `${numero} ${rua}${cidade ? `, ${cidade}` : ''}${estado ? `, ${estado}` : ''}${cep ? ` ${cep}` : ''}`
-      : feature.place_name,
+  const numero = feature.address?.trim() || extrairNumeroDoTexto(feature.place_name)
+  let rua = feature.text?.trim()
+  if (numero && rua?.startsWith(numero)) {
+    rua = rua.slice(numero.length).trim()
+  }
+  const endereco: EnderecoLocal = {
+    formatted: feature.place_name,
     latitude: lat,
     longitude: lng,
     place_id: feature.id,
@@ -186,6 +200,10 @@ function enderecoDeFeatureMapbox(feature: MapboxFeature): EnderecoLocal | null {
     cep,
     numero_confirmado: Boolean(numero),
   }
+  if (numero && rua) {
+    endereco.formatted = montarTextoEndereco(endereco)
+  }
+  return endereco
 }
 
 async function geocodeMapboxDireto(query: string, types = 'address,poi'): Promise<MapboxFeature[]> {
@@ -196,6 +214,8 @@ async function geocodeMapboxDireto(query: string, types = 'address,poi'): Promis
   )
   url.searchParams.set('access_token', token)
   url.searchParams.set('country', 'us')
+  url.searchParams.set('proximity', CENTRO_LOS_ANGELES)
+  url.searchParams.set('bbox', CAIXA_LOS_ANGELES)
   url.searchParams.set('types', types)
   url.searchParams.set('language', 'en')
   url.searchParams.set('limit', '6')
@@ -267,10 +287,32 @@ export function buscarSugestoesDev(termo: string): EnderecoLocal[] {
   )
 }
 
-export async function estimarRota(
-  origem: EnderecoLocal,
-  destino: EnderecoLocal,
-): Promise<ResultadoRota> {
+export interface PontoRota {
+  latitude: number
+  longitude: number
+}
+
+export interface RotaRua {
+  distanciaKm: number
+  tempoMinutos: number
+  provedor: 'mapbox' | 'haversine'
+  coordenadas: Array<[number, number]>
+  polyline?: string
+}
+
+const cacheRotas = new Map<string, RotaRua>()
+
+function chaveRota(origem: PontoRota, destino: PontoRota) {
+  const arredondar = (valor: number) => valor.toFixed(4)
+  return [
+    arredondar(origem.longitude),
+    arredondar(origem.latitude),
+    arredondar(destino.longitude),
+    arredondar(destino.latitude),
+  ].join(',')
+}
+
+function rotaEmLinhaReta(origem: PontoRota, destino: PontoRota): RotaRua {
   const km = calcularDistanciaKm(
     origem.latitude,
     origem.longitude,
@@ -279,8 +321,135 @@ export async function estimarRota(
   )
   return {
     distanciaKm: km,
-    tempoMinutos: Math.round((km / 40) * 60),
+    tempoMinutos: Math.max(1, Math.round((km / 40) * 60)),
     provedor: 'haversine',
+    coordenadas: [],
+  }
+}
+
+function codificarTrecho(valor: number, anterior: number) {
+  let numero = Math.round((valor - anterior) * 1e5)
+  numero = numero < 0 ? ~(numero << 1) : numero << 1
+  let texto = ''
+  while (numero >= 0x20) {
+    texto += String.fromCharCode((0x20 | (numero & 0x1f)) + 63)
+    numero >>= 5
+  }
+  texto += String.fromCharCode(numero + 63)
+  return texto
+}
+
+function codificarPolyline(coordenadas: Array<[number, number]>) {
+  let texto = ''
+  let latAnterior = 0
+  let lngAnterior = 0
+  for (const [lng, lat] of coordenadas) {
+    texto += codificarTrecho(lat, latAnterior)
+    texto += codificarTrecho(lng, lngAnterior)
+    latAnterior = lat
+    lngAnterior = lng
+  }
+  return texto
+}
+
+function reduzirCoordenadas(coordenadas: Array<[number, number]>, maximo: number) {
+  if (coordenadas.length <= maximo) return coordenadas
+  const passo = (coordenadas.length - 1) / (maximo - 1)
+  const saida: Array<[number, number]> = []
+  for (let i = 0; i < maximo; i += 1) {
+    saida.push(coordenadas[Math.round(i * passo)])
+  }
+  return saida
+}
+
+export async function obterRotaRua(origem: PontoRota, destino: PontoRota): Promise<RotaRua> {
+  const chave = chaveRota(origem, destino)
+  const salva = cacheRotas.get(chave)
+  if (salva) return salva
+
+  const token = tokenMapbox()
+  if (!token) return rotaEmLinhaReta(origem, destino)
+
+  try {
+    const url = new URL(
+      `https://api.mapbox.com/directions/v5/mapbox/driving/${origem.longitude},${origem.latitude};${destino.longitude},${destino.latitude}`,
+    )
+    url.searchParams.set('access_token', token)
+    url.searchParams.set('geometries', 'geojson')
+    url.searchParams.set('overview', 'full')
+    url.searchParams.set('language', 'en')
+    const resp = await fetch(url)
+    const data = (await resp.json()) as {
+      message?: string
+      routes?: Array<{
+        distance?: number
+        duration?: number
+        geometry?: { coordinates?: Array<[number, number]> }
+      }>
+    }
+    const rota = data.routes?.[0]
+    const coordenadas = rota?.geometry?.coordinates ?? []
+    if (!resp.ok || !rota || coordenadas.length < 2 || typeof rota.distance !== 'number') {
+      return rotaEmLinhaReta(origem, destino)
+    }
+    const enxuta = reduzirCoordenadas(coordenadas, 180)
+    const resultado: RotaRua = {
+      distanciaKm: Math.round((rota.distance / 1000) * 100) / 100,
+      tempoMinutos: Math.max(1, Math.round((rota.duration ?? 0) / 60)),
+      provedor: 'mapbox',
+      coordenadas,
+      polyline: codificarPolyline(enxuta),
+    }
+    cacheRotas.set(chave, resultado)
+    return resultado
+  } catch {
+    return rotaEmLinhaReta(origem, destino)
+  }
+}
+
+export function urlMapaEstatico(opcoes: {
+  origemLat?: number
+  origemLng?: number
+  destinoLat?: number
+  destinoLng?: number
+  motoristaLat?: number
+  motoristaLng?: number
+  polyline?: string
+}) {
+  const token = tokenMapbox()
+  if (!token) return ''
+  const camadas: string[] = []
+  if (opcoes.polyline) {
+    camadas.push(`path-4+c9a46c-0.9(${encodeURIComponent(opcoes.polyline)})`)
+  }
+  const pin = (cor: string, lng?: number, lat?: number) => {
+    if (typeof lat !== 'number' || typeof lng !== 'number') return ''
+    return `pin-s+${cor}(${lng},${lat})`
+  }
+  camadas.push(
+    pin('c9a46c', opcoes.origemLng, opcoes.origemLat),
+    pin('f6f1e8', opcoes.destinoLng, opcoes.destinoLat),
+    pin('3b82f6', opcoes.motoristaLng, opcoes.motoristaLat),
+  )
+  const marcas = camadas.filter(Boolean)
+  if (marcas.length === 0) return ''
+  const url = new URL(
+    `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${marcas.join(',')}/auto/800x500@2x`,
+  )
+  url.searchParams.set('padding', '70')
+  url.searchParams.set('access_token', token)
+  return url.toString()
+}
+
+export async function estimarRota(
+  origem: EnderecoLocal,
+  destino: EnderecoLocal,
+): Promise<ResultadoRota> {
+  const rota = await obterRotaRua(origem, destino)
+  return {
+    distanciaKm: rota.distanciaKm,
+    tempoMinutos: rota.tempoMinutos,
+    provedor: rota.provedor,
   }
 }
 
@@ -292,7 +461,12 @@ export async function buscarSugestoesPlaces(termo: string): Promise<
   if (tokenMapbox()) {
     try {
       const features = await geocodeMapboxDireto(termo, 'address,poi')
-      return features.map((f) => ({ description: f.place_name, place_id: f.id }))
+      return features.flatMap((feature) => {
+        const endereco = interpretarFeatureMapbox(feature)
+        if (!endereco) return []
+        guardarEndereco(feature.id, endereco)
+        return [{ description: endereco.formatted || feature.place_name, place_id: feature.id }]
+      })
     } catch {
       /* tenta proxy / DEV abaixo */
     }
@@ -319,16 +493,29 @@ export async function buscarSugestoesPlaces(termo: string): Promise<
   }
 }
 
-export async function resolverPlaceId(placeId: string): Promise<EnderecoLocal> {
+export async function resolverPlaceId(placeId: string, descricao?: string): Promise<EnderecoLocal> {
   const dev = PONTOS_DEV_LA.find((p) => p.place_id === placeId)
   if (dev) return { ...dev, numero_confirmado: Boolean(dev.numero) }
 
-  if (tokenMapbox()) {
-    const features = await geocodeMapboxDireto(placeId, 'address,poi')
-    const feature = features.find((f) => f.id === placeId) ?? features[0]
-    const endereco = feature ? enderecoDeFeatureMapbox(feature) : null
+  const emCache = cacheEnderecos.get(placeId)
+  if (emCache) return { ...emCache, numero_confirmado: Boolean(emCache.numero) }
+
+  const consulta = descricao?.trim() ?? ''
+  if (tokenMapbox() && consulta) {
+    const features = await geocodeMapboxDireto(consulta, 'address,poi')
+    const feature =
+      features.find((item) => item.id === placeId) ??
+      features.find((item) => item.place_name === consulta) ??
+      features[0]
+    const endereco = feature ? interpretarFeatureMapbox(feature) : null
     if (endereco) {
-      return { ...endereco, numero_confirmado: Boolean(endereco.numero) }
+      const completo = {
+        ...endereco,
+        place_id: endereco.place_id ?? placeId,
+        numero_confirmado: Boolean(endereco.numero),
+      }
+      guardarEndereco(completo.place_id ?? placeId, completo)
+      return completo
     }
   }
 
@@ -339,6 +526,7 @@ export async function resolverPlaceId(placeId: string): Promise<EnderecoLocal> {
   const data = await chamarPlacesProxy<{ endereco: EnderecoLocal }>({
     acao: 'details',
     place_id: placeId,
+    termo: consulta || undefined,
   })
   return {
     ...data.endereco,
@@ -421,7 +609,7 @@ export async function validarNumeroNoEndereco(
         .join(', ')
       const features = await geocodeMapboxDireto(query, 'address')
       const escolhido = features.find((f) => f.address && numerosEnderecoIguais(f.address, num))
-      const endereco = escolhido ? enderecoDeFeatureMapbox(escolhido) : null
+      const endereco = escolhido ? interpretarFeatureMapbox(escolhido) : null
       if (!endereco) {
         return {
           ok: false,

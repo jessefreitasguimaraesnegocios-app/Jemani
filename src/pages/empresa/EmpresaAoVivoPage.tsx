@@ -5,7 +5,7 @@ import { ChatEmpresa } from '@/components/ChatEmpresa'
 import { MapaFrotaEmpresa } from '@/components/MapaFrotaEmpresa'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
-import { agruparCorridasPorColuna, COLUNAS_QUADRO } from '@/services/quadroViagens'
+import { agruparCorridasPorColuna, COLUNAS_EMPRESA } from '@/services/quadroViagens'
 import { corridaEstaNoMapa } from '@/services/posicaoCorridaAoVivo'
 import {
   inicioDoTurno,
@@ -49,8 +49,13 @@ export function EmpresaAoVivoPage() {
   const porColuna = useMemo(() => agruparCorridasPorColuna(viagens), [viagens])
   const mapaCategorias = useMemo(() => new Map(categorias.map((c) => [c.id, c])), [categorias])
   const selecionada = viagens.find((v) => v.id === selecionadaId) ?? null
+  const motoristaDaCorrida = daEmpresa.find((item) => item.id === selecionada?.motorista_id)
+  const veiculoDaCorrida = selecionada?.veiculo_id
+    ? veiculos.find((item) => item.id === selecionada.veiculo_id)
+    : selecionada?.motorista_id
+      ? veiculoDoMotorista(selecionada.motorista_id, turnos, viagens, veiculos)
+      : undefined
   const emRota = viagens.some((v) => corridaEstaNoMapa(v.status))
-  const agora = Date.now()
   const pontosMotorista = online
     .filter(
       (motorista) =>
@@ -59,12 +64,12 @@ export function EmpresaAoVivoPage() {
         ),
     )
     .flatMap((motorista) => {
-      const posicao = posicaoDoMotorista(motorista.id, turnos, viagens, agora)
+      const posicao = posicaoDoMotorista(motorista.id, turnos, viagens)
       if (!posicao) return []
       return [{ id: motorista.id, nome: motorista.nome, ...posicao }]
     })
   const posicaoFoco = motoristaId
-    ? posicaoDoMotorista(motoristaId, turnos, viagens, agora)
+    ? posicaoDoMotorista(motoristaId, turnos, viagens)
     : null
   const foco =
     motoristaId && posicaoFoco && focoSeq
@@ -85,8 +90,21 @@ export function EmpresaAoVivoPage() {
   }
 
   function escolherViagem(id: string) {
-    setMotoristaId(null)
+    setFocoSeq(0)
+    if (selecionadaId === id) {
+      setSelecionadaId(null)
+      setMotoristaId(null)
+      return
+    }
+    const viagem = viagens.find((item) => item.id === id)
     setSelecionadaId(id)
+    if (viagem?.motorista_id) setMotoristaId(viagem.motorista_id)
+  }
+
+  function abrirChatDaCorrida() {
+    if (!selecionada?.motorista_id) return
+    setMotoristaId(selecionada.motorista_id)
+    setAba('chat')
   }
 
   function horaTurno(iso?: string) {
@@ -176,7 +194,24 @@ export function EmpresaAoVivoPage() {
               <span>{t('empresa.aoVivo.destino')}</span>
               {selecionada.destino}
             </p>
-            <Link to={`/empresa/viagens/${selecionada.id}`}>{t('comum.abrir')}</Link>
+            <p>
+              <span>{t('comum.motorista')}</span>
+              {motoristaDaCorrida?.nome ?? t('empresa.aoVivo.semMotorista')}
+            </p>
+            <p>
+              <span>{t('comum.veiculo')}</span>
+              {veiculoDaCorrida
+                ? `${veiculoDaCorrida.marca} ${veiculoDaCorrida.modelo}`
+                : t('empresa.aoVivo.semVeiculo')}
+            </p>
+            <div className="ao-vivo-ficha-acoes">
+              <Link to={`/empresa/viagens/${selecionada.id}`}>{t('comum.abrir')}</Link>
+              {motoristaDaCorrida && (
+                <button type="button" className="ao-vivo-ficha-chat" onClick={abrirChatDaCorrida}>
+                  {t('empresa.aoVivo.falar')}
+                </button>
+              )}
+            </div>
           </aside>
         )}
       </div>
@@ -197,12 +232,14 @@ export function EmpresaAoVivoPage() {
 
       <div className="ao-vivo-quadro">
         <div className="quadro-colunas">
-          {COLUNAS_QUADRO.map((coluna) => {
+          {COLUNAS_EMPRESA.map((coluna) => {
             const lista = porColuna.get(coluna.id) ?? []
             return (
               <section key={coluna.id} className="quadro-coluna">
                 <div className="quadro-coluna-cabeca">
-                  <h2 className="quadro-coluna-titulo">{t(coluna.chaveTitulo)}</h2>
+                  <h2 className="quadro-coluna-titulo">
+                    {coluna.id === 'empresa' ? t('empresa.aoVivo.col.aceitas') : t(coluna.chaveTitulo)}
+                  </h2>
                   <span className="quadro-coluna-qtd">{lista.length}</span>
                 </div>
                 <div className="quadro-coluna-lista">
@@ -212,6 +249,7 @@ export function EmpresaAoVivoPage() {
                       key={viagem.id}
                       type="button"
                       className={`quadro-card ${viagem.id === selecionadaId ? 'quadro-card--ativo' : ''}`}
+                      aria-pressed={viagem.id === selecionadaId}
                       onClick={() => escolherViagem(viagem.id)}
                     >
                       <p className="quadro-card-codigo">{viagem.codigo}</p>

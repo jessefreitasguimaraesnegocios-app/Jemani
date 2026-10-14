@@ -95,6 +95,16 @@
   font-size: 0.85rem;
 }
 
+.corrida-gps {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.95rem;
+  background: rgba(201, 164, 108, 0.16);
+  color: #f0d7ae;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
 .corrida-vazia {
   padding: 2rem 1rem;
   text-align: center;

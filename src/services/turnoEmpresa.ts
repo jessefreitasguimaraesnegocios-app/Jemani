@@ -54,13 +54,12 @@ export function posicaoDoMotorista(
   motoristaId: string,
   turnos: TurnoMotorista[],
   viagens: Viagem[],
-  agora: number,
 ) {
   const corrida = viagens.find(
     (viagem) => viagem.motorista_id === motoristaId && corridaEstaNoMapa(viagem.status),
   )
   if (corrida) {
-    const naRota = calcularPosicaoCorrida(corrida, agora)
+    const naRota = calcularPosicaoCorrida(corrida)
     if (naRota) return naRota
   }
   const turno = turnoAberto(turnos, motoristaId)

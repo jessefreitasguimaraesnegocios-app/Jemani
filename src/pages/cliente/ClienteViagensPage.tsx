@@ -1,130 +1,182 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { CalendarPlus, ChevronRight, History } from 'lucide-react'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { useAuth } from '@/contexts/AuthContext'
-import type { ChaveTraducao } from '@/i18n/mensagens'
 import { usarIdioma } from '@/i18n/usarIdioma'
+import { separarAgendamentos, viagemEmAndamento } from '@/services/agendamentoCliente'
 import { useDemoStore } from '@/store/demoStore'
-import type { StatusViagem, Viagem } from '@/types'
+import type { Viagem } from '@/types'
 import { formatarData, formatarMoeda } from '@/utils/format'
+import { CartaoReservaCliente } from './CartaoReservaCliente'
 import './ClienteViagensPage.css'
-
-const GRUPOS: { chave: ChaveTraducao; filtro: (v: Viagem) => boolean }[] = [
-  {
-    chave: 'cliente.viagens.grupoPagamento',
-    filtro: (v) => v.status === 'pending_payment' || v.payment_status === 'pending_payment',
-  },
-  {
-    chave: 'cliente.viagens.grupoProximas',
-    filtro: (v) =>
-      [
-        'paid',
-        'solicitada',
-        'aguardando_empresa',
-        'oferta_enviada',
-        'empresa_confirmada',
-        'motorista_atribuido',
-      ].includes(v.status),
-  },
-  {
-    chave: 'cliente.viagens.grupoAndamento',
-    filtro: (v) =>
-      (
-        [
-          'motorista_a_caminho',
-          'motorista_chegou',
-          'passageiro_embarcou',
-          'viagem_em_andamento',
-        ] as StatusViagem[]
-      ).includes(v.status),
-  },
-  {
-    chave: 'cliente.viagens.grupoConcluidas',
-    filtro: (v) => v.status === 'viagem_finalizada',
-  },
-  {
-    chave: 'cliente.viagens.grupoCanceladas',
-    filtro: (v) => v.status === 'cancelada' || v.status === 'expired',
-  },
-]
 
 export function ClienteViagensPage() {
   const { usuario } = useAuth()
   const { t, locale } = usarIdioma()
   const todasViagens = useDemoStore((s) => s.viagens)
-  const viagens = useMemo(
-    () => todasViagens.filter((v) => v.cliente_id === usuario?.id),
-    [todasViagens, usuario?.id],
-  )
   const empresas = useDemoStore((s) => s.empresas)
   const motoristas = useDemoStore((s) => s.motoristas)
   const categorias = useDemoStore((s) => s.categorias)
 
-  const mapaCategorias = useMemo(() => {
-    const mapa = new Map(categorias.map((c) => [c.id, c.nome]))
-    return mapa
-  }, [categorias])
+  const viagens = useMemo(
+    () => todasViagens.filter((v) => v.cliente_id === usuario?.id),
+    [todasViagens, usuario?.id],
+  )
+  const { proxima, outras, historico } = useMemo(() => separarAgendamentos(viagens), [viagens])
 
-  const mapaEmpresas = useMemo(() => {
-    const mapa = new Map(empresas.map((e) => [e.id, e.nome_comercial]))
-    return mapa
-  }, [empresas])
+  const mapaCategorias = useMemo(() => new Map(categorias.map((c) => [c.id, c.nome])), [categorias])
+  const mapaEmpresas = useMemo(
+    () => new Map(empresas.map((e) => [e.id, e.nome_comercial])),
+    [empresas],
+  )
+  const mapaMotoristas = useMemo(() => new Map(motoristas.map((m) => [m.id, m.nome])), [motoristas])
 
-  const mapaMotoristas = useMemo(() => {
-    const mapa = new Map(motoristas.map((m) => [m.id, m.nome]))
-    return mapa
-  }, [motoristas])
+  const emAndamento = proxima ? viagemEmAndamento(proxima) : false
 
   return (
-    <div className="cliente-viagens animar-entrada">
-      <div className="cliente-viagens-topo">
-        <h1 className="fonte-display cliente-viagens-titulo">{t('cliente.viagens.titulo')}</h1>
+    <div className="cliente-agenda animar-entrada">
+      <div className="cliente-agenda-topo">
+        <div>
+          <p className="cliente-agenda-olho">{t('cliente.viagens.olho')}</p>
+          <h1 className="fonte-display cliente-agenda-titulo">{t('cliente.viagens.titulo')}</h1>
+          <p className="cliente-agenda-sub">{t('cliente.viagens.sub')}</p>
+        </div>
         <Link to="/app/reservar" className="cliente-viagens-nova">
+          <CalendarPlus size={16} />
           {t('cliente.viagens.nova')}
         </Link>
       </div>
 
-      {GRUPOS.map((g) => {
-        const lista = viagens.filter(g.filtro)
-        return (
-          <section key={g.chave}>
-            <h2 className="cliente-viagens-grupo-titulo">{t(g.chave)}</h2>
-            {lista.length === 0 ? (
-              <p className="cliente-viagens-vazio">{t('cliente.viagens.vazioGrupo')}</p>
-            ) : (
-              <div className="cliente-viagens-lista">
-                {lista.map((v) => (
-                  <Link key={v.id} to={`/app/viagens/${v.id}`} className="cliente-viagens-cartao">
-                    <div className="cliente-viagens-cartao-linha">
-                      <div>
-                        <p className="cliente-viagens-cartao-titulo">
-                          {v.codigo} · {mapaCategorias.get(v.categoria_id) ?? '—'}
-                        </p>
-                        <p className="cliente-viagens-cartao-texto">
-                          {v.origem} → {v.destino}
-                        </p>
-                        <p className="cliente-viagens-cartao-texto">
-                          {formatarData(v.data_viagem, locale)} {v.horario} ·{' '}
-                          {formatarMoeda(v.preco_total, locale)}
-                        </p>
-                        {v.empresa_id && (
-                          <p className="cliente-viagens-cartao-extra">
-                            {t('comum.empresa')}: {mapaEmpresas.get(v.empresa_id) ?? '—'}
-                            {v.motorista_id
-                              ? ` · ${t('comum.motorista')}: ${mapaMotoristas.get(v.motorista_id) ?? '—'}`
-                              : ''}
-                          </p>
-                        )}
-                      </div>
-                      <BadgeStatus status={v.status} />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-        )
-      })}
+      {proxima ? (
+        <ProximoAgendamento
+          viagem={proxima}
+          emAndamento={emAndamento}
+          categoria={mapaCategorias.get(proxima.categoria_id)}
+          empresa={proxima.empresa_id ? mapaEmpresas.get(proxima.empresa_id) : undefined}
+          motorista={proxima.motorista_id ? mapaMotoristas.get(proxima.motorista_id) : undefined}
+          locale={locale}
+        />
+      ) : (
+        <section className="cliente-agenda-vazio">
+          <p className="cliente-agenda-vazio-titulo">{t('cliente.viagens.vazio')}</p>
+          <p className="cliente-agenda-vazio-texto">{t('cliente.viagens.vazioTexto')}</p>
+          <Link to="/app/reservar" className="cliente-viagens-nova">
+            {t('cliente.viagens.vazioAcao')}
+          </Link>
+        </section>
+      )}
+
+      <Link to="/app/viagens/historico" className="cliente-agenda-historico">
+        <span className="cliente-agenda-historico-icone" aria-hidden>
+          <History size={22} />
+        </span>
+        <span className="cliente-agenda-historico-texto">
+          <span className="cliente-agenda-historico-titulo">{t('cliente.viagens.historico')}</span>
+          <span className="cliente-agenda-historico-sub">
+            {historico.length === 0
+              ? t('cliente.viagens.historicoVazio')
+              : t('cliente.viagens.historicoTexto')}
+          </span>
+        </span>
+        <span className="cliente-agenda-historico-qtd">{historico.length}</span>
+        <ChevronRight size={20} className="cliente-agenda-historico-seta" />
+      </Link>
+
+      {outras.length > 0 && (
+        <details className="cliente-agenda-outras">
+          <summary>
+            <span>{t('cliente.viagens.outras')}</span>
+            <span className="cliente-agenda-outras-qtd">{outras.length}</span>
+          </summary>
+          <p className="cliente-agenda-nota">{t('cliente.viagens.outrasTexto')}</p>
+          <div className="cliente-viagens-lista">
+            {outras.map((viagem) => (
+              <CartaoReservaCliente
+                key={viagem.id}
+                viagem={viagem}
+                categoria={mapaCategorias.get(viagem.categoria_id)}
+                empresa={viagem.empresa_id ? mapaEmpresas.get(viagem.empresa_id) : undefined}
+                motorista={
+                  viagem.motorista_id ? mapaMotoristas.get(viagem.motorista_id) : undefined
+                }
+              />
+            ))}
+          </div>
+        </details>
+      )}
     </div>
+  )
+}
+
+function ProximoAgendamento({
+  viagem,
+  emAndamento,
+  categoria,
+  empresa,
+  motorista,
+  locale,
+}: {
+  viagem: Viagem
+  emAndamento: boolean
+  categoria?: string
+  empresa?: string
+  motorista?: string
+  locale: string
+}) {
+  const { t } = usarIdioma()
+  const faltaPagamento =
+    viagem.status === 'pending_payment' || viagem.payment_status === 'pending_payment'
+
+  return (
+    <section className="cliente-agenda-proxima" aria-labelledby="proximo-agendamento">
+      <div className="cliente-agenda-proxima-topo">
+        <p id="proximo-agendamento" className="cliente-agenda-selo">
+          {emAndamento ? t('cliente.viagens.andamento') : t('cliente.viagens.proximo')}
+        </p>
+        <BadgeStatus status={viagem.status} />
+      </div>
+      <p className="cliente-agenda-explicacao">
+        {emAndamento ? t('cliente.viagens.andamentoTexto') : t('cliente.viagens.proximoTexto')}
+      </p>
+      <p className="fonte-display cliente-agenda-quando">
+        {formatarData(viagem.data_viagem, locale)}
+        <span> · {viagem.horario}</span>
+      </p>
+
+      <div className="cliente-agenda-trajeto">
+        <div className="cliente-agenda-ponto">
+          <span className="cliente-agenda-marca" aria-hidden />
+          <div>
+            <p className="cliente-agenda-rotulo">{t('cliente.viagens.embarque')}</p>
+            <p className="cliente-agenda-endereco">{viagem.origem}</p>
+          </div>
+        </div>
+        <div className="cliente-agenda-ponto">
+          <span className="cliente-agenda-marca cliente-agenda-marca--fim" aria-hidden />
+          <div>
+            <p className="cliente-agenda-rotulo">{t('cliente.viagens.destino')}</p>
+            <p className="cliente-agenda-endereco">{viagem.destino}</p>
+          </div>
+        </div>
+      </div>
+
+      <p className="cliente-agenda-meta">
+        {viagem.codigo}
+        {categoria ? ` · ${categoria}` : ''} · {formatarMoeda(viagem.preco_total, locale)}
+      </p>
+      {empresa && (
+        <p className="cliente-agenda-meta">
+          {t('comum.empresa')}: {empresa}
+          {motorista ? ` · ${t('comum.motorista')}: ${motorista}` : ''}
+        </p>
+      )}
+      {faltaPagamento && <p className="cliente-agenda-aviso">{t('cliente.viagens.pagar')}</p>}
+
+      <Link to={`/app/viagens/${viagem.id}`} className="cliente-agenda-ver">
+        {t('cliente.viagens.ver')}
+        <ChevronRight size={18} />
+      </Link>
+    </section>
   )
 }
