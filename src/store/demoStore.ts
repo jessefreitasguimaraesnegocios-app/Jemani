@@ -10,6 +10,7 @@ import {
   anexarViagemAoHistorico,
   ordenarEmpresasPorProximidade,
 } from '@/services/distribuicaoService'
+import { statusPeloGps } from '@/services/statusPeloGps'
 import { fundirViagemNuvem, nuvemEstaAtrasada } from '@/services/fundirViagemNuvem'
 import { calcularDistanciaKm } from '@/services/mapasService'
 import { transferirParaEmpresa } from '@/lib/stripeApi'
@@ -272,7 +273,7 @@ export const useDemoStore = create<EstadoDemo>()(
         return perfil
       },
 
-      cadastrar: ({ nome, email, senha, telefone, tipo = 'cliente' }) => {
+      cadastrar: ({ nome, email, senha, telefone }) => {
         const state = get()
         if (state.perfis.some((p) => p.email.toLowerCase() === email.toLowerCase())) {
           throw new Error('E-mail já cadastrado')
@@ -283,7 +284,7 @@ export const useDemoStore = create<EstadoDemo>()(
           email: email.toLowerCase(),
           nome,
           telefone,
-          tipo,
+          tipo: 'cliente',
           ativo: true,
           created_at: agora,
           updated_at: agora,
@@ -579,6 +580,7 @@ export const useDemoStore = create<EstadoDemo>()(
           viagem.origem_lat,
           viagem.origem_lng,
           viagem.categoria_id,
+          state.veiculos,
         )
         const hist = anexarViagemAoHistorico(historico, viagemId)
         const agora = agoraIso()
@@ -642,8 +644,9 @@ export const useDemoStore = create<EstadoDemo>()(
         })
 
         registrarHistorico(set, get, viagemId, 'paid', 'aguardando_empresa')
-        void gravarViagemNuvem(atualizada)
-        void gravarOfertasNuvem(atribuicoes)
+        void gravarViagemNuvem(atualizada).then((gravou) => {
+          if (gravou) void gravarOfertasNuvem(atribuicoes)
+        })
 
         for (const o of ordenadas) {
           notificar(
@@ -733,8 +736,11 @@ export const useDemoStore = create<EstadoDemo>()(
           set({
             viagens: get().viagens.map((viagem) => (viagem.id === atualizada.id ? atualizada : viagem)),
           })
-          void gravarViagemNuvem(atualizada)
-          void gravarOfertasNuvem(get().atribuicoes.filter((oferta) => oferta.viagem_id === presa.id))
+          void gravarViagemNuvem(atualizada).then((gravou) => {
+            if (gravou) {
+              void gravarOfertasNuvem(get().atribuicoes.filter((oferta) => oferta.viagem_id === presa.id))
+            }
+          })
         }
       },
 
@@ -970,10 +976,13 @@ export const useDemoStore = create<EstadoDemo>()(
           'status',
           viagemId,
         )
-        void gravarViagemNuvem(atualizada)
-        void gravarOfertasNuvem(
-          get().atribuicoes.filter((a) => a.viagem_id === viagemId),
-        )
+        void gravarViagemNuvem(atualizada).then((gravou) => {
+          if (gravou) {
+            void gravarOfertasNuvem(
+              get().atribuicoes.filter((a) => a.viagem_id === viagemId),
+            )
+          }
+        })
 
         if (empresa?.stripe_account_id && import.meta.env.VITE_STRIPE_ENABLED === 'true') {
           void transferirParaEmpresa({
@@ -1149,22 +1158,30 @@ export const useDemoStore = create<EstadoDemo>()(
       atualizarPosicaoMotorista: (viagemId, latitude, longitude) => {
         const viagem = get().viagens.find((v) => v.id === viagemId)
         if (!viagem) return
-        if (
+        const parada =
           typeof viagem.motorista_lat === 'number' &&
           typeof viagem.motorista_lng === 'number' &&
           Math.abs(viagem.motorista_lat - latitude) < 0.00015 &&
           Math.abs(viagem.motorista_lng - longitude) < 0.00015
-        ) {
-          return
+        if (!parada) {
+          set({
+            viagens: get().viagens.map((v) =>
+              v.id === viagemId
+                ? { ...v, motorista_lat: latitude, motorista_lng: longitude, updated_at: agoraIso() }
+                : v,
+            ),
+          })
+          void gravarPosicaoNuvem(viagemId, latitude, longitude)
         }
-        set({
-          viagens: get().viagens.map((v) =>
-            v.id === viagemId
-              ? { ...v, motorista_lat: latitude, motorista_lng: longitude, updated_at: agoraIso() }
-              : v,
-          ),
-        })
-        void gravarPosicaoNuvem(viagemId, latitude, longitude)
+        let atual = get().viagens.find((v) => v.id === viagemId)
+        if (!atual) return
+        let proximo = statusPeloGps(atual, latitude, longitude)
+        if (!proximo || proximo === atual.status) return
+        get().atualizarStatus(viagemId, proximo)
+        atual = get().viagens.find((v) => v.id === viagemId)
+        if (!atual) return
+        proximo = statusPeloGps(atual, latitude, longitude)
+        if (proximo && proximo !== atual.status) get().atualizarStatus(viagemId, proximo)
       },
 
       solicitarFinalizacao: (viagemId) => {
@@ -1852,19 +1869,26 @@ export const useDemoStore = create<EstadoDemo>()(
     {
       name: 'jemani-demo-v5',
       version: 10,
+      partialize: (estado): ReturnType<typeof estadoInicial> => {
+        const { senhas: _senhas, ...resto } = estado
+        return { ...(resto as unknown as ReturnType<typeof estadoInicial>), senhas: {} }
+      },
       migrate: (persistido) => completarCatalogo(persistido as ReturnType<typeof estadoInicial>),
       merge: (persistido, atual) => {
-        const base = completarCatalogo({
-          ...atual,
-          ...(persistido as object),
-        })
         const bruto = persistido as {
+          senhas?: Record<string, string>
           turnos?: TurnoMotorista[]
           mensagensEmpresa?: MensagemEmpresa[]
           agendamentosVeiculo?: AgendamentoVeiculo[]
         }
+        const { senhas: _senhas, ...semSenha } = bruto ?? {}
+        const base = completarCatalogo({
+          ...atual,
+          ...semSenha,
+        })
         return {
           ...base,
+          senhas: atual.senhas,
           turnos: Array.isArray(bruto?.turnos) ? bruto.turnos : [],
           mensagensEmpresa: Array.isArray(bruto?.mensagensEmpresa) ? bruto.mensagensEmpresa : [],
           agendamentosVeiculo: Array.isArray(bruto?.agendamentosVeiculo) ? bruto.agendamentosVeiculo : [],

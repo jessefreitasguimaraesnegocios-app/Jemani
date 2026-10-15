@@ -295,8 +295,8 @@
 }
 
 .ao-vivo-carro {
-  width: 40px;
-  height: 64px;
+  width: 48px;
+  height: 80px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -305,17 +305,17 @@
 
 .ao-vivo-carro-giro {
   display: block;
-  width: 40px;
-  height: 64px;
+  width: 48px;
+  height: 80px;
   transform: rotate(var(--rumo, 0deg));
   transform-origin: center center;
-  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.55));
 }
 
 .ao-vivo-carro svg {
   display: block;
-  width: 40px;
-  height: 64px;
+  width: 48px;
+  height: 80px;
   overflow: visible;
 }
 

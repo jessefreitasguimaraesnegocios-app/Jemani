@@ -21,7 +21,6 @@ import './ReservarPage.css'
 const ETAPAS: ChaveTraducao[] = [
   'reserva.etapaTrecho',
   'reserva.etapaQuando',
-  'reserva.etapaPassageiros',
   'reserva.etapaCategoria',
   'reserva.etapaDetalhes',
   'reserva.etapaResumo',
@@ -200,13 +199,17 @@ export function ReservarPage() {
       }
     }
     if (etapa === 2) {
-      if (passageiros < 1) {
-        setErro('Informe a quantidade de passageiros')
+      if (!categoriaId || !categoria) {
+        setErro('Escolha uma categoria')
         return
       }
     }
     if (etapa === 3) {
-      if (!categoriaId || !categoria) {
+      if (passageiros < 1) {
+        setErro('Informe a quantidade de passageiros')
+        return
+      }
+      if (!categoria) {
         setErro('Escolha uma categoria')
         return
       }
@@ -222,8 +225,6 @@ export function ReservarPage() {
         )
         return
       }
-    }
-    if (etapa === 4) {
       if (!nomePassageiro.trim()) {
         setErro('Informe o nome do passageiro principal.')
         return
@@ -401,24 +402,6 @@ export function ReservarPage() {
         )}
 
         {etapa === 2 && (
-          <div>
-            <label className="rotulo">Quantidade de passageiros</label>
-            <input
-              type="number"
-              min={1}
-              max={20}
-              className="campo"
-              value={passageiros}
-              onChange={(e) => setPassageiros(Number(e.target.value))}
-              required
-            />
-            <p className="mt-1 text-xs text-[var(--color-slate)]">
-              Na próxima etapa você escolhe a categoria conforme a capacidade.
-            </p>
-          </div>
-        )}
-
-        {etapa === 3 && (
           <div className="reserva-etapa-categoria">
             <SeletorCategoria3D
               categorias={categorias}
@@ -430,7 +413,7 @@ export function ReservarPage() {
           </div>
         )}
 
-        {etapa === 4 && (
+        {etapa === 3 && (
           <>
             <div className="rounded-2xl border border-[var(--color-line)] bg-[rgba(184,149,108,0.08)] p-3 text-sm">
               <p className="font-medium text-[var(--color-ink)]">Trecho</p>
@@ -469,6 +452,22 @@ export function ReservarPage() {
                 value={telefoneContato}
                 onChange={(e) => setTelefoneContato(e.target.value)}
                 placeholder="(310) 555-0000"
+              />
+            </div>
+
+            <div>
+              <label className="rotulo" htmlFor="passageiros">
+                Quantidade de passageiros
+              </label>
+              <input
+                id="passageiros"
+                type="number"
+                min={1}
+                max={20}
+                className="campo"
+                value={passageiros}
+                onChange={(e) => setPassageiros(Number(e.target.value))}
+                required
               />
             </div>
 
@@ -541,7 +540,7 @@ export function ReservarPage() {
           </>
         )}
 
-        {etapa === 5 && preco && (
+        {etapa === 4 && preco && (
           <div className="space-y-3 text-sm">
             <Linha label="Embarque" valor={origemEndereco?.formatted ?? '—'} />
             <Linha label="Destino" valor={destinoEndereco?.formatted ?? '—'} />

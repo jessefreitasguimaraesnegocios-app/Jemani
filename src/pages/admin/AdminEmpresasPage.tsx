@@ -56,6 +56,7 @@ export function AdminEmpresasPage() {
         viagem.origem_lat,
         viagem.origem_lng,
         viagem.categoria_id,
+        veiculos,
       )
       mapa.set(
         viagem.id,
@@ -74,7 +75,7 @@ export function AdminEmpresasPage() {
       )
     }
     return mapa
-  }, [corridasDisponiveis, empresas, atribuicoes])
+  }, [corridasDisponiveis, empresas, atribuicoes, veiculos])
 
   function enviarOferta(viagemId: string, empresaId: string) {
     setErro('')

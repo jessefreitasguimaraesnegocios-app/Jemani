@@ -31,7 +31,8 @@ import {
 } from '@/services/filtroGravacaoNuvem'
 import { fundirViagemNuvem } from '@/services/fundirViagemNuvem'
 import { normalizarIdioma } from '@/i18n/tipos'
-import type { Empresa, Viagem } from '@/types'
+import type { Empresa, Veiculo, Viagem } from '@/types'
+import { statusPeloGps } from '@/services/statusPeloGps'
 
 describe('idioma', () => {
   it('normaliza valores conhecidos e cai em pt-BR', () => {
@@ -180,10 +181,104 @@ describe('distribuicao por proximidade', () => {
     expect(historico.some((h: { resultado: string }) => h.resultado === 'indisponivel')).toBe(true)
   })
 
+  it('não oferece van para empresa sem essa categoria na frota', () => {
+    const empresas = [
+      empresaBase({ id: 'sedan', latitude: 33.95, longitude: -118.4, categorias_ids: ['van', 'sedan'] }),
+      empresaBase({ id: 'van', latitude: 34.04, longitude: -118.25, categorias_ids: ['van'] }),
+    ]
+    const frota: Veiculo[] = [
+      {
+        id: 'v1',
+        empresa_id: 'sedan',
+        marca: 'Mercedes',
+        modelo: 'S',
+        ano: 2024,
+        categoria_id: 'sedan',
+        capacidade: 3,
+        ar_condicionado: true,
+        bagageiro: true,
+        fotos: [],
+        status: 'disponivel',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'v2',
+        empresa_id: 'van',
+        marca: 'Mercedes',
+        modelo: 'Sprinter',
+        ano: 2024,
+        categoria_id: 'van',
+        capacidade: 12,
+        ar_condicionado: true,
+        bagageiro: true,
+        fotos: [],
+        status: 'disponivel',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]
+    const { ordenadas } = ordenarEmpresasPorProximidade(
+      empresas,
+      origemLat,
+      origemLng,
+      'van',
+      frota,
+    )
+    expect(ordenadas.map((item) => item.empresa.id)).toEqual(['van'])
+  })
+
   it('empresa sem coords é inelegível', () => {
     const e = empresaBase({ id: 'x', latitude: 1, longitude: 1 })
     delete (e as { latitude?: number }).latitude
     expect(empresaElegivel(e, 'cat1').ok).toBe(false)
+  })
+})
+
+describe('status pelo gps', () => {
+  const base = {
+    id: 'v',
+    codigo: 'JEM-1',
+    cliente_id: 'c',
+    categoria_id: 'cat',
+    origem: 'A',
+    destino: 'B',
+    origem_lat: 34.05,
+    origem_lng: -118.25,
+    destino_lat: 34.1,
+    destino_lng: -118.3,
+    data_viagem: '2026-10-20',
+    horario: '10:00',
+    passageiros: 1,
+    preco_base: 1,
+    taxas: 0,
+    preco_total: 1,
+    comissao_percentual: 10,
+    valor_plataforma: 0,
+    valor_empresa: 1,
+    payment_status: 'paid',
+    version: 1,
+    created_at: '2026-10-15T00:00:00Z',
+    updated_at: '2026-10-15T00:00:00Z',
+  } as Viagem
+
+  it('marca a caminho quando o motorista sai e chegou ao chegar no embarque', () => {
+    expect(statusPeloGps({ ...base, status: 'motorista_atribuido' }, 34.2, -118.4)).toBe(
+      'motorista_a_caminho',
+    )
+    expect(statusPeloGps({ ...base, status: 'motorista_a_caminho' }, 34.05, -118.25)).toBe(
+      'motorista_chegou',
+    )
+  })
+
+  it('inicia a viagem quando o carro sai do embarque com o passageiro', () => {
+    expect(statusPeloGps({ ...base, status: 'passageiro_embarcou' }, 34.2, -118.4)).toBe(
+      'viagem_em_andamento',
+    )
+  })
+
+  it('não finaliza sozinho ao chegar no destino', () => {
+    expect(statusPeloGps({ ...base, status: 'viagem_em_andamento' }, 34.1, -118.3)).toBeNull()
   })
 })
 

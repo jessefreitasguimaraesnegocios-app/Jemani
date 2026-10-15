@@ -422,14 +422,15 @@ export function urlMapaEstatico(opcoes: {
   if (opcoes.polyline) {
     camadas.push(`path-4+c9a46c-0.9(${encodeURIComponent(opcoes.polyline)})`)
   }
-  const pin = (cor: string, lng?: number, lat?: number) => {
+  const pin = (cor: string, lng?: number, lat?: number, icone?: string) => {
     if (typeof lat !== 'number' || typeof lng !== 'number') return ''
-    return `pin-s+${cor}(${lng},${lat})`
+    const forma = icone ? `pin-s-${icone}+${cor}` : `pin-s+${cor}`
+    return `${forma}(${lng},${lat})`
   }
   camadas.push(
     pin('c9a46c', opcoes.origemLng, opcoes.origemLat),
     pin('f6f1e8', opcoes.destinoLng, opcoes.destinoLat),
-    pin('3b82f6', opcoes.motoristaLng, opcoes.motoristaLat),
+    pin('111111', opcoes.motoristaLng, opcoes.motoristaLat, 'car'),
   )
   const marcas = camadas.filter(Boolean)
   if (marcas.length === 0) return ''

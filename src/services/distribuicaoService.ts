@@ -1,5 +1,5 @@
 import { calcularDistanciaKm } from '@/services/mapasService'
-import type { Empresa, HistoricoDistribuicao } from '@/types'
+import type { Empresa, HistoricoDistribuicao, Veiculo } from '@/types'
 import { gerarId, agoraIso } from '@/utils/format'
 
 export interface EmpresaComDistancia {
@@ -10,11 +10,23 @@ export interface EmpresaComDistancia {
 export function empresaElegivel(
   empresa: Empresa,
   categoriaId: string,
+  veiculos?: Veiculo[],
 ): { ok: boolean; motivo?: string } {
   if (empresa.status !== 'ativa') return { ok: false, motivo: 'Empresa inativa' }
   if (!empresa.habilitada_receber) return { ok: false, motivo: 'Não habilitada a receber corridas' }
   if (!empresa.categorias_ids.includes(categoriaId)) {
     return { ok: false, motivo: 'Categoria de veículo não atendida' }
+  }
+  if (veiculos) {
+    const temNaFrota = veiculos.some(
+      (veiculo) =>
+        veiculo.empresa_id === empresa.id &&
+        veiculo.categoria_id === categoriaId &&
+        veiculo.status !== 'inativo',
+    )
+    if (!temNaFrota) {
+      return { ok: false, motivo: 'Sem veículo dessa categoria na frota' }
+    }
   }
   if (
     typeof empresa.latitude !== 'number' ||
@@ -33,12 +45,13 @@ export function ordenarEmpresasPorProximidade(
   origemLat: number,
   origemLng: number,
   categoriaId: string,
+  veiculos?: Veiculo[],
 ): { ordenadas: EmpresaComDistancia[]; historico: HistoricoDistribuicao[]; viagemId?: string } {
   const historico: HistoricoDistribuicao[] = []
   const elegiveis: EmpresaComDistancia[] = []
 
   for (const empresa of empresas) {
-    const check = empresaElegivel(empresa, categoriaId)
+    const check = empresaElegivel(empresa, categoriaId, veiculos)
     if (!check.ok) {
       historico.push({
         id: gerarId(),

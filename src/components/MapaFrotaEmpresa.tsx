@@ -28,14 +28,16 @@ type Props = {
   aoFocarMotorista: (id: string) => void
 }
 
-const CARRO = `<svg viewBox="0 0 40 64" aria-hidden="true">
-  <ellipse cx="20" cy="58" rx="12" ry="3" fill="#000" opacity="0.35"/>
-  <path fill="#111" stroke="#e6e6e6" stroke-width="1.25" d="M20 4.5c5.1 0 8.2 3.1 8.8 8.4l.5 3.8c1.7 1.1 2.9 3.1 2.9 5.8v17.2c0 7.4-5 12.3-12.2 12.3S8 47.1 8 39.7V22.5c0-2.7 1.2-4.7 2.9-5.8l.5-3.8C11.8 7.6 14.9 4.5 20 4.5z"/>
-  <path fill="#f7f9fb" d="M12.4 16.2h15.2c.9 0 1.4.9 1.1 1.7l-1.7 6.4c-.3.9-1.1 1.4-2 1.4h-9.8c-.9 0-1.7-.5-2-1.4l-1.7-6.4c-.3-.8.2-1.7 1.1-1.7z"/>
-  <path fill="#3d4248" d="M13 38.2h14c.6 0 1 .6.8 1.2l-1.1 4.2c-.3.9-1.1 1.4-2 1.4h-9.4c-.9 0-1.7-.5-2-1.4l-1.1-4.2c-.2-.6.2-1.2.8-1.2z"/>
-  <rect x="11.2" y="8.6" width="3.6" height="2.4" rx="1.1" fill="#fff6e8"/>
-  <rect x="25.2" y="8.6" width="3.6" height="2.4" rx="1.1" fill="#fff6e8"/>
-  <path fill="#161616" stroke="#e6e6e6" stroke-width="0.9" d="M6.4 24.2h3.4v6.2H7.2c-.9 0-1.8-.7-1.8-1.8v-2.4c0-1.2.6-2 1-2zm23.8 0H33.6c.4 0 1 .8 1 2v2.4c0 1.1-.9 1.8-1.8 1.8H30.2v-6.2z"/>
+const CARRO = `<svg viewBox="0 0 48 80" aria-hidden="true">
+  <ellipse cx="24" cy="72" rx="14" ry="3.2" fill="#000" opacity="0.45"/>
+  <path fill="#0c0c0c" stroke="#e7c98a" stroke-width="1.6" d="M24 3.2c6.4 0 10.2 3.4 11.2 9.2l1.2 6.2c2.2 1.3 3.6 3.6 3.6 6.6v22.4c0 9.2-6.2 15.2-16 15.2S8 57.6 8 48.4V25.2c0-3 1.4-5.3 3.6-6.6l1.2-6.2C13.8 6.6 17.6 3.2 24 3.2z"/>
+  <path fill="#f4f7fb" d="M14.2 16.5h19.6c1.1 0 1.7 1.1 1.3 2.1l-2.2 7.6c-.4 1.1-1.4 1.8-2.5 1.8H17.6c-1.1 0-2.1-.7-2.5-1.8l-2.2-7.6c-.4-1 .2-2.1 1.3-2.1z"/>
+  <path fill="#2c3138" d="M15.2 48.5h17.6c.8 0 1.3.7 1 1.5l-1.4 5.2c-.4 1.1-1.4 1.8-2.5 1.8H17.1c-1.1 0-2.1-.7-2.5-1.8l-1.4-5.2c-.3-.8.2-1.5 1-1.5z"/>
+  <rect x="12.2" y="7.2" width="5.2" height="3.1" rx="1.2" fill="#fff4d8"/>
+  <rect x="30.6" y="7.2" width="5.2" height="3.1" rx="1.2" fill="#fff4d8"/>
+  <rect x="13.4" y="62.2" width="4.2" height="2.2" rx="0.6" fill="#d4544a"/>
+  <rect x="30.4" y="62.2" width="4.2" height="2.2" rx="0.6" fill="#d4544a"/>
+  <path fill="#111" stroke="#e7c98a" stroke-width="1" d="M6.2 28.4h4.2v8.2H7.4c-1.2 0-2.2-.9-2.2-2.2v-3.4c0-1.5.7-2.6 1-2.6zm31.4 0h4.2c.3 0 1 1.1 1 2.6v3.4c0 1.3-1 2.2-2.2 2.2h-3v-8.2z"/>
 </svg>`
 
 function rumoEmGraus(deLat: number, deLng: number, paraLat?: number, paraLng?: number) {
