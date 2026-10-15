@@ -34,6 +34,18 @@ if (!secret?.startsWith('sk_')) {
 const stripe = new Stripe(secret)
 const PORT = Number(process.env.STRIPE_LOCAL_PORT || 8787)
 
+function baseRetorno(appUrl) {
+  try {
+    const url = new URL(appUrl)
+    const host = url.hostname
+    const noComputador = host === 'localhost' || host === '127.0.0.1' || host === '::1'
+    if (url.protocol === 'https:' || noComputador) return appUrl.replace(/\/$/, '')
+  } catch {
+    return 'http://localhost:5173'
+  }
+  return 'https://jemani.vercel.app'
+}
+
 function json(res, status, body) {
   res.writeHead(status, {
     'Content-Type': 'application/json',
@@ -66,7 +78,7 @@ const server = createServer(async (req, res) => {
       const viagemId = String(body.viagem_id ?? '').trim()
       const codigo = String(body.codigo ?? 'Jemani').trim()
       const amount = Number(body.amount)
-      const appUrl = String(body.app_url ?? env.APP_URL ?? 'http://localhost:5173').replace(/\/$/, '')
+      const appUrl = baseRetorno(String(body.app_url ?? env.APP_URL ?? 'http://localhost:5173'))
       if (!viagemId || !Number.isFinite(amount) || amount <= 0) {
         return json(res, 400, { erro: 'viagem_id e amount válidos são obrigatórios' })
       }
@@ -177,6 +189,6 @@ const server = createServer(async (req, res) => {
   }
 })
 
-server.listen(PORT, () => {
-  console.log(`Stripe local teste em http://127.0.0.1:${PORT}`)
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Stripe local teste em http://0.0.0.0:${PORT}`)
 })

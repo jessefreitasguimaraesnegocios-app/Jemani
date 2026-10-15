@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import type { IdiomaApp } from '@/i18n/tipos'
 import { usarIdioma } from '@/i18n/usarIdioma'
+import { dispararFeedbackAlerta } from '@/utils/feedbackAlerta'
 import {
   filtrarCorridas,
   montarHistoricoMotorista,
@@ -165,7 +166,14 @@ function ConfiguracaoMotorista() {
   }
 
   function alternar(chave: string) {
-    atualizarConfiguracao(chave, ligado(chave) ? 'false' : 'true')
+    const proximo = ligado(chave) ? 'false' : 'true'
+    atualizarConfiguracao(chave, proximo)
+    if (proximo === 'true' && (chave === 'som_notificacao' || chave === 'vibracao')) {
+      dispararFeedbackAlerta(
+        configuracoes.map((item) => (item.chave === chave ? { ...item, valor: 'true' } : item)),
+        chave === 'vibracao' ? 'status' : 'mensagem',
+      )
+    }
   }
 
   const temas = [

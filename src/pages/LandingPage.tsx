@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowDown, ArrowRight, ArrowUpRight, Check, ChevronLeft, ChevronRight,
@@ -13,7 +13,7 @@ const copy = {
     signIn: 'Entrar', create: 'Criar conta', eyebrow: 'LOS ANGELES · CALIFÓRNIA',
     title: <>Chegar bem<br /><em>muda tudo.</em></>,
     intro: 'Uma experiência de transporte executivo pensada em cada detalhe — do primeiro toque ao destino.',
-    book: 'Planejar minha viagem', discover: 'Descobrir a Jemani', imageCaption: 'Uma frota à altura dos seus planos.',
+    book: 'Planejar minha viagem', baixar: 'Download', discover: 'Descobrir a Jemani', imageCaption: 'Uma frota à altura dos seus planos.',
     strip: ['Motoristas profissionais', 'Reserva simples', 'Acompanhamento da viagem'],
     experienceEyebrow: 'O tempo é seu', experienceTitle: <>Mais do que um trajeto.<br /><em>Um jeito melhor de viajar.</em></>,
     experienceText: 'A Jemani conecta você a empresas parceiras selecionadas para viagens de aeroporto, compromissos importantes e momentos que pedem um cuidado especial.',
@@ -53,7 +53,7 @@ const copy = {
   en: {
     nav: ['The experience', 'The fleet', 'The app'], signIn: 'Sign in', create: 'Create account', eyebrow: 'LOS ANGELES · CALIFORNIA',
     title: <>Arriving well<br /><em>changes everything.</em></>, intro: 'Executive transportation with care in every detail — from your first tap to your destination.',
-    book: 'Plan my ride', discover: 'Discover Jemani', imageCaption: 'A fleet worthy of your plans.', strip: ['Professional drivers', 'Effortless booking', 'Trip updates'],
+    book: 'Plan my ride', baixar: 'Download', discover: 'Discover Jemani', imageCaption: 'A fleet worthy of your plans.', strip: ['Professional drivers', 'Effortless booking', 'Trip updates'],
     experienceEyebrow: 'Your time is yours', experienceTitle: <>More than a ride.<br /><em>A better way to travel.</em></>, experienceText: 'Jemani connects you with selected partner companies for airport transfers, important meetings, and the moments that deserve extra care.',
     features: [['One booking, made simple', 'Choose your pickup, destination, time, and ideal ride in just a few steps.'], ['Care in every detail', 'Follow your confirmation, meet your driver, and stay informed throughout your trip.'], ['Comfort that fits you', 'From executive sedans to roomy vans, find the right fit for every occasion.']],
     fleetEyebrow: 'Your ride, your style', fleetTitle: <>Meet your<br /><em>next ride.</em></>, fleetText: 'A curated selection, from executive comfort to room for the whole group.',
@@ -65,7 +65,7 @@ const copy = {
   },
   es: {
     nav: ['La experiencia', 'La flota', 'La app'], signIn: 'Entrar', create: 'Crear cuenta', eyebrow: 'LOS ANGELES · CALIFORNIA',
-    title: <>Llegar bien<br /><em>lo cambia todo.</em></>, intro: 'Transporte ejecutivo cuidado en cada detalle — desde el primer toque hasta tu destino.', book: 'Planear mi viaje', discover: 'Descubrir Jemani', imageCaption: 'Una flota a la altura de tus planes.', strip: ['Conductores profesionales', 'Reserva sencilla', 'Seguimiento del viaje'],
+    title: <>Llegar bien<br /><em>lo cambia todo.</em></>, intro: 'Transporte ejecutivo cuidado en cada detalle — desde el primer toque hasta tu destino.', book: 'Planear mi viaje', baixar: 'Download', discover: 'Descubrir Jemani', imageCaption: 'Una flota a la altura de tus planes.', strip: ['Conductores profesionales', 'Reserva sencilla', 'Seguimiento del viaje'],
     experienceEyebrow: 'Tu tiempo es tuyo', experienceTitle: <>Más que un trayecto.<br /><em>Una mejor forma de viajar.</em></>, experienceText: 'Jemani te conecta con empresas asociadas seleccionadas para traslados al aeropuerto, compromisos importantes y momentos que merecen un cuidado especial.',
     features: [['Una reserva, sin complicaciones', 'Elige origen, destino, horario y la categoría ideal en pocos pasos.'], ['Atención en cada detalle', 'Sigue la confirmación, conoce a tu conductor y viaja con claridad.'], ['Comodidad a tu medida', 'Desde sedanes ejecutivos hasta vans espaciosas, encuentra el vehículo ideal.']],
     fleetEyebrow: 'Tu viaje, tu estilo', fleetTitle: <>Encuentra tu<br /><em>próximo vehículo.</em></>, fleetText: 'Una selección que va desde el confort ejecutivo hasta espacio para todo el grupo.', fleet: [['JEMANI EXECUTIVE', 'Sedanes ejecutivos', '/frota/classe-s.jpg'], ['JEMANI BLACK', 'Una experiencia exclusiva', '/frota/lucid.jpg'], ['JEMANI SUV', 'Espacio para ir más lejos', '/frota/escalade.jpg'], ['JEMANI LUXE', 'Presencia en cada llegada', '/frota/volvo.jpg'], ['JEMANI VAN', 'Más espacio para el grupo', '/frota/sprinter.jpg'], ['JEMANI CHARTER', 'Viajes para grupos y eventos', '/frota/charter.jpg']],
@@ -78,9 +78,40 @@ export function LandingPage() {
   const { idioma } = usarIdioma()
   const content = copy[idioma]
   const fleetTrack = useRef<HTMLDivElement>(null)
+  const pausaCarrossel = useRef(0)
   const [passosIphoneAbertos, definirPassosIphoneAbertos] = useState(false)
   const alternarPassosIphone = () => definirPassosIphoneAbertos((aberto) => !aberto)
-  const scrollFleet = (direction: -1 | 1) => fleetTrack.current?.scrollBy({ left: direction * 360, behavior: 'smooth' })
+  const rolarFrota = (direcao: -1 | 1) => {
+    pausaCarrossel.current = Date.now() + 5000
+    const trilho = fleetTrack.current
+    const cartao = trilho?.querySelector<HTMLElement>('.fleet-card')
+    const passo = cartao ? cartao.offsetWidth + 15 : 360
+    trilho?.scrollBy({ left: direcao * passo, behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    const trilho = fleetTrack.current
+    if (!trilho) return
+    let quadro = 0
+    const andar = () => {
+      if (Date.now() >= pausaCarrossel.current) {
+        const metade = trilho.scrollWidth / 2
+        if (trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
+        trilho.scrollLeft += 0.7
+      }
+      quadro = window.requestAnimationFrame(andar)
+    }
+    const pausar = () => { pausaCarrossel.current = Number.POSITIVE_INFINITY }
+    const seguir = () => { pausaCarrossel.current = 0 }
+    trilho.addEventListener('pointerenter', pausar)
+    trilho.addEventListener('pointerleave', seguir)
+    quadro = window.requestAnimationFrame(andar)
+    return () => {
+      window.cancelAnimationFrame(quadro)
+      trilho.removeEventListener('pointerenter', pausar)
+      trilho.removeEventListener('pointerleave', seguir)
+    }
+  }, [])
 
   return (
     <main className="jemani-site">
@@ -98,7 +129,7 @@ export function LandingPage() {
           <div className="site-eyebrow"><span />{content.eyebrow}</div>
           <h1>{content.title}</h1>
           <p className="hero-intro">{content.intro}</p>
-          <div className="hero-buttons"><Link to="/cadastrar" className="site-button site-button-gold">{content.book}<ArrowRight size={17} /></Link><a className="hero-text-link" href="#experiencia">{content.discover}<ArrowDown size={16} /></a></div>
+          <div className="hero-buttons"><a className="site-button site-button-gold" href="/downloads/jemani-android.apk" download="Jemani-Android.apk">{content.baixar}<ArrowDown size={17} /></a><Link to="/cadastrar" className="hero-text-link">{content.book}<ArrowRight size={16} /></Link></div>
           <div className="hero-note"><MapPin size={15} /> Los Angeles · Santa Monica · Beverly Hills</div>
         </div>
         <div className="hero-image-wrap">
@@ -122,11 +153,11 @@ export function LandingPage() {
       </section>
 
       <section id="frota" className="fleet-section site-section">
-        <div className="fleet-top"><div><span className="section-kicker">02 / {content.fleetEyebrow}</span><h2>{content.fleetTitle}</h2></div><div className="fleet-intro"><p>{content.fleetText}</p><div className="fleet-controls"><button onClick={() => scrollFleet(-1)} aria-label="Previous vehicles"><ChevronLeft size={19} /></button><button onClick={() => scrollFleet(1)} aria-label="Next vehicles"><ChevronRight size={19} /></button></div></div></div>
-        <div className="fleet-track" ref={fleetTrack}>{content.fleet.map(([name, description, image], index) => <article className="fleet-card" key={name}>
-          <div className="fleet-card-image"><img src={image} alt={description} loading={index > 1 ? 'lazy' : 'eager'} /><span className="fleet-number">0{index + 1}</span><span className="fleet-image-glow" /></div>
-          <div className="fleet-card-copy"><div><span>{name}</span><p>{description}</p></div><Link to="/cadastrar" aria-label={`${content.book}: ${name}`}><ArrowUpRight size={17} /></Link></div>
-        </article>)}</div>
+        <div className="fleet-top"><div><span className="section-kicker">02 / {content.fleetEyebrow}</span><h2>{content.fleetTitle}</h2></div><div className="fleet-intro"><p>{content.fleetText}</p><div className="fleet-controls"><button onClick={() => rolarFrota(-1)} aria-label="Previous vehicles"><ChevronLeft size={19} /></button><button onClick={() => rolarFrota(1)} aria-label="Next vehicles"><ChevronRight size={19} /></button></div></div></div>
+        <div className="fleet-track fleet-carrossel" ref={fleetTrack}>{[0, 1].map((copia) => content.fleet.map(([name, description, image], index) => <article className="fleet-card" key={`${copia}-${name}`} aria-hidden={copia === 1}>
+          <div className="fleet-card-image"><img src={image} alt={copia === 0 ? description : ''} loading={index > 1 || copia === 1 ? 'lazy' : 'eager'} /><span className="fleet-number">0{index + 1}</span><span className="fleet-image-glow" /></div>
+          <div className="fleet-card-copy"><div><span>{name}</span><p>{description}</p></div><Link to="/cadastrar" tabIndex={copia === 1 ? -1 : undefined} aria-label={`${content.book}: ${name}`}><ArrowUpRight size={17} /></Link></div>
+        </article>))}</div>
         <div className="fleet-bottom"><span>JEMANI FLEET · LOS ANGELES</span><span>01 — 06</span></div>
       </section>
 

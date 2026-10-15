@@ -92,12 +92,46 @@ export function ClienteViagemDetalhePage() {
         companyAmount: viagem!.valor_empresa,
         emailCliente: usuario.email,
       })
-      if (!intencao.checkoutUrl) {
+      if (!intencao.checkoutUrl || !intencao.sessionId) {
         throw new Error(
           'Checkout Stripe indisponível. Configure VITE_STRIPE_ENABLED=true e as Edge Functions.',
         )
       }
-      window.location.href = intencao.checkoutUrl
+      const noComputador =
+        window.location.protocol === 'http:' &&
+        ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
+      if (noComputador) {
+        window.location.assign(intencao.checkoutUrl)
+        return
+      }
+      const abriu = window.open(intencao.checkoutUrl, '_blank', 'noopener')
+      if (!abriu) {
+        window.location.assign(intencao.checkoutUrl)
+        return
+      }
+      setMsg('Stripe aberto. Quando terminar o pagamento, volte para esta tela.')
+      const viagemId = viagem!.id
+      const usuarioId = usuario.id
+      const sessao = intencao.sessionId
+      let tentativas = 0
+      const timer = window.setInterval(() => {
+        tentativas += 1
+        if (tentativas > 40) {
+          window.clearInterval(timer)
+          setPagando(false)
+          setMsg('O Stripe ainda não confirmou. Se o pagamento passou, abra a viagem de novo.')
+          return
+        }
+        void confirmarPagamentoStripe(viagemId, usuarioId, sessao)
+          .then(() => {
+            window.clearInterval(timer)
+            setMsg('Pagamento confirmado via Stripe. Corrida liberada para as empresas.')
+            setPagando(false)
+          })
+          .catch(() => {
+            /* a sessão ainda não foi paga */
+          })
+      }, 3000)
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Erro ao iniciar Stripe')
       setPagando(false)

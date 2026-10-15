@@ -70,7 +70,7 @@ export function SincronizarNuvem() {
       if (!ativo) return
       for (const viagem of viagens) aplicarViagemNuvem(viagem, true)
       for (const oferta of ofertas) aplicarOfertaNuvem(oferta, true)
-      for (const mensagem of mensagens) aplicarMensagemNuvem(mensagem)
+      for (const mensagem of mensagens) aplicarMensagemNuvem(mensagem, true)
       for (const turno of turnos) aplicarTurnoNuvem(turno)
       for (const item of agendamentos) aplicarAgendamentoNuvem(item, true)
       for (const item of historicos) aplicarHistoricoNuvem(item)
@@ -80,7 +80,7 @@ export function SincronizarNuvem() {
         (oferta) => aplicarOfertaNuvem(oferta, false),
       )
       canalOperacao = assinarOperacao(
-        aplicarMensagemNuvem,
+        (mensagem) => aplicarMensagemNuvem(mensagem, false),
         aplicarTurnoNuvem,
         (item) => aplicarAgendamentoNuvem(item, false),
         removerAgendamentoNuvem,

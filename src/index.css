@@ -17,6 +17,16 @@
   --color-info: #3a5a7a;
 }
 
+:root {
+  --folga-status: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+}
+
+@media (max-width: 720px) {
+  :root {
+    --folga-status: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px), 2.75rem);
+  }
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -228,6 +238,12 @@
     background: var(--color-sidebar, var(--color-ink));
     color: #fff;
     border-right: 1px solid transparent;
+  }
+
+  @media (max-width: 1023px) {
+    .painel-lateral {
+      padding-top: var(--folga-status, env(safe-area-inset-top, 0px));
+    }
   }
 
   .sidebar-link {

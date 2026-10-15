@@ -1,8 +1,25 @@
+function urlDoApp() {
+  try {
+    const url = new URL(window.location.origin)
+    const noComputador =
+      url.protocol === 'http:' &&
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1')
+    if (noComputador || (url.protocol === 'https:' && url.hostname !== 'localhost')) {
+      return url.origin
+    }
+  } catch {
+    /* origem inválida */
+  }
+  return 'https://jemani.vercel.app'
+}
+
 const apiLocal = () => {
   const local = (import.meta.env.VITE_STRIPE_API_URL as string | undefined)?.trim()
   if (local) return local.replace(/\/$/, '')
-  if (import.meta.env.DEV && import.meta.env.VITE_STRIPE_ENABLED === 'true') {
-    return 'http://127.0.0.1:8787'
+  if (import.meta.env.DEV && import.meta.env.VITE_STRIPE_ENABLED === 'true' && typeof window !== 'undefined') {
+    const host = window.location.hostname
+    const nome = !host || host === 'localhost' || host === '::1' ? '127.0.0.1' : host
+    return `http://${nome}:8787`
   }
   return ''
 }
@@ -42,7 +59,7 @@ async function chamarFuncao<T>(nome: string, corpo: Record<string, unknown>): Pr
   } catch {
     throw new Error(
       local
-        ? 'Servidor Stripe de teste não está no ar. Rode npm run stripe:local e tente de novo.'
+        ? 'Não consegui falar com o Stripe de teste neste aparelho. No celular, use a mesma rede do computador e deixe o servidor de teste ligado.'
         : 'Não foi possível falar com o Stripe.',
     )
   }
@@ -69,7 +86,7 @@ export function criarCheckoutStripe(dados: {
 }) {
   return chamarFuncao<{ session_id: string; url: string }>('stripe-criar-checkout', {
     ...dados,
-    app_url: window.location.origin,
+    app_url: urlDoApp(),
   })
 }
 

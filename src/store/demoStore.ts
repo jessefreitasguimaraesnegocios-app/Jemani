@@ -143,7 +143,7 @@ interface EstadoDemo {
   atualizarPosicaoMotorista: (viagemId: string, latitude: number, longitude: number) => void
   aplicarViagemNuvem: (viagem: Viagem, silencioso?: boolean) => void
   aplicarOfertaNuvem: (oferta: AtribuicaoViagem, silencioso?: boolean) => void
-  aplicarMensagemNuvem: (mensagem: MensagemEmpresa) => void
+  aplicarMensagemNuvem: (mensagem: MensagemEmpresa, silencioso?: boolean) => void
   aplicarTurnoNuvem: (turno: TurnoMotorista) => void
   aplicarAgendamentoNuvem: (item: AgendamentoVeiculo, silencioso?: boolean) => void
   removerAgendamentoNuvem: (id: string) => void
@@ -222,7 +222,7 @@ function notificar(
     created_at: agoraIso(),
   }
   set(() => ({ notificacoes: [n, ...get().notificacoes] }))
-  dispararFeedbackAlerta(get().configuracoes)
+  if (get().sessaoId === usuarioId) dispararFeedbackAlerta(get().configuracoes, tipo)
   emitirAvisoSistema(titulo, mensagem)
 }
 
@@ -1809,9 +1809,23 @@ export const useDemoStore = create<EstadoDemo>()(
         void apagarAgendamentoNuvem(id)
       },
 
-      aplicarMensagemNuvem: (mensagem) => {
+      aplicarMensagemNuvem: (mensagem, silencioso = false) => {
         if (get().mensagensEmpresa.some((item) => item.id === mensagem.id)) return
         set({ mensagensEmpresa: [...get().mensagensEmpresa, mensagem] })
+        if (silencioso) return
+        const motorista = get().motoristas.find((m) => m.id === mensagem.motorista_id)
+        const empresa = get().empresas.find((e) => e.id === mensagem.empresa_id)
+        const destino = mensagem.autor === 'motorista' ? empresa?.usuario_id : motorista?.usuario_id
+        if (!destino) return
+        notificar(
+          set,
+          get,
+          destino,
+          mensagem.autor === 'motorista' ? motorista?.nome ?? 'Motorista' : empresa?.nome_comercial ?? 'Empresa',
+          mensagem.texto,
+          'mensagem',
+          mensagem.motorista_id,
+        )
       },
 
       aplicarTurnoNuvem: (turno) => {

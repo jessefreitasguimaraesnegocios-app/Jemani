@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { SincronizarIdioma } from '@/components/SincronizarIdioma'
+import { PrepararAlertas } from '@/components/PrepararAlertas'
 import { SincronizarNuvem } from '@/components/SincronizarNuvem'
 import { RotaProtegida } from '@/components/RotaProtegida'
 import { LayoutCliente } from '@/layouts/LayoutCliente'
@@ -45,6 +46,7 @@ export default function App() {
     <AuthProvider>
       <SincronizarIdioma>
       <>
+      <PrepararAlertas />
       <SincronizarNuvem />
       <BrowserRouter>
         <Routes>

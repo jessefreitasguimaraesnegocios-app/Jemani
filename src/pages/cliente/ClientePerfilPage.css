@@ -1,0 +1,52 @@
+.cliente-alertas {
+  display: grid;
+  gap: 1rem;
+}
+
+.cliente-interruptor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cliente-interruptor strong {
+  display: block;
+}
+
+.cliente-interruptor p {
+  margin: 0.2rem 0 0;
+  color: var(--color-slate);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.cliente-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.7rem;
+  height: 1.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: #cfc8bc;
+  cursor: pointer;
+}
+
+.cliente-switch span {
+  position: absolute;
+  top: 0.18rem;
+  left: 0.18rem;
+  width: 1.18rem;
+  height: 1.18rem;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+
+.cliente-switch-ligado {
+  background: #c9a46c;
+}
+
+.cliente-switch-ligado span {
+  transform: translateX(1.15rem);
+}

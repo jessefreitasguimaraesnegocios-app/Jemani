@@ -2,6 +2,21 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { CORS, json } from '../_shared/cors.ts'
 import { criarClienteStripe, valorEmCentavos } from '../_shared/stripe.ts'
 
+function urlRetorno(bruta: string) {
+  try {
+    const url = new URL(bruta)
+    const noComputador =
+      url.protocol === 'http:' &&
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1')
+    if (noComputador || (url.protocol === 'https:' && url.hostname !== 'localhost')) {
+      return url.origin
+    }
+  } catch {
+    /* segue para o site público */
+  }
+  return 'https://jemani.vercel.app'
+}
+
 /**
  * Cria Checkout Session (modo payment) na conta da plataforma.
  * O cliente paga a Jemani; o repasse Connect à empresa ocorre depois
@@ -18,9 +33,8 @@ Deno.serve(async (req: Request) => {
     const amount = Number(body.amount)
     const platformFee = Number(body.platform_fee ?? 0)
     const companyAmount = Number(body.company_amount ?? 0)
-    const appUrl = String(body.app_url ?? Deno.env.get('APP_URL') ?? 'http://localhost:5173').replace(
-      /\/$/,
-      '',
+    const appUrl = urlRetorno(
+      String(body.app_url ?? Deno.env.get('APP_URL') ?? 'http://localhost:5173'),
     )
     const emailCliente = body.email_cliente ? String(body.email_cliente).trim() : undefined
 
