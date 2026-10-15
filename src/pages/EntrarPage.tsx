@@ -6,9 +6,7 @@ import type { ChaveTraducao } from '@/i18n/mensagens'
 
 const CONTAS_DEMO: Array<{ email: string; chave: ChaveTraducao }> = [
   { email: 'cliente@jemani.app', chave: 'entrar.perfilCliente' },
-  { email: 'empresa@laxshuttle.app', chave: 'entrar.perfilEmpresaLax' },
   { email: 'empresa@lapremier.app', chave: 'entrar.perfilEmpresaLa' },
-  { email: 'empresa@beverlyconcierge.app', chave: 'entrar.perfilEmpresaBeverly' },
   { email: 'motorista@jemani.app', chave: 'entrar.perfilMotorista' },
   { email: 'admin@jemani.app', chave: 'entrar.perfilAdmin' },
 ]

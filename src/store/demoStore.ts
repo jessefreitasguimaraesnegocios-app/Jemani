@@ -1837,7 +1837,7 @@ export const useDemoStore = create<EstadoDemo>()(
       },
     }),
     {
-      name: 'jemani-demo-v4',
+      name: 'jemani-demo-v5',
       version: 10,
       migrate: (persistido) => completarCatalogo(persistido as ReturnType<typeof estadoInicial>),
       merge: (persistido, atual) => {

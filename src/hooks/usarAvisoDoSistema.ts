@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useDemoStore } from '@/store/demoStore'
 import { pedirPermissaoAviso } from '@/utils/avisoSistema'
 
-const CHAVE = 'jemani-demo-v4'
+const CHAVE = 'jemani-demo-v5'
 
 export function usarAvisoDoSistema(usuarioId?: string) {
   const vistos = useRef(new Set<string>())
