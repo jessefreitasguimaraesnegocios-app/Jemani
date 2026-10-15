@@ -25,6 +25,7 @@ import {
   contarCorridasPorStatus,
   corridaCorrespondeBusca,
 } from '@/services/quadroViagens'
+import { fundirViagemNuvem } from '@/services/fundirViagemNuvem'
 import { normalizarIdioma } from '@/i18n/tipos'
 import type { Empresa, Viagem } from '@/types'
 
@@ -212,6 +213,49 @@ describe('endereço Mapbox', () => {
     expect(endereco?.formatted).toContain('8423')
     expect(endereco?.latitude).toBe(34.065)
     expect(endereco?.longitude).toBe(-118.373)
+  })
+})
+
+describe('sincronia da viagem', () => {
+  it('não deixa a nuvem atrasada desfazer um pagamento local', () => {
+    const local = viagemBase({
+      id: 'v1',
+      cliente_id: 'c1',
+      status: 'aguardando_empresa',
+      payment_status: 'paid',
+      version: 3,
+    })
+    const nuvem = viagemBase({
+      id: 'v1',
+      cliente_id: 'c1',
+      status: 'pending_payment',
+      payment_status: 'pending_payment',
+      version: 1,
+    })
+    const fundida = fundirViagemNuvem(local, nuvem)
+    expect(fundida.status).toBe('aguardando_empresa')
+    expect(fundida.payment_status).toBe('paid')
+  })
+
+  it('aceita um status mais novo vindo da nuvem', () => {
+    const local = viagemBase({
+      id: 'v1',
+      cliente_id: 'c1',
+      status: 'aguardando_empresa',
+      payment_status: 'paid',
+      version: 2,
+    })
+    const nuvem = viagemBase({
+      id: 'v1',
+      cliente_id: 'c1',
+      status: 'empresa_confirmada',
+      payment_status: 'paid',
+      version: 4,
+      empresa_id: 'e1',
+    })
+    const fundida = fundirViagemNuvem(local, nuvem)
+    expect(fundida.status).toBe('empresa_confirmada')
+    expect(fundida.empresa_id).toBe('e1')
   })
 })
 

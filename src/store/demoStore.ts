@@ -10,6 +10,7 @@ import {
   anexarViagemAoHistorico,
   ordenarEmpresasPorProximidade,
 } from '@/services/distribuicaoService'
+import { fundirViagemNuvem, nuvemEstaAtrasada } from '@/services/fundirViagemNuvem'
 import { calcularDistanciaKm } from '@/services/mapasService'
 import { transferirParaEmpresa } from '@/lib/stripeApi'
 import { emitirAvisoSistema } from '@/utils/avisoSistema'
@@ -128,6 +129,7 @@ interface EstadoDemo {
     sessionId: string,
   ) => Promise<Viagem>
   iniciarDistribuicaoAposPagamento: (viagemId: string) => Viagem
+  retomarCorridasPagas: () => void
   enviarOfertaEmailEmpresa: (
     viagemId: string,
     empresaId: string,
@@ -653,6 +655,74 @@ export const useDemoStore = create<EstadoDemo>()(
         )
 
         return atualizada
+      },
+
+      retomarCorridasPagas: () => {
+        const state = get()
+        const idsPagos = new Set(
+          state.historicos
+            .filter((item) => item.status_novo === 'paid' || item.status_novo === 'aguardando_empresa')
+            .map((item) => item.viagem_id),
+        )
+        const presas = state.viagens.filter(
+          (viagem) => viagem.status === 'pending_payment' && idsPagos.has(viagem.id),
+        )
+        if (presas.length === 0) return
+
+        const agora = agoraIso()
+        set({
+          viagens: state.viagens.map((viagem) =>
+            presas.some((presa) => presa.id === viagem.id)
+              ? {
+                  ...viagem,
+                  status: 'paid',
+                  payment_status: 'paid',
+                  version: viagem.version + 1,
+                  updated_at: agora,
+                }
+              : viagem,
+          ),
+          pagamentos: state.pagamentos.map((pagamento) =>
+            presas.some((presa) => presa.id === pagamento.booking_id) && pagamento.status !== 'pago'
+              ? {
+                  ...pagamento,
+                  status: 'pago',
+                  provider: 'stripe',
+                  payment_method: 'stripe_checkout',
+                  updated_at: agora,
+                }
+              : pagamento,
+          ),
+        })
+
+        for (const presa of presas) {
+          const temOferta = get().atribuicoes.some((oferta) => oferta.viagem_id === presa.id)
+          if (!temOferta) {
+            try {
+              get().iniciarDistribuicaoAposPagamento(presa.id)
+            } catch (err) {
+              console.warn(
+                'Falha ao retomar a corrida paga',
+                err instanceof Error ? err.message : err,
+              )
+            }
+            continue
+          }
+          const atual = get().viagens.find((viagem) => viagem.id === presa.id)
+          if (!atual) continue
+          const atualizada: Viagem = {
+            ...atual,
+            status: 'aguardando_empresa',
+            payment_status: 'paid',
+            version: atual.version + 1,
+            updated_at: agoraIso(),
+          }
+          set({
+            viagens: get().viagens.map((viagem) => (viagem.id === atualizada.id ? atualizada : viagem)),
+          })
+          void gravarViagemNuvem(atualizada)
+          void gravarOfertasNuvem(get().atribuicoes.filter((oferta) => oferta.viagem_id === presa.id))
+        }
       },
 
       enviarOfertaEmailEmpresa: (viagemId, empresaId, adminId) => {
@@ -1473,24 +1543,11 @@ export const useDemoStore = create<EstadoDemo>()(
 
       aplicarViagemNuvem: (viagem, silencioso = false) => {
         const atual = get().viagens.find((v) => v.id === viagem.id)
-        const statusMudou = !atual || atual.status !== viagem.status
-        const fundida: Viagem = atual
-          ? {
-              ...atual,
-              status: viagem.status,
-              payment_status: viagem.payment_status,
-              empresa_id: viagem.empresa_id ?? atual.empresa_id,
-              motorista_id: viagem.motorista_id,
-              veiculo_id: viagem.veiculo_id ?? atual.veiculo_id,
-              motorista_lat: viagem.motorista_lat ?? atual.motorista_lat,
-              motorista_lng: viagem.motorista_lng ?? atual.motorista_lng,
-              comissao_percentual: viagem.comissao_percentual,
-              valor_plataforma: viagem.valor_plataforma,
-              valor_empresa: viagem.valor_empresa,
-              version: viagem.version,
-              updated_at: viagem.updated_at,
-            }
-          : viagem
+        const fundida = fundirViagemNuvem(atual, viagem)
+        const statusMudou = !atual || atual.status !== fundida.status
+        if (atual && nuvemEstaAtrasada(atual, viagem)) {
+          void gravarViagemNuvem(fundida)
+        }
 
         set({
           viagens: atual
@@ -1512,13 +1569,13 @@ export const useDemoStore = create<EstadoDemo>()(
           viagem_finalizada: 'Viagem finalizada',
           cancelada: 'Viagem cancelada',
         }
-        const titulo = avisos[viagem.status]
-        if (titulo && sessao === viagem.cliente_id) {
-          notificar(set, get, sessao, titulo, `Atualização da viagem ${viagem.codigo}.`, 'status', viagem.id)
+        const titulo = avisos[fundida.status]
+        if (titulo && sessao === fundida.cliente_id) {
+          notificar(set, get, sessao, titulo, `Atualização da viagem ${fundida.codigo}.`, 'status', fundida.id)
         }
 
-        const motorista = get().motoristas.find((m) => m.id === viagem.motorista_id)
-        if (viagem.status === 'motorista_atribuido' && motorista?.usuario_id === sessao) {
+        const motorista = get().motoristas.find((m) => m.id === fundida.motorista_id)
+        if (fundida.status === 'motorista_atribuido' && motorista?.usuario_id === sessao) {
           notificar(
             set,
             get,

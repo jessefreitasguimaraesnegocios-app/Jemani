@@ -44,11 +44,20 @@ export function SincronizarNuvem() {
       const senha = useDemoStore.getState().senhas[usuario.email]
       const entrou = await entrarNuvem(usuario.email, senha ?? '')
       if (!entrou || !ativo) return
-      const estado = useDemoStore.getState()
+      useDemoStore.getState().retomarCorridasPagas()
       if (usuario.tipo === 'cliente') {
-        const minhas = estado.viagens.filter((v) => v.cliente_id === usuario.id)
-        for (const viagem of minhas) await gravarViagemNuvem(viagem)
-        await gravarOfertasNuvem(estado.atribuicoes.filter((a) => minhas.some((v) => v.id === a.viagem_id)))
+        const ids = useDemoStore
+          .getState()
+          .viagens.filter((v) => v.cliente_id === usuario.id)
+          .map((v) => v.id)
+        for (const idViagem of ids) {
+          const viagem = useDemoStore.getState().viagens.find((v) => v.id === idViagem)
+          if (viagem) await gravarViagemNuvem(viagem)
+        }
+        const ofertas = useDemoStore
+          .getState()
+          .atribuicoes.filter((a) => ids.includes(a.viagem_id))
+        await gravarOfertasNuvem(ofertas)
       }
       const [viagens, ofertas, mensagens, turnos, agendamentos, historicos] = await Promise.all([
         listarViagensNuvem(),
