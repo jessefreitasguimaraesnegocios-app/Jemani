@@ -25,6 +25,10 @@ import {
   contarCorridasPorStatus,
   corridaCorrespondeBusca,
 } from '@/services/quadroViagens'
+import {
+  historicoPodeIrParaNuvem,
+  ofertasComEmpresaCadastrada,
+} from '@/services/filtroGravacaoNuvem'
 import { fundirViagemNuvem } from '@/services/fundirViagemNuvem'
 import { normalizarIdioma } from '@/i18n/tipos'
 import type { Empresa, Viagem } from '@/types'
@@ -256,6 +260,44 @@ describe('sincronia da viagem', () => {
     const fundida = fundirViagemNuvem(local, nuvem)
     expect(fundida.status).toBe('empresa_confirmada')
     expect(fundida.empresa_id).toBe('e1')
+  })
+})
+
+describe('gravacao na nuvem', () => {
+  const cliente = '22222222-2222-2222-2222-222222222201'
+  const viagem = '3ad1a4d4-0782-42ea-95c2-ed0b554a3a00'
+  const existentes = new Set([viagem])
+
+  it('não envia histórico de viagem ausente nem de outro usuário', () => {
+    expect(
+      historicoPodeIrParaNuvem(
+        { viagem_id: '00000000-0000-0000-0000-000000000099', usuario_id: cliente },
+        cliente,
+        existentes,
+      ),
+    ).toBe(false)
+    expect(
+      historicoPodeIrParaNuvem(
+        { viagem_id: viagem, usuario_id: '44444444-4444-4444-4444-444444444402' },
+        cliente,
+        existentes,
+      ),
+    ).toBe(false)
+    expect(
+      historicoPodeIrParaNuvem({ viagem_id: viagem, usuario_id: cliente }, cliente, existentes),
+    ).toBe(true)
+    expect(historicoPodeIrParaNuvem({ viagem_id: viagem }, cliente, existentes)).toBe(true)
+  })
+
+  it('só atribui empresa que está cadastrada para receber', () => {
+    const premier = '33333333-3333-3333-3333-333333333301'
+    const ausente = '33333333-3333-3333-3333-333333333306'
+    const ofertas = [
+      { empresa_id: premier, viagem_id: viagem },
+      { empresa_id: ausente, viagem_id: viagem },
+    ]
+    const filtradas = ofertasComEmpresaCadastrada(ofertas, new Set([premier]))
+    expect(filtradas.map((item) => item.empresa_id)).toEqual([premier])
   })
 })
 

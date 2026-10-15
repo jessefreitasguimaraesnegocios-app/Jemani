@@ -233,6 +233,7 @@ function registrarHistorico(
   novo: StatusViagem,
   usuarioId?: string,
   observacao?: string,
+  enviarParaNuvem = true,
 ) {
   const h: HistoricoStatus = {
     id: gerarId(),
@@ -244,7 +245,8 @@ function registrarHistorico(
     created_at: agoraIso(),
   }
   set(() => ({ historicos: [h, ...get().historicos] }))
-  void gravarHistoricoNuvem(h)
+  if (enviarParaNuvem) void gravarHistoricoNuvem(h)
+  return h
 }
 
 export const useDemoStore = create<EstadoDemo>()(
@@ -398,8 +400,19 @@ export const useDemoStore = create<EstadoDemo>()(
           pagamentos: [pagamento, ...state.pagamentos],
         })
 
-        registrarHistorico(set, get, viagem.id, undefined, 'pending_payment', clienteId)
-        void gravarViagemNuvem(viagem)
+        const historicoInicial = registrarHistorico(
+          set,
+          get,
+          viagem.id,
+          undefined,
+          'pending_payment',
+          clienteId,
+          undefined,
+          false,
+        )
+        void gravarViagemNuvem(viagem).then((gravou) => {
+          if (gravou) void gravarHistoricoNuvem(historicoInicial)
+        })
 
         notificar(
           set,

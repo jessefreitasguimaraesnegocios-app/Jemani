@@ -1,4 +1,5 @@
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import { ofertasComEmpresaCadastrada } from '@/services/filtroGravacaoNuvem'
 import { supabase } from '@/lib/supabase'
 import type { AtribuicaoViagem, StatusViagem, Viagem } from '@/types'
 
@@ -171,19 +172,26 @@ export function ofertaDaLinha(linha: LinhaOferta): AtribuicaoViagem {
 
 export async function gravarViagemNuvem(viagem: Viagem) {
   const db = cliente()
-  if (!db) return
+  if (!db) return false
   const sessao = await db.auth.getSession()
   const uid = sessao.data.session?.user.id
-  if (!uid) return
+  if (!uid) return false
   const linha = paraLinha(viagem)
   if (uid === viagem.cliente_id) {
     const { error } = await db.from('trips').upsert(linha, { onConflict: 'id' })
-    if (error) console.warn('Falha ao gravar viagem na nuvem', error.message)
-    return
+    if (error) {
+      console.warn('Falha ao gravar viagem na nuvem', error.message)
+      return false
+    }
+    return true
   }
   const { id, created_at, ...resto } = linha
   const { error } = await db.from('trips').update(resto).eq('id', id)
-  if (error) console.warn('Falha ao gravar viagem na nuvem', error.message)
+  if (error) {
+    console.warn('Falha ao gravar viagem na nuvem', error.message)
+    return false
+  }
+  return true
 }
 
 export async function gravarPosicaoNuvem(viagemId: string, latitude: number, longitude: number) {
@@ -196,10 +204,33 @@ export async function gravarPosicaoNuvem(viagemId: string, latitude: number, lon
   if (error) console.warn('Falha ao gravar posição na nuvem', error.message)
 }
 
+function idsDaResposta(data: unknown) {
+  if (!Array.isArray(data)) return null
+  const ids = data.flatMap((item) => {
+    if (typeof item === 'string') return [item]
+    if (item && typeof item === 'object' && 'empresas_que_podem_receber' in item) {
+      const valor = item.empresas_que_podem_receber
+      return typeof valor === 'string' ? [valor] : []
+    }
+    return []
+  })
+  return new Set(ids)
+}
+
+async function idsEmpresasQuePodemReceber() {
+  const db = cliente()
+  if (!db) return null
+  const { data, error } = await db.rpc('empresas_que_podem_receber')
+  if (error) return null
+  return idsDaResposta(data)
+}
+
 export async function gravarOfertasNuvem(ofertas: AtribuicaoViagem[]) {
   const db = cliente()
   if (!db || ofertas.length === 0) return
-  const linhas = ofertas.map((o) => ({
+  const cadastradas = await idsEmpresasQuePodemReceber()
+  if (!cadastradas) return
+  const linhas = ofertasComEmpresaCadastrada(ofertas, cadastradas).map((o) => ({
     id: o.id,
     viagem_id: o.viagem_id,
     empresa_id: o.empresa_id,
@@ -209,6 +240,7 @@ export async function gravarOfertasNuvem(ofertas: AtribuicaoViagem[]) {
     respondido_em: o.respondido_em ?? null,
     created_at: o.created_at,
   }))
+  if (linhas.length === 0) return
   const { error } = await db.from('trip_assignments').upsert(linhas, { onConflict: 'viagem_id,empresa_id' })
   if (error) console.warn('Falha ao gravar ofertas na nuvem', error.message)
 }

@@ -1,4 +1,5 @@
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import { historicoPodeIrParaNuvem } from '@/services/filtroGravacaoNuvem'
 import { supabase } from '@/lib/supabase'
 import type {
   AgendamentoVeiculo,
@@ -224,7 +225,18 @@ function linhaHistorico(item: HistoricoStatus) {
 export async function gravarHistoricosNuvem(lista: HistoricoStatus[]) {
   const db = banco()
   if (!db || lista.length === 0) return
-  const { error } = await db.from('trip_status_history').upsert(lista.map(linhaHistorico), { onConflict: 'id' })
+  const sessao = await db.auth.getSession()
+  const usuarioId = sessao.data.session?.user.id
+  if (!usuarioId) return
+  const idsViagem = [...new Set(lista.map((item) => item.viagem_id))]
+  const { data, error: erroLeitura } = await db.from('trips').select('id').in('id', idsViagem)
+  if (erroLeitura || !data) return
+  const existentes = new Set(data.map((linha) => linha.id as string))
+  const permitidos = lista.filter((item) => historicoPodeIrParaNuvem(item, usuarioId, existentes))
+  if (permitidos.length === 0) return
+  const { error } = await db
+    .from('trip_status_history')
+    .upsert(permitidos.map(linhaHistorico), { onConflict: 'id' })
   if (error) console.warn('Falha ao gravar histórico na nuvem', error.message)
 }
 
