@@ -15,6 +15,14 @@ dist-ssr
 .env.local
 supabase/functions/.env
 .supabase
+android/local.properties
+android/.gradle
+.gradle-home
+.native-apk-backup
+android/build
+android/app/build
+ios/DerivedData
+ios/App/Pods
 tmp_mig*.json
 tmp_*.json
 

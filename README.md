@@ -110,3 +110,27 @@ Repositório: [github.com/jessefreitasguimaraesnegocios-app/Jemani](https://gith
 ## Região
 
 Los Angeles e cidades da região: LAX, Santa Monica, Beverly Hills, Pasadena, Long Beach, Burbank, Malibu, Century City, Hollywood.
+
+# Aplicativos móveis (Capacitor)
+
+O projeto web pode ser empacotado para Android e iOS com Capacitor.
+
+## Android APK de teste
+
+Com Android Studio, Android SDK, Java 21 e Node 22 instalados, execute:
+
+```bash
+npm run android:apk
+```
+
+O comando cria um APK debug e o copia para `public/downloads/jemani-android.apk`, que é o arquivo servido pelo botão de download na página inicial. O APK atual é para instalação/teste manual; ainda não é uma versão assinada para publicação na Google Play.
+
+## iOS
+
+O projeto Capacitor iOS está em `ios/`. Para atualizar os assets web:
+
+```bash
+npm run ios:sync
+```
+
+A compilação e assinatura do `.ipa` exigem macOS, Xcode e as credenciais de distribuição da Apple. Depois, publique pela App Store ou TestFlight e substitua o aviso “em breve” na página pelo link oficial.

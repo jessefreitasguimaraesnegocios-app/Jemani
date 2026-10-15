@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "android:apk": "node scripts/build-android-apk.mjs",
+    "ios:sync": "node scripts/sync-ios.mjs",
+    "native:sync": "npm run build && cap sync",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
@@ -13,6 +16,9 @@
     "stripe:local": "node scripts/stripe-local-server.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "@supabase/supabase-js": "^2.116.0",
@@ -30,6 +36,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
