@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { IDS, criarDadosIniciais } from '@/data/seed'
 import { calcularDistanciaKm, interpretarFeatureMapbox } from '@/services/mapasService'
 import {
   empresaElegivel,
@@ -394,6 +395,17 @@ describe('gravacao na nuvem', () => {
     ]
     const filtradas = ofertasComEmpresaCadastrada(ofertas, new Set([premier]))
     expect(filtradas.map((item) => item.empresa_id)).toEqual([premier])
+  })
+
+  it('deixa a Ford Expedition na frota para a empresa receber a corrida', () => {
+    const dados = criarDadosIniciais()
+    const tem = dados.veiculos.some(
+      (veiculo) =>
+        veiculo.empresa_id === IDS.empresaLa &&
+        veiculo.categoria_id === IDS.catExpedition &&
+        veiculo.status !== 'inativo',
+    )
+    expect(tem).toBe(true)
   })
 
   it('não deixa a oferta local aberta desfazer o aceite da nuvem', () => {

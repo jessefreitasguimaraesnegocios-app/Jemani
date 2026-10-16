@@ -20,6 +20,7 @@ import {
   gravarOfertasNuvem,
   gravarPosicaoNuvem,
   gravarViagemNuvem,
+  gravarViagensNuvem,
 } from '@/services/nuvemCorrida'
 import {
   apagarAgendamentoNuvem,
@@ -133,6 +134,7 @@ interface EstadoDemo {
   ) => Promise<Viagem>
   iniciarDistribuicaoAposPagamento: (viagemId: string) => Viagem
   retomarCorridasPagas: () => void
+  garantirOfertasAbertas: () => void
   enviarOfertaEmailEmpresa: (
     viagemId: string,
     empresaId: string,
@@ -748,6 +750,77 @@ export const useDemoStore = create<EstadoDemo>()(
             }
           })
         }
+      },
+
+      garantirOfertasAbertas: () => {
+        const state = get()
+        const clienteId = state.sessaoId
+        if (!clienteId) return
+        const agora = agoraIso()
+        const novasAtribuicoes: AtribuicaoViagem[] = []
+        const atualizadas: Viagem[] = []
+
+        for (const viagem of state.viagens) {
+          if (viagem.cliente_id !== clienteId) continue
+          if (viagem.payment_status !== 'paid' || viagem.empresa_id) continue
+          if (!['aguardando_empresa', 'oferta_enviada', 'paid'].includes(viagem.status)) continue
+          if (
+            state.atribuicoes.some(
+              (oferta) => oferta.viagem_id === viagem.id && oferta.status === 'oferecida',
+            )
+          ) {
+            continue
+          }
+          if (typeof viagem.origem_lat !== 'number' || typeof viagem.origem_lng !== 'number') continue
+
+          const { ordenadas } = ordenarEmpresasPorProximidade(
+            state.empresas,
+            viagem.origem_lat,
+            viagem.origem_lng,
+            viagem.categoria_id,
+            state.veiculos,
+          )
+          if (ordenadas.length === 0) continue
+
+          novasAtribuicoes.push(
+            ...ordenadas.map((o, idx) => ({
+              id: gerarId(),
+              viagem_id: viagem.id,
+              empresa_id: o.empresa.id,
+              status: 'oferecida' as const,
+              distancia_km: o.distancia_km,
+              created_at: agora,
+              motivo: idx === 0 ? 'primeira_por_proximidade' : `ordem_${idx + 1}`,
+            })),
+          )
+          atualizadas.push({
+            ...viagem,
+            status: 'aguardando_empresa',
+            version: viagem.version + 1,
+            updated_at: agora,
+          })
+          for (const o of ordenadas) {
+            notificar(
+              set,
+              get,
+              o.empresa.usuario_id,
+              'Nova solicitação recebida',
+              `Corrida ${viagem.codigo} (${o.distancia_km} km do embarque): ${viagem.origem} → ${viagem.destino}`,
+              'nova_solicitacao',
+              viagem.id,
+            )
+          }
+        }
+
+        if (atualizadas.length === 0) return
+        const porId = new Map(atualizadas.map((viagem) => [viagem.id, viagem]))
+        set({
+          viagens: get().viagens.map((viagem) => porId.get(viagem.id) ?? viagem),
+          atribuicoes: [...novasAtribuicoes, ...get().atribuicoes],
+        })
+        void gravarViagensNuvem(atualizadas).then((gravou) => {
+          if (gravou) void gravarOfertasNuvem(novasAtribuicoes)
+        })
       },
 
       enviarOfertaEmailEmpresa: (viagemId, empresaId, adminId) => {

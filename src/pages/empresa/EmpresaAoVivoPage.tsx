@@ -25,6 +25,7 @@ export function EmpresaAoVivoPage() {
   const { usuario } = useAuth()
   const empresa = useDemoStore((s) => s.obterEmpresaDoUsuario(usuario?.id ?? ''))
   const todasViagens = useDemoStore((s) => s.viagens)
+  const atribuicoes = useDemoStore((s) => s.atribuicoes)
   const categorias = useDemoStore((s) => s.categorias)
   const motoristas = useDemoStore((s) => s.motoristas)
   const veiculos = useDemoStore((s) => s.veiculos)
@@ -34,10 +35,16 @@ export function EmpresaAoVivoPage() {
   const [motoristaId, setMotoristaId] = useState<string | null>(null)
   const [focoSeq, setFocoSeq] = useState(0)
 
-  const viagens = useMemo(
-    () => todasViagens.filter((v) => v.empresa_id === empresa?.id),
-    [todasViagens, empresa?.id],
-  )
+  const viagens = useMemo(() => {
+    const oferecidas = new Set(
+      atribuicoes
+        .filter((oferta) => oferta.empresa_id === empresa?.id && oferta.status === 'oferecida')
+        .map((oferta) => oferta.viagem_id),
+    )
+    return todasViagens.filter(
+      (viagem) => viagem.empresa_id === empresa?.id || oferecidas.has(viagem.id),
+    )
+  }, [todasViagens, atribuicoes, empresa?.id])
   const daEmpresa = useMemo(
     () => motoristas.filter((m) => m.empresa_id === empresa?.id),
     [motoristas, empresa?.id],

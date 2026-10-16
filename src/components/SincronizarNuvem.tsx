@@ -80,6 +80,7 @@ export function SincronizarNuvem() {
           return !remota || nuvemEstaAtrasada(atual, remota) ? [atual] : []
         })
         if (paraSubir.length > 0) await gravarViagensNuvem(paraSubir)
+        useDemoStore.getState().garantirOfertasAbertas()
         const idsLocais = new Set(locais.map((item) => item.id))
         await gravarOfertasNuvem(
           useDemoStore

@@ -204,6 +204,25 @@ export function sincronizarFrota(categorias: CategoriaVeiculo[], agora = agoraIs
   return [...frota, ...categorias.filter((c) => !slugs.has(c.slug))]
 }
 
+const FROTA_PARA_OFERTA = [
+  {
+    categoriaId: IDS.catExpedition,
+    marca: 'Ford',
+    modelo: 'Expedition',
+    capacidade: 7,
+    sufixo: '8',
+    placa: '7EXP',
+  },
+  {
+    categoriaId: IDS.catCharter,
+    marca: 'Prevost',
+    modelo: 'H3-45',
+    capacidade: 40,
+    sufixo: '9',
+    placa: '7CHT',
+  },
+]
+
 export function criarVeiculoShield(agora = agoraIso()): Veiculo {
   return {
     id: ID_VEICULO_SHIELD,
@@ -309,11 +328,42 @@ export function completarCatalogo<
   const veiculosBase = estado.veiculos.some((v) => v.id === ID_VEICULO_SHIELD)
     ? estado.veiculos
     : [...estado.veiculos, criarVeiculoShield(agora)]
-  const veiculos = veiculosBase.map((veiculo) =>
+  let veiculos = veiculosBase.map((veiculo) =>
     veiculo.id === ID_VEICULO_SHIELD
       ? { ...veiculo, marca: 'Cadillac', modelo: 'Escalade' }
       : veiculo,
   )
+  for (const empresa of empresas) {
+    for (const item of FROTA_PARA_OFERTA) {
+      if (!empresa.categorias_ids.includes(item.categoriaId)) continue
+      const jaTem = veiculos.some(
+        (veiculo) =>
+          veiculo.empresa_id === empresa.id &&
+          veiculo.categoria_id === item.categoriaId &&
+          veiculo.status !== 'inativo',
+      )
+      if (jaTem) continue
+      veiculos = [
+        ...veiculos,
+        {
+          id: `99999999-9999-9999-9999-999999999${item.sufixo}${empresa.id.slice(-2)}`,
+          empresa_id: empresa.id,
+          marca: item.marca,
+          modelo: item.modelo,
+          ano: 2024,
+          categoria_id: item.categoriaId,
+          capacidade: item.capacidade,
+          ar_condicionado: true,
+          bagageiro: true,
+          fotos: [],
+          placa: `${item.placa}${empresa.id.slice(-2)}`,
+          status: 'disponivel',
+          created_at: agora,
+          updated_at: agora,
+        },
+      ]
+    }
+  }
 
   const listaMotoristas = estado.motoristas.some((m) => m.id === IDS.motorista11)
     ? estado.motoristas
@@ -1027,7 +1077,7 @@ export function criarDadosIniciais(): {
       created_at: agora,
     }))
 
-  return {
+  return completarCatalogo({
     perfis,
     senhas,
     empresas,
@@ -1058,7 +1108,7 @@ export function criarDadosIniciais(): {
     turnos: [],
     mensagensEmpresa: [],
     agendamentosVeiculo: [],
-  }
+  })
 }
 
 function gerarUuidLocal(base: string): string {
