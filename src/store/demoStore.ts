@@ -964,13 +964,15 @@ export const useDemoStore = create<EstadoDemo>()(
           ],
         })
 
-        registrarHistorico(
+        const historicoAceite = registrarHistorico(
           set,
           get,
           viagemId,
           viagem.status,
           'empresa_confirmada',
           empresa?.usuario_id,
+          undefined,
+          false,
         )
 
         notificar(
@@ -985,8 +987,9 @@ export const useDemoStore = create<EstadoDemo>()(
         const ofertaAceita = get().atribuicoes.filter(
           (a) => a.viagem_id === viagemId && a.empresa_id === empresaId,
         )
-        void gravarViagemNuvem(atualizada).finally(() => {
+        void gravarViagemNuvem(atualizada).then((gravou) => {
           void gravarOfertasNuvem(ofertaAceita)
+          if (gravou) void gravarHistoricoNuvem(historicoAceite)
         })
 
         if (empresa?.stripe_account_id && import.meta.env.VITE_STRIPE_ENABLED === 'true') {

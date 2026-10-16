@@ -100,9 +100,10 @@ export async function cadastrarClienteNuvem(dados: {
 
 export async function entrarNuvem(email: string, senha: string) {
   const db = cliente()
-  if (!db || !email || !senha) return false
+  if (!db || !email) return false
   const atual = await db.auth.getSession()
   if (atual.data.session?.user.email?.toLowerCase() === email.toLowerCase()) return true
+  if (!senha) return false
   const { error } = await db.auth.signInWithPassword({ email, password: senha })
   return !error
 }
@@ -210,6 +211,22 @@ export function ofertaDaLinha(linha: LinhaOferta): AtribuicaoViagem {
   }
 }
 
+export async function gravarViagensNuvem(viagens: Viagem[]) {
+  const db = cliente()
+  if (!db || viagens.length === 0) return false
+  const sessao = await db.auth.getSession()
+  const uid = sessao.data.session?.user.id
+  if (!uid) return false
+  const linhas = viagens.filter((viagem) => viagem.cliente_id === uid).map(paraLinha)
+  if (linhas.length === 0) return false
+  const { error } = await db.from('trips').upsert(linhas, { onConflict: 'id' })
+  if (error) {
+    console.warn('Falha ao gravar viagem na nuvem', error.message)
+    return false
+  }
+  return true
+}
+
 export async function gravarViagemNuvem(viagem: Viagem) {
   const db = cliente()
   if (!db) return false
@@ -217,14 +234,7 @@ export async function gravarViagemNuvem(viagem: Viagem) {
   const uid = sessao.data.session?.user.id
   if (!uid) return false
   const linha = paraLinha(viagem)
-  if (uid === viagem.cliente_id) {
-    const { error } = await db.from('trips').upsert(linha, { onConflict: 'id' })
-    if (error) {
-      console.warn('Falha ao gravar viagem na nuvem', error.message)
-      return false
-    }
-    return true
-  }
+  if (uid === viagem.cliente_id) return gravarViagensNuvem([viagem])
   const { id, created_at, ...resto } = linha
   const { data, error } = await db.from('trips').update(resto).eq('id', id).select('id')
   if (error || !data?.length) {
@@ -318,9 +328,11 @@ export function assinarNuvem(
   const canal: RealtimeChannel = db
     .channel('corridas-jemani')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, (payload) => {
-      const linha = payload.new as LinhaViagem
+      const linha = payload.new as { id?: string } | null
       if (!linha?.id) return
-      aoViagem(viagemDaLinha(linha))
+      void buscarViagemNuvem(linha.id).then((viagem) => {
+        if (viagem) aoViagem(viagem)
+      })
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'trip_assignments' }, (payload) => {
       const linha = payload.new as LinhaOferta

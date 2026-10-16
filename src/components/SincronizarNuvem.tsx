@@ -1,11 +1,14 @@
 import { useEffect } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from '@/contexts/AuthContext'
+import { ofertaLocalPodeSubir } from '@/services/filtroGravacaoNuvem'
+import { nuvemEstaAtrasada } from '@/services/fundirViagemNuvem'
 import {
   assinarNuvem,
+  buscarViagemNuvem,
   entrarNuvem,
   gravarOfertasNuvem,
-  gravarViagemNuvem,
+  gravarViagensNuvem,
   listarOfertasNuvem,
   listarViagensNuvem,
 } from '@/services/nuvemCorrida'
@@ -37,28 +40,26 @@ export function SincronizarNuvem() {
   useEffect(() => {
     if (!usuario) return
     let ativo = true
+    let relogio = 0
+    let aoVoltar: (() => void) | null = null
     let canalCorrida: RealtimeChannel | null = null
     let canalOperacao: RealtimeChannel | null = null
+
+    async function puxarCorridasAoVivo() {
+      const [viagensAgora, ofertasAgora] = await Promise.all([
+        listarViagensNuvem(),
+        listarOfertasNuvem(),
+      ])
+      if (!ativo) return
+      for (const viagem of viagensAgora) aplicarViagemNuvem(viagem, false)
+      for (const oferta of ofertasAgora) aplicarOfertaNuvem(oferta, true)
+    }
 
     void (async () => {
       const senha = useDemoStore.getState().senhas[usuario.email]
       const entrou = await entrarNuvem(usuario.email, senha ?? '')
       if (!entrou || !ativo) return
       useDemoStore.getState().retomarCorridasPagas()
-      if (usuario.tipo === 'cliente') {
-        const ids = useDemoStore
-          .getState()
-          .viagens.filter((v) => v.cliente_id === usuario.id)
-          .map((v) => v.id)
-        for (const idViagem of ids) {
-          const viagem = useDemoStore.getState().viagens.find((v) => v.id === idViagem)
-          if (viagem) await gravarViagemNuvem(viagem)
-        }
-        const ofertas = useDemoStore
-          .getState()
-          .atribuicoes.filter((a) => ids.includes(a.viagem_id))
-        await gravarOfertasNuvem(ofertas)
-      }
       const [viagens, ofertas, mensagens, turnos, agendamentos, historicos] = await Promise.all([
         listarViagensNuvem(),
         listarOfertasNuvem(),
@@ -70,6 +71,24 @@ export function SincronizarNuvem() {
       if (!ativo) return
       for (const viagem of viagens) aplicarViagemNuvem(viagem, true)
       for (const oferta of ofertas) aplicarOfertaNuvem(oferta, true)
+      if (usuario.tipo === 'cliente') {
+        const locais = useDemoStore.getState().viagens.filter((v) => v.cliente_id === usuario.id)
+        const porId = new Map(viagens.map((item) => [item.id, item]))
+        const paraSubir = locais.flatMap((local) => {
+          const atual = useDemoStore.getState().viagens.find((v) => v.id === local.id) ?? local
+          const remota = porId.get(local.id)
+          return !remota || nuvemEstaAtrasada(atual, remota) ? [atual] : []
+        })
+        if (paraSubir.length > 0) await gravarViagensNuvem(paraSubir)
+        const idsLocais = new Set(locais.map((item) => item.id))
+        await gravarOfertasNuvem(
+          useDemoStore
+            .getState()
+            .atribuicoes.filter(
+              (oferta) => idsLocais.has(oferta.viagem_id) && ofertaLocalPodeSubir(oferta, ofertas),
+            ),
+        )
+      }
       for (const mensagem of mensagens) aplicarMensagemNuvem(mensagem, true)
       for (const turno of turnos) aplicarTurnoNuvem(turno)
       for (const item of agendamentos) aplicarAgendamentoNuvem(item, true)
@@ -84,8 +103,21 @@ export function SincronizarNuvem() {
         aplicarTurnoNuvem,
         (item) => aplicarAgendamentoNuvem(item, false),
         removerAgendamentoNuvem,
-        aplicarHistoricoNuvem,
+        (item) => {
+          aplicarHistoricoNuvem(item)
+          void buscarViagemNuvem(item.viagem_id).then((viagem) => {
+            if (ativo && viagem) aplicarViagemNuvem(viagem, false)
+          })
+        },
       )
+      if (!ativo) return
+      aoVoltar = () => {
+        if (document.visibilityState === 'visible') void puxarCorridasAoVivo()
+      }
+      document.addEventListener('visibilitychange', aoVoltar)
+      relogio = window.setInterval(() => {
+        if (document.visibilityState === 'visible') void puxarCorridasAoVivo()
+      }, 4000)
 
       const depois = useDemoStore.getState()
       const motorista = depois.motoristas.find((m) => m.usuario_id === usuario.id)
@@ -143,6 +175,8 @@ export function SincronizarNuvem() {
 
     return () => {
       ativo = false
+      window.clearInterval(relogio)
+      if (aoVoltar) document.removeEventListener('visibilitychange', aoVoltar)
       void canalCorrida?.unsubscribe()
       void canalOperacao?.unsubscribe()
     }

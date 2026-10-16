@@ -27,6 +27,7 @@ import {
 } from '@/services/quadroViagens'
 import {
   historicoPodeIrParaNuvem,
+  ofertaLocalPodeSubir,
   ofertasComEmpresaCadastrada,
 } from '@/services/filtroGravacaoNuvem'
 import { fundirViagemNuvem } from '@/services/fundirViagemNuvem'
@@ -393,6 +394,17 @@ describe('gravacao na nuvem', () => {
     ]
     const filtradas = ofertasComEmpresaCadastrada(ofertas, new Set([premier]))
     expect(filtradas.map((item) => item.empresa_id)).toEqual([premier])
+  })
+
+  it('não deixa a oferta local aberta desfazer o aceite da nuvem', () => {
+    const empresa = '33333333-3333-3333-3333-333333333301'
+    const nuvem = [{ viagem_id: viagem, empresa_id: empresa, status: 'aceita' }]
+    expect(
+      ofertaLocalPodeSubir({ viagem_id: viagem, empresa_id: empresa, status: 'oferecida' }, nuvem),
+    ).toBe(false)
+    expect(
+      ofertaLocalPodeSubir({ viagem_id: viagem, empresa_id: empresa, status: 'aceita' }, []),
+    ).toBe(true)
   })
 })
 

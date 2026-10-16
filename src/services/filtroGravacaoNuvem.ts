@@ -14,3 +14,14 @@ export function ofertasComEmpresaCadastrada<T extends { empresa_id: string }>(
 ) {
   return ofertas.filter((oferta) => empresasCadastradas.has(oferta.empresa_id))
 }
+
+export function ofertaLocalPodeSubir(
+  local: { viagem_id: string; empresa_id: string; status: string },
+  nuvem: readonly { viagem_id: string; empresa_id: string; status: string }[],
+) {
+  const remota = nuvem.find(
+    (item) => item.viagem_id === local.viagem_id && item.empresa_id === local.empresa_id,
+  )
+  if (!remota || remota.status === local.status) return !remota
+  return remota.status === 'oferecida'
+}
