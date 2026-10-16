@@ -226,9 +226,9 @@ export async function gravarViagemNuvem(viagem: Viagem) {
     return true
   }
   const { id, created_at, ...resto } = linha
-  const { error } = await db.from('trips').update(resto).eq('id', id)
-  if (error) {
-    console.warn('Falha ao gravar viagem na nuvem', error.message)
+  const { data, error } = await db.from('trips').update(resto).eq('id', id).select('id')
+  if (error || !data?.length) {
+    console.warn('Falha ao gravar viagem na nuvem', error?.message ?? 'nenhuma linha atualizada')
     return false
   }
   return true

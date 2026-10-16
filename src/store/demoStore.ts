@@ -982,12 +982,11 @@ export const useDemoStore = create<EstadoDemo>()(
           'status',
           viagemId,
         )
-        void gravarViagemNuvem(atualizada).then((gravou) => {
-          if (gravou) {
-            void gravarOfertasNuvem(
-              get().atribuicoes.filter((a) => a.viagem_id === viagemId),
-            )
-          }
+        const ofertaAceita = get().atribuicoes.filter(
+          (a) => a.viagem_id === viagemId && a.empresa_id === empresaId,
+        )
+        void gravarViagemNuvem(atualizada).finally(() => {
+          void gravarOfertasNuvem(ofertaAceita)
         })
 
         if (empresa?.stripe_account_id && import.meta.env.VITE_STRIPE_ENABLED === 'true') {
