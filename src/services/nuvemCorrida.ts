@@ -1,7 +1,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { ofertasComEmpresaCadastrada } from '@/services/filtroGravacaoNuvem'
 import { supabase } from '@/lib/supabase'
-import type { AtribuicaoViagem, StatusViagem, Viagem } from '@/types'
+import type { AtribuicaoViagem, Empresa, Motorista, Perfil, StatusViagem, Viagem } from '@/types'
 
 type LinhaViagem = {
   id: string
@@ -106,6 +106,98 @@ export async function entrarNuvem(email: string, senha: string) {
   if (!senha) return false
   const { error } = await db.auth.signInWithPassword({ email, password: senha })
   return !error
+}
+
+function perfilDaLinha(linha: {
+  id: string
+  email: string
+  nome: string
+  telefone?: string | null
+  tipo: Perfil['tipo']
+  avatar_url?: string | null
+  ativo: boolean
+  created_at: string
+  updated_at: string
+}): Perfil {
+  return {
+    id: linha.id,
+    email: linha.email,
+    nome: linha.nome,
+    telefone: linha.telefone ?? undefined,
+    tipo: linha.tipo,
+    avatar_url: linha.avatar_url ?? undefined,
+    ativo: linha.ativo,
+    created_at: linha.created_at,
+    updated_at: linha.updated_at,
+  }
+}
+
+function empresaDaLinha(linha: Empresa): Empresa {
+  return {
+    ...linha,
+    latitude: linha.latitude != null ? Number(linha.latitude) : undefined,
+    longitude: linha.longitude != null ? Number(linha.longitude) : undefined,
+    regioes_atendidas: linha.regioes_atendidas ?? [],
+    categorias_ids: linha.categorias_ids ?? [],
+    habilitada_receber: linha.habilitada_receber ?? true,
+    avaliacao_media: Number(linha.avaliacao_media ?? 5),
+    comissao_percentual:
+      linha.comissao_percentual != null ? Number(linha.comissao_percentual) : 10,
+  }
+}
+
+function motoristaDaLinha(linha: Motorista): Motorista {
+  return {
+    ...linha,
+    telefone: linha.telefone ?? '',
+    cnh: linha.cnh ?? '',
+    categoria_cnh: linha.categoria_cnh ?? 'B',
+    experiencia_anos: Number(linha.experiencia_anos ?? 0),
+    disponivel: linha.disponivel ?? true,
+    avaliacao_media: Number(linha.avaliacao_media ?? 5),
+  }
+}
+
+export async function entrarContaNuvem(email: string, senha: string) {
+  const db = cliente()
+  if (!db || !email || !senha) return null
+  const { data, error } = await db.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password: senha,
+  })
+  if (error || !data.user) return null
+
+  const { data: linha, error: erroPerfil } = await db
+    .from('profiles')
+    .select('*')
+    .eq('id', data.user.id)
+    .maybeSingle()
+  if (erroPerfil || !linha) {
+    await db.auth.signOut()
+    return null
+  }
+
+  const perfil = perfilDaLinha(linha as Perfil)
+  let empresa: Empresa | undefined
+  let motorista: Motorista | undefined
+
+  if (perfil.tipo === 'empresa') {
+    const { data: empresas } = await db.from('companies').select('*')
+    const lista = (empresas ?? []) as Empresa[]
+    const linhaEmpresa = lista.find((item) => item.usuario_id === perfil.id) ?? lista[0]
+    if (linhaEmpresa) empresa = empresaDaLinha(linhaEmpresa)
+  }
+
+  if (perfil.tipo === 'motorista') {
+    const { data: linhaMotorista } = await db
+      .from('drivers')
+      .select('*')
+      .eq('usuario_id', perfil.id)
+      .maybeSingle()
+    if (linhaMotorista) motorista = motoristaDaLinha(linhaMotorista as Motorista)
+  }
+
+  return { perfil, empresa, motorista }
 }
 
 export async function sairNuvem() {

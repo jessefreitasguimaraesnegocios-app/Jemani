@@ -17,7 +17,9 @@ import { transferirParaEmpresa } from '@/lib/stripeApi'
 import { emitirAvisoSistema } from '@/utils/avisoSistema'
 import {
   cadastrarClienteNuvem,
+  entrarContaNuvem,
   gravarOfertasNuvem,
+  sairNuvem,
   gravarPosicaoNuvem,
   gravarViagemNuvem,
   gravarViagensNuvem,
@@ -110,7 +112,7 @@ interface EstadoDemo {
 
   resetarDemo: () => void
   obterUsuario: () => Perfil | null
-  entrar: (email: string, senha: string) => Perfil
+  entrar: (email: string, senha: string) => Promise<Perfil>
   cadastrar: (dados: {
     nome: string
     email: string
@@ -266,15 +268,68 @@ export const useDemoStore = create<EstadoDemo>()(
         return perfis.find((p) => p.id === sessaoId) ?? null
       },
 
-      entrar: (email, senha) => {
+      entrar: async (email, senha) => {
+        const emailLimpo = email.trim().toLowerCase()
         const state = get()
-        const perfil = state.perfis.find((p) => p.email.toLowerCase() === email.toLowerCase())
-        if (!perfil || state.senhas[perfil.email] !== senha) {
-          throw new Error('E-mail ou senha inválidos')
+        const local = state.perfis.find((p) => p.email.toLowerCase() === emailLimpo)
+        if (local && state.senhas[local.email] === senha) {
+          if (!local.ativo) throw new Error('Usuário inativo')
+          set({
+            sessaoId: local.id,
+            senhas: { ...state.senhas, [local.email]: senha },
+          })
+          return local
         }
-        if (!perfil.ativo) throw new Error('Usuário inativo')
-        set({ sessaoId: perfil.id })
-        return perfil
+
+        const conta = await entrarContaNuvem(emailLimpo, senha)
+        if (!conta) throw new Error('E-mail ou senha inválidos')
+        if (!conta.perfil.ativo) {
+          await sairNuvem()
+          throw new Error('Usuário inativo')
+        }
+
+        const perfis = [
+          ...state.perfis.filter(
+            (p) => p.id !== conta.perfil.id && p.email.toLowerCase() !== emailLimpo,
+          ),
+          conta.perfil,
+        ]
+        let empresas = state.empresas
+        let veiculos = state.veiculos
+        let motoristas = state.motoristas
+        if (conta.empresa) {
+          const jaTem = empresas.some((e) => e.id === conta.empresa!.id)
+          empresas = jaTem
+            ? empresas.map((e) => (e.id === conta.empresa!.id ? { ...e, ...conta.empresa } : e))
+            : [conta.empresa, ...empresas]
+          const catalogo = completarCatalogo({
+            categorias: state.categorias,
+            empresas,
+            veiculos,
+            motoristas,
+          })
+          empresas = catalogo.empresas
+          veiculos = catalogo.veiculos
+          motoristas = catalogo.motoristas
+        }
+        if (conta.motorista) {
+          const jaTem = motoristas.some((m) => m.id === conta.motorista!.id)
+          motoristas = jaTem
+            ? motoristas.map((m) =>
+                m.id === conta.motorista!.id ? { ...m, ...conta.motorista } : m,
+              )
+            : [conta.motorista, ...motoristas]
+        }
+
+        set({
+          perfis,
+          empresas,
+          veiculos,
+          motoristas,
+          senhas: { ...get().senhas, [conta.perfil.email]: senha },
+          sessaoId: conta.perfil.id,
+        })
+        return conta.perfil
       },
 
       cadastrar: async ({ nome, email, senha, telefone }) => {
