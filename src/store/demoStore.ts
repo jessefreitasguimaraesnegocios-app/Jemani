@@ -16,6 +16,7 @@ import { calcularDistanciaKm } from '@/services/mapasService'
 import { transferirParaEmpresa } from '@/lib/stripeApi'
 import { emitirAvisoSistema } from '@/utils/avisoSistema'
 import {
+  cadastrarClienteNuvem,
   gravarOfertasNuvem,
   gravarPosicaoNuvem,
   gravarViagemNuvem,
@@ -63,6 +64,7 @@ import type {
   Veiculo,
   Viagem,
 } from '@/types'
+import { supabase } from '@/lib/supabase'
 import { enderecoProntoParaReserva } from '@/utils/endereco'
 import { dispararFeedbackAlerta } from '@/utils/feedbackAlerta'
 import { agoraIso, gerarCodigoViagem, gerarId } from '@/utils/format'
@@ -114,7 +116,7 @@ interface EstadoDemo {
     senha: string
     telefone?: string
     tipo?: TipoUsuario
-  }) => Perfil
+  }) => Promise<Perfil>
   sair: () => void
 
   calcularPreco: (
@@ -273,15 +275,19 @@ export const useDemoStore = create<EstadoDemo>()(
         return perfil
       },
 
-      cadastrar: ({ nome, email, senha, telefone }) => {
+      cadastrar: async ({ nome, email, senha, telefone }) => {
         const state = get()
-        if (state.perfis.some((p) => p.email.toLowerCase() === email.toLowerCase())) {
+        const emailLimpo = email.trim().toLowerCase()
+        if (state.perfis.some((p) => p.email.toLowerCase() === emailLimpo)) {
           throw new Error('E-mail já cadastrado')
         }
+        const id = supabase
+          ? await cadastrarClienteNuvem({ nome, email: emailLimpo, senha, telefone })
+          : gerarId()
         const agora = agoraIso()
         const perfil: Perfil = {
-          id: gerarId(),
-          email: email.toLowerCase(),
+          id,
+          email: emailLimpo,
           nome,
           telefone,
           tipo: 'cliente',

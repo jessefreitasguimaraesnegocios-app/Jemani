@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { BadgeStatus } from '@/components/BadgeStatus'
@@ -81,6 +82,11 @@ export function ClienteViagemDetalhePage() {
 
   async function pagarComStripe() {
     if (!usuario) return
+    const noComputador =
+      window.location.protocol === 'http:' &&
+      ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
+    const janelaStripe =
+      noComputador || Capacitor.isNativePlatform() ? null : window.open('about:blank', '_blank')
     setPagando(true)
     setMsg('')
     try {
@@ -97,15 +103,15 @@ export function ClienteViagemDetalhePage() {
           'Checkout Stripe indisponível. Configure VITE_STRIPE_ENABLED=true e as Edge Functions.',
         )
       }
-      const noComputador =
-        window.location.protocol === 'http:' &&
-        ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
       if (noComputador) {
         window.location.assign(intencao.checkoutUrl)
         return
       }
-      const abriu = window.open(intencao.checkoutUrl, '_blank', 'noopener')
-      if (!abriu) {
+      if (Capacitor.isNativePlatform()) {
+        window.location.assign(intencao.checkoutUrl)
+      } else if (janelaStripe) {
+        janelaStripe.location.href = intencao.checkoutUrl
+      } else {
         window.location.assign(intencao.checkoutUrl)
         return
       }
@@ -133,6 +139,7 @@ export function ClienteViagemDetalhePage() {
           })
       }, 3000)
     } catch (err) {
+      janelaStripe?.close()
       setMsg(err instanceof Error ? err.message : 'Erro ao iniciar Stripe')
       setPagando(false)
     }

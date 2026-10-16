@@ -58,6 +58,46 @@ function cliente() {
   return supabase
 }
 
+export async function cadastrarClienteNuvem(dados: {
+  nome: string
+  email: string
+  senha: string
+  telefone?: string
+}) {
+  const db = cliente()
+  if (!db) throw new Error('Supabase não configurado')
+  const email = dados.email.trim().toLowerCase()
+  const { data, error } = await db.auth.signUp({
+    email,
+    password: dados.senha,
+    options: { data: { nome: dados.nome, telefone: dados.telefone ?? '' } },
+  })
+  if (error) {
+    const texto = error.message.toLowerCase()
+    if (texto.includes('already') || texto.includes('registered')) {
+      throw new Error('E-mail já cadastrado')
+    }
+    throw new Error(error.message)
+  }
+  if (!data.user) throw new Error('Não foi possível criar a conta')
+  if (!data.session) {
+    throw new Error('Conta criada, mas o e-mail ainda precisa ser confirmado.')
+  }
+  const { error: erroPerfil } = await db.from('profiles').upsert(
+    {
+      id: data.user.id,
+      email,
+      nome: dados.nome,
+      telefone: dados.telefone || null,
+      tipo: 'cliente',
+      ativo: true,
+    },
+    { onConflict: 'id' },
+  )
+  if (erroPerfil) throw new Error(erroPerfil.message)
+  return data.user.id
+}
+
 export async function entrarNuvem(email: string, senha: string) {
   const db = cliente()
   if (!db || !email || !senha) return false

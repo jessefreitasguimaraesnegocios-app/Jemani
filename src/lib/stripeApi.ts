@@ -18,8 +18,9 @@ const apiLocal = () => {
   if (local) return local.replace(/\/$/, '')
   if (import.meta.env.DEV && import.meta.env.VITE_STRIPE_ENABLED === 'true' && typeof window !== 'undefined') {
     const host = window.location.hostname
-    const nome = !host || host === 'localhost' || host === '::1' ? '127.0.0.1' : host
-    return `http://${nome}:8787`
+    const noComputador = !host || host === 'localhost' || host === '127.0.0.1' || host === '::1'
+    if (noComputador) return 'http://127.0.0.1:8787'
+    return `${window.location.origin}/api-stripe`
   }
   return ''
 }

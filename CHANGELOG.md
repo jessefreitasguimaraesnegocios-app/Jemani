@@ -2,6 +2,42 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-10-15]
+
+### Adicionado
+
+- Aplicativo Android (Capacitor, `com.jemani.executivemobility`) e download do APK em `public/downloads/jemani-android.apk`. Na página inicial, o botão dourado **Download** baixa esse arquivo. **Planejar minha viagem** ficou no link ao lado e abre o cadastro.
+- No iPhone, a página explica como instalar pela tela de início do Safari. Ainda não há arquivo `.ipa` nem publicação na App Store.
+- Os carros da frota passam sozinhos em carrossel. As setas pausam o movimento por alguns segundos.
+- A corrida só é oferecida a empresa que tem veículo ativo daquela categoria.
+- O status da viagem acompanha o GPS (a caminho, chegou, embarcou, em andamento).
+- Som e vibração de verdade para cliente e motorista: corrida aceita, motorista atribuído, mudança de status e mensagem que chega do outro aparelho. O cliente liga e desliga no perfil; o motorista, no menu. O primeiro toque na tela libera o áudio. O APK pede permissão de vibração.
+- Regra do editor para regenerar o APK sempre que o app empacotado mudar.
+
+### Alterado
+
+- Cabeçalho no celular fica abaixo dos ícones de wifi, bateria e hora. A folga vale na página inicial, no cliente, no motorista e nos painéis de empresa e admin. No computador a altura continua 82px.
+- Reserva: a quantidade de passageiros ficou acima da bagagem e o passo extra de passageiros saiu.
+- Marcador do carro no mapa mais legível. O modal de finalizar a viagem usa painel escuro, com contraste melhor.
+- A senha de acesso não fica mais gravada no navegador.
+- Recursão `42P17` ao gravar viagem foi corrigida no banco (`viagem_ja_existe` e `pode_atualizar_oferta`) e aplicada no projeto Jemani.
+- Stripe de teste no celular: o telefone fala com o computador na mesma rede (porta 8787), em vez de `127.0.0.1` do próprio aparelho. O retorno que o Stripe recusava (`http://192.168...` ou `https://localhost` do APK) passa a ser `https://jemani.vercel.app`. No telefone o checkout abre numa aba nova e a viagem confirma quando o pagamento passa. No computador, em `localhost`, o fluxo continua o mesmo.
+- APK atualizado (9,7 MB) e publicado na `main` (`634895b`).
+
+### Observação
+
+Stripe segue em modo teste. Para pagar pelo celular na rede local, o servidor `npm run stripe:local` precisa estar ligado. O firewall do Windows ainda bloqueia a porta 8787 sem liberação de administrador.
+
+Os erros `42501` em `trips` e `trip_assignments` (a política recusa gravar a linha) continuam no log do Supabase. Não foram alterados nesta etapa.
+
+### Próximos passos
+
+Ainda não feitos. Retomar nesta ordem:
+
+6. **Stripe em produção**, só quando for pedido: chaves live, conta Connect real e tirar o modo teste. Até lá permanece em teste.
+7. **Segurança do banco:** `company_users` e `pickup_locations` ainda estão sem RLS. Não ligar o RLS sem as políticas de acesso. Investigar os `42501` de `trips` e `trip_assignments` sem abrir a política para qualquer usuário.
+8. **Deploy:** conferir se a Vercel publicou a `main` (`634895b`) e se o APK novo está no ar. Publicar a Edge Function `stripe-criar-checkout` se o telefone ainda usar um app antigo.
+
 ## [2026-10-12]
 
 ### Adicionado
