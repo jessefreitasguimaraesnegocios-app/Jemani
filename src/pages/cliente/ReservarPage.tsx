@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CampoEndereco } from '@/components/CampoEndereco'
 import { SeletorCategoria3D } from '@/components/cliente/SeletorCategoria3D'
@@ -68,8 +68,19 @@ export function ReservarPage() {
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
 
+  const definirOrigem = useCallback((endereco: EnderecoLocal | null) => {
+    setOrigemEndereco(endereco)
+    setErro('')
+  }, [])
+  const definirDestino = useCallback((endereco: EnderecoLocal | null) => {
+    setDestinoEndereco(endereco)
+    setErro('')
+  }, [])
+
   const embarqueAeroporto = enderecoEhAeroporto(origemEndereco)
   const destinoAeroporto = enderecoEhAeroporto(destinoEndereco)
+  const origemPronta = enderecoProntoParaReserva(origemEndereco).ok
+  const destinoPronto = enderecoProntoParaReserva(destinoEndereco).ok
 
   useEffect(() => {
     if (!categoriaId && categorias[0]) setCategoriaId(categorias[0].id)
@@ -112,7 +123,7 @@ export function ReservarPage() {
   const [rota, setRota] = useState<RotaRua | null>(null)
 
   useEffect(() => {
-    if (!origemEndereco || !destinoEndereco) {
+    if (!origemPronta || !destinoPronto || !origemEndereco || !destinoEndereco) {
       setRota(null)
       return
     }
@@ -125,13 +136,17 @@ export function ReservarPage() {
       ativo = false
     }
   }, [
+    origemPronta,
+    destinoPronto,
+    origemEndereco,
+    destinoEndereco,
     origemEndereco?.latitude,
     origemEndereco?.longitude,
     destinoEndereco?.latitude,
     destinoEndereco?.longitude,
   ])
 
-  const aguardandoRota = Boolean(origemEndereco && destinoEndereco && !rota)
+  const aguardandoRota = Boolean(origemPronta && destinoPronto && !rota)
 
   const validacaoHorario = useMemo(
     () => validarAntecedenciaMinima(dataViagem, horario, agora),
@@ -154,7 +169,7 @@ export function ReservarPage() {
     const partes: string[] = []
     if (telefoneContato.trim()) partes.push(`Contato: ${telefoneContato.trim()}`)
     if (embarqueAeroporto && terminal.trim()) {
-      partes.push(`Terminal / portão: ${terminal.trim()}`)
+      partes.push(`Portão: ${terminal.trim()}`)
     }
     if (observacoes.trim()) partes.push(observacoes.trim())
     return partes.length ? partes.join('\n') : undefined
@@ -308,23 +323,27 @@ export function ReservarPage() {
             <CampoEndereco
               rotulo="Embarque (origem)"
               valor={origemEndereco}
-              onChange={setOrigemEndereco}
-              placeholder="Ex.: 150 E Olive Ave, Burbank"
+              onChange={definirOrigem}
+              placeholder="Rua e número, ou LAX, BUR, SNA..."
+              papel="origem"
             />
             {embarqueAeroporto && (
               <p className="text-xs text-[var(--color-success)]">
-                Embarque em aeroporto detectado — pediremos o número do voo nos detalhes.
+                Embarque no aeroporto: o carro busca no nível de desembarque (chegadas) do terminal.
+                O número do voo entra nos detalhes.
               </p>
             )}
             <CampoEndereco
               rotulo="Destino"
               valor={destinoEndereco}
-              onChange={setDestinoEndereco}
-              placeholder="Ex.: 8423 Wilshire Blvd, Beverly Hills"
+              onChange={definirDestino}
+              placeholder="Rua e número, ou LAX, BUR, SNA..."
+              papel="destino"
             />
             {destinoAeroporto && !embarqueAeroporto && (
               <p className="text-xs text-[var(--color-slate)]">
-                Destino em aeroporto: chegue com folga para check-in e segurança.
+                Destino no aeroporto: o desembarque do carro fica no nível de embarque (saídas) do
+                terminal escolhido.
               </p>
             )}
             {aguardandoRota && (
@@ -508,14 +527,14 @@ export function ReservarPage() {
                 </div>
                 <div>
                   <label className="rotulo" htmlFor="terminal">
-                    Terminal / portão (opcional)
+                    Portão (opcional)
                   </label>
                   <input
                     id="terminal"
                     className="campo"
                     value={terminal}
                     onChange={(e) => setTerminal(e.target.value)}
-                    placeholder="Ex.: Terminal 4 · Gate 42B"
+                    placeholder="Ex.: 42B"
                   />
                 </div>
               </div>
@@ -553,7 +572,7 @@ export function ReservarPage() {
               <Linha label="Voo" valor={numeroVoo.trim().toUpperCase()} />
             )}
             {embarqueAeroporto && terminal.trim() && (
-              <Linha label="Terminal" valor={terminal.trim()} />
+              <Linha label="Portão" valor={terminal.trim()} />
             )}
             <Linha label="Categoria" valor={categoria?.nome ?? '—'} />
             <Linha

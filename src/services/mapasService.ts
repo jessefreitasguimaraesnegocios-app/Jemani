@@ -1,3 +1,8 @@
+import {
+  descricaoEhPontoFixoDeAeroporto,
+  selecaoAeroporto,
+  sugerirAeroportos,
+} from '@/services/aeroportos'
 import type { EnderecoLocal } from '@/types'
 import { extrairNumeroDoTexto, montarTextoEndereco, numerosEnderecoIguais } from '@/utils/endereco'
 
@@ -218,7 +223,7 @@ async function geocodeMapboxDireto(query: string, types = 'address,poi'): Promis
   url.searchParams.set('bbox', CAIXA_LOS_ANGELES)
   url.searchParams.set('types', types)
   url.searchParams.set('language', 'en')
-  url.searchParams.set('limit', '6')
+  url.searchParams.set('limit', '8')
   url.searchParams.set('autocomplete', 'true')
   const resp = await fetch(url)
   const data = await resp.json()
@@ -454,6 +459,31 @@ export async function estimarRota(
   }
 }
 
+function ordenarFeaturesPorNumero(features: MapboxFeature[], termo: string): MapboxFeature[] {
+  const numero = extrairNumeroDoTexto(termo)
+  if (!numero) return features
+  return [...features].sort((a, b) => {
+    const peso = (feature: MapboxFeature) => {
+      if (feature.address && numerosEnderecoIguais(feature.address, numero)) return 0
+      if (feature.address) return 1
+      return 2
+    }
+    return peso(a) - peso(b)
+  })
+}
+
+function juntarSugestoes(
+  termo: string,
+  remotas: Array<{ description: string; place_id: string }>,
+): Array<{ description: string; place_id: string }> {
+  const aeros = sugerirAeroportos(termo)
+  const ids = new Set(aeros.map((item) => item.place_id))
+  const ruas = remotas.filter(
+    (item) => !ids.has(item.place_id) && !descricaoEhPontoFixoDeAeroporto(item.description),
+  )
+  return [...aeros, ...ruas].slice(0, 8)
+}
+
 export async function buscarSugestoesPlaces(termo: string): Promise<
   Array<{ description: string; place_id: string }>
 > {
@@ -461,23 +491,30 @@ export async function buscarSugestoesPlaces(termo: string): Promise<
 
   if (tokenMapbox()) {
     try {
-      const features = await geocodeMapboxDireto(termo, 'address,poi')
-      return features.flatMap((feature) => {
+      const features = ordenarFeaturesPorNumero(
+        await geocodeMapboxDireto(termo, 'address,poi'),
+        termo,
+      )
+      const remotas = features.flatMap((feature) => {
         const endereco = interpretarFeatureMapbox(feature)
         if (!endereco) return []
         guardarEndereco(feature.id, endereco)
-        return [{ description: endereco.formatted || feature.place_name, place_id: feature.id }]
+        return [{ description: feature.place_name || endereco.formatted, place_id: feature.id }]
       })
+      return juntarSugestoes(termo, remotas)
     } catch {
       /* tenta proxy / DEV abaixo */
     }
   }
 
   if (!googleMapsConfigurado()) {
-    return buscarSugestoesDev(termo).map((p) => ({
-      description: p.formatted,
-      place_id: p.place_id ?? p.formatted,
-    }))
+    return juntarSugestoes(
+      termo,
+      buscarSugestoesDev(termo).map((p) => ({
+        description: p.formatted,
+        place_id: p.place_id ?? p.formatted,
+      })),
+    )
   }
 
   try {
@@ -485,16 +522,24 @@ export async function buscarSugestoesPlaces(termo: string): Promise<
       acao: 'autocomplete',
       termo,
     })
-    return data.sugestoes ?? []
+    return juntarSugestoes(termo, data.sugestoes ?? [])
   } catch {
-    return buscarSugestoesDev(termo).map((p) => ({
-      description: p.formatted,
-      place_id: p.place_id ?? p.formatted,
-    }))
+    return juntarSugestoes(
+      termo,
+      buscarSugestoesDev(termo).map((p) => ({
+        description: p.formatted,
+        place_id: p.place_id ?? p.formatted,
+      })),
+    )
   }
 }
 
 export async function resolverPlaceId(placeId: string, descricao?: string): Promise<EnderecoLocal> {
+  if (placeId.startsWith('aero:') || placeId === 'dev_lax') {
+    const aeroporto = selecaoAeroporto(placeId, descricao ?? '')
+    if (aeroporto) return aeroporto
+  }
+
   const dev = PONTOS_DEV_LA.find((p) => p.place_id === placeId)
   if (dev) return { ...dev, numero_confirmado: Boolean(dev.numero) }
 

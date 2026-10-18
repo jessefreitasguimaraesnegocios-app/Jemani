@@ -1,16 +1,16 @@
+import { descricaoEhPontoFixoDeAeroporto } from '@/services/aeroportos'
 import type { EnderecoLocal } from '@/types'
-
-const TERMOS_AEROPORTO =
-  /\b(airport|aeroporto|international\s+airport|lax|sna|ont|bur|lgb|john\s+wayne|hollywood\s+burbank|bob\s+hope|long\s+beach\s+airport)\b/i
 
 const NUMERO_NO_INICIO = /^\s*\d+[\w-]*/
 
 /** Detecta se o endereço é de aeroporto (embarque/desembarque aéreo). */
 export function enderecoEhAeroporto(endereco?: EnderecoLocal | null): boolean {
   if (!endereco) return false
-  const texto = `${endereco.formatted} ${endereco.place_id ?? ''} ${endereco.rua ?? ''}`
+  if (endereco.codigo_aeroporto) return true
+  if (endereco.place_id?.startsWith('aero:')) return true
   if (endereco.place_id === 'dev_lax') return true
-  return TERMOS_AEROPORTO.test(texto)
+  const texto = `${endereco.formatted} ${endereco.rua ?? ''}`
+  return descricaoEhPontoFixoDeAeroporto(texto)
 }
 
 /** Extrai número se vier no início do formatted (padrão US: "842 N Brand Blvd..."). */
@@ -49,6 +49,21 @@ export function enderecoProntoParaReserva(endereco?: EnderecoLocal | null): {
   mensagem?: string
 } {
   if (!endereco) return { ok: false, mensagem: 'Selecione um endereço na lista.' }
+  if (enderecoEhAeroporto(endereco)) {
+    if (
+      !endereco.terminal_id ||
+      !endereco.nivel_aeroporto ||
+      !Number.isFinite(endereco.latitude) ||
+      !Number.isFinite(endereco.longitude)
+    ) {
+      return {
+        ok: false,
+        mensagem:
+          'Escolha o terminal e se o ponto é embarque (saídas) ou desembarque (chegadas).',
+      }
+    }
+    return { ok: true }
+  }
   if (
     typeof endereco.latitude !== 'number' ||
     typeof endereco.longitude !== 'number' ||
@@ -57,7 +72,6 @@ export function enderecoProntoParaReserva(endereco?: EnderecoLocal | null): {
   ) {
     return { ok: false, mensagem: 'Endereço sem coordenadas. Escolha uma sugestão.' }
   }
-  if (enderecoEhAeroporto(endereco)) return { ok: true }
   if (!endereco.numero?.trim()) {
     return {
       ok: false,

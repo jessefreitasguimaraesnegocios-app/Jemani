@@ -46,6 +46,12 @@ export interface EnderecoLocal {
   cep?: string
   /** true quando o número foi confirmado no geocode daquela rua */
   numero_confirmado?: boolean
+  /** Aeroporto da região, quando o ponto é um terminal */
+  codigo_aeroporto?: string
+  /** Terminal escolhido (ex.: t4, tbit, ta) */
+  terminal_id?: string
+  /** Embarque fica nas saídas; desembarque fica nas chegadas */
+  nivel_aeroporto?: 'embarque' | 'desembarque'
 }
 
 export interface Perfil {

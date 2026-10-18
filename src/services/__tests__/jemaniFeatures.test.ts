@@ -44,7 +44,8 @@ describe('idioma', () => {
     expect(normalizarIdioma('xyz')).toBe('pt-BR')
   })
 })
-import { enderecoProntoParaReserva } from '@/utils/endereco'
+import { montarPontoAeroporto, sugerirAeroportos } from '@/services/aeroportos'
+import { enderecoEhAeroporto, enderecoProntoParaReserva } from '@/utils/endereco'
 import { montarUrlGmailCompose } from '@/utils/gmailCompose'
 
 function empresaBase(partial: Partial<Empresa> & { id: string; latitude: number; longitude: number }): Empresa {
@@ -132,6 +133,43 @@ describe('enderecoProntoParaReserva', () => {
       source: 'dev_fallback',
     })
     expect(r.ok).toBe(true)
+  })
+
+  it('não trata o aeroporto como um ponto único', () => {
+    const shell = enderecoProntoParaReserva({
+      formatted: 'LAX · Los Angeles International Airport, Los Angeles, CA',
+      latitude: Number.NaN,
+      longitude: Number.NaN,
+      source: 'mapbox',
+      codigo_aeroporto: 'lax',
+    })
+    expect(shell.ok).toBe(false)
+
+    const embarque = montarPontoAeroporto('lax', 't4', 'embarque')
+    const desembarque = montarPontoAeroporto('lax', 't4', 'desembarque')
+    expect(embarque).not.toBeNull()
+    expect(desembarque).not.toBeNull()
+    expect(enderecoProntoParaReserva(embarque).ok).toBe(true)
+    expect(enderecoEhAeroporto(embarque)).toBe(true)
+    expect(embarque!.formatted).toContain('Terminal 4')
+    expect(embarque!.formatted).toContain('Embarque')
+    const metros = calcularDistanciaKm(
+      embarque!.latitude,
+      embarque!.longitude,
+      desembarque!.latitude,
+      desembarque!.longitude,
+    ) * 1000
+    expect(metros).toBeGreaterThan(40)
+    expect(embarque!.latitude).not.toBe(desembarque!.latitude)
+  })
+
+  it('completa aeroporto enquanto digita e não confunde rua', () => {
+    expect(sugerirAeroportos('lax').some((item) => item.place_id === 'aero:lax')).toBe(true)
+    expect(sugerirAeroportos('terminal 4').map((item) => item.place_id)).toEqual(
+      expect.arrayContaining(['aero:lax:t4', 'aero:ont:t4']),
+    )
+    expect(sugerirAeroportos('aeros way')).toEqual([])
+    expect(sugerirAeroportos('world way')[0]?.place_id).toBe('aero:lax')
   })
 
   it('rejeita número ainda não confirmado', () => {

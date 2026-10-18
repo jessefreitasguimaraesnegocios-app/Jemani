@@ -36,7 +36,21 @@
   background: transparent;
   text-align: left;
   font-size: 0.875rem;
+  line-height: 1.35;
+  white-space: normal;
   cursor: pointer;
+}
+
+.campo-endereco-aero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+
+@media (min-width: 640px) {
+  .campo-endereco-aero {
+    grid-template-columns: 1.4fr 1fr;
+  }
 }
 
 .campo-endereco-item:hover {

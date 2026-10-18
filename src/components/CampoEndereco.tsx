@@ -1,5 +1,15 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import {
+  atualizarPontoAeroporto,
+  criarSelecaoAeroporto,
+  listarTerminais,
+  nivelSugerido,
+  rotuloNivel,
+  selecaoAeroporto,
+  type NivelAeroporto,
+  type PapelEndereco,
+} from '@/services/aeroportos'
+import {
   buscarSugestoesPlaces,
   googleMapsConfigurado,
   resolverPlaceId,
@@ -22,9 +32,10 @@ interface Props {
   valor?: EnderecoLocal | null
   onChange: (endereco: EnderecoLocal | null) => void
   placeholder?: string
+  papel?: PapelEndereco
 }
 
-export function CampoEndereco({ rotulo, valor, onChange, placeholder }: Props) {
+export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: Props) {
   const id = useId()
   const idNumero = `${id}-numero`
   const idComplemento = `${id}-complemento`
@@ -43,6 +54,14 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder }: Props) {
   const ehAeroporto = enderecoEhAeroporto(valor)
   const precisaNumero = Boolean(valor && !ehAeroporto)
   const numeroOk = Boolean(valor?.numero_confirmado && numero.trim())
+  const terminais = valor?.codigo_aeroporto ? listarTerminais(valor.codigo_aeroporto) : []
+  const nivelAtual = valor?.nivel_aeroporto ?? nivelSugerido(papel)
+  const pontoAeroportoOk = Boolean(
+    valor?.terminal_id &&
+      valor.nivel_aeroporto &&
+      Number.isFinite(valor.latitude) &&
+      Number.isFinite(valor.longitude),
+  )
 
   useEffect(() => {
     setTexto(valor?.formatted ?? '')
@@ -107,11 +126,41 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder }: Props) {
     return () => window.clearTimeout(t)
   }, [numero, complemento, valor?.rua, valor?.place_id, valor?.cidade, valor?.numero_confirmado, ehAeroporto, onChange, valor])
 
+  function aplicarAeroporto(endereco: EnderecoLocal, aviso = '') {
+    onChange(endereco)
+    setTexto(endereco.formatted)
+    setNumero('')
+    setSugestoes([])
+    setErro(aviso)
+  }
+
   async function selecionar(placeId: string, description: string) {
     setErro('')
     setCarregando(true)
     try {
+      const jaAeroporto = selecaoAeroporto(placeId, description, papel)
+      if (jaAeroporto) {
+        aplicarAeroporto(
+          jaAeroporto,
+          jaAeroporto.terminal_id
+            ? ''
+            : 'Escolha o terminal e o nível abaixo. O aeroporto não usa um ponto único.',
+        )
+        return
+      }
+
       const base = await resolverPlaceId(placeId, description)
+      const convertido = selecaoAeroporto(placeId, `${description} ${base.formatted}`, papel)
+      if (convertido) {
+        aplicarAeroporto(
+          convertido,
+          convertido.terminal_id
+            ? ''
+            : 'Escolha o terminal e o nível abaixo. O aeroporto não usa um ponto único.',
+        )
+        return
+      }
+
       const numeroDetectado =
         base.numero?.trim() ||
         extrairNumeroDoTexto(base.formatted) ||
@@ -191,9 +240,53 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder }: Props) {
     onChange(aplicarNumeroNoEndereco(valor, novoNumero, complemento, false))
   }
 
+  function escolherTerminal(terminalId: string) {
+    if (!valor?.codigo_aeroporto) return
+    const nivel = valor.nivel_aeroporto ?? nivelSugerido(papel)
+    if (!terminalId) {
+      const shell = criarSelecaoAeroporto(valor.codigo_aeroporto, undefined, nivel, complemento)
+      const proximo = shell ?? {
+        ...valor,
+        terminal_id: undefined,
+        nivel_aeroporto: nivel,
+        latitude: Number.NaN,
+        longitude: Number.NaN,
+        formatted: valor.formatted.replace(/ · Terminal[^,]*/, ''),
+      }
+      onChange(proximo)
+      setTexto(proximo.formatted)
+      setErro('Escolha o terminal e o nível abaixo. O aeroporto não usa um ponto único.')
+      return
+    }
+    const ponto = atualizarPontoAeroporto(valor, terminalId, nivel, complemento)
+    setErro('')
+    onChange(ponto)
+    setTexto(ponto.formatted)
+  }
+
+  function escolherNivel(nivel: NivelAeroporto) {
+    if (!valor?.codigo_aeroporto) return
+    if (!valor.terminal_id) {
+      onChange({ ...valor, nivel_aeroporto: nivel })
+      return
+    }
+    const ponto = atualizarPontoAeroporto(valor, valor.terminal_id, nivel, complemento)
+    setErro('')
+    onChange(ponto)
+    setTexto(ponto.formatted)
+  }
+
   function atualizarComplemento(novoComplemento: string) {
     setComplemento(novoComplemento)
     if (!valor) return
+    if (valor.codigo_aeroporto && valor.terminal_id && valor.nivel_aeroporto) {
+      onChange(atualizarPontoAeroporto(valor, valor.terminal_id, valor.nivel_aeroporto, novoComplemento))
+      return
+    }
+    if (valor.codigo_aeroporto) {
+      onChange({ ...valor, complemento: novoComplemento.trim() || undefined })
+      return
+    }
     onChange(
       aplicarNumeroNoEndereco(
         valor,
@@ -248,6 +341,42 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder }: Props) {
 
       {valor && (
         <div className="campo-endereco-detalhe">
+          {ehAeroporto && (
+            <div className="campo-endereco-aero">
+              <div>
+                <label className="rotulo" htmlFor={`${id}-terminal`}>
+                  Terminal *
+                </label>
+                <select
+                  id={`${id}-terminal`}
+                  className={`campo ${valor.terminal_id ? '' : 'campo-endereco-obrigatorio'}`}
+                  value={valor.terminal_id ?? ''}
+                  onChange={(e) => escolherTerminal(e.target.value)}
+                >
+                  <option value="">Selecione o terminal</option>
+                  {terminais.map((terminal) => (
+                    <option key={terminal.id} value={terminal.id}>
+                      {terminal.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="rotulo" htmlFor={`${id}-nivel`}>
+                  Nível *
+                </label>
+                <select
+                  id={`${id}-nivel`}
+                  className="campo"
+                  value={nivelAtual}
+                  onChange={(e) => escolherNivel(e.target.value as NivelAeroporto)}
+                >
+                  <option value="embarque">{rotuloNivel('embarque')}</option>
+                  <option value="desembarque">{rotuloNivel('desembarque')}</option>
+                </select>
+              </div>
+            </div>
+          )}
           {!ehAeroporto && (
             <div className="campo-endereco-grade">
               <div className="campo-endereco-rua">
@@ -281,26 +410,24 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder }: Props) {
           )}
           <div>
             <label className="rotulo" htmlFor={idComplemento}>
-              Complemento (opcional)
+              {ehAeroporto ? 'Portão ou ponto de encontro (opcional)' : 'Complemento (opcional)'}
             </label>
             <input
               id={idComplemento}
               className="campo"
               value={complemento}
-              placeholder="Apto, suite, portaria, terminal..."
+              placeholder={ehAeroporto ? 'Ex.: portão 42B' : 'Apto, suite, portaria...'}
               onChange={(e) => atualizarComplemento(e.target.value)}
             />
           </div>
           {validandoNumero && (
             <p className="campo-endereco-dica">Validando se o número existe neste endereço...</p>
           )}
-          <p
-            className={
-              ehAeroporto || numeroOk ? 'campo-endereco-ok' : 'campo-endereco-erro'
-            }
-          >
+          <p className={pontoAeroportoOk || numeroOk ? 'campo-endereco-ok' : 'campo-endereco-erro'}>
             {ehAeroporto
-              ? `Aeroporto · ${valor.latitude.toFixed(5)}, ${valor.longitude.toFixed(5)}`
+              ? pontoAeroportoOk
+                ? `Ponto confirmado: ${valor.formatted}`
+                : 'Escolha o terminal e o nível. O motorista vai a esse meio-fio, não ao centro do aeroporto.'
               : !numero.trim()
                 ? 'Falta o número do endereço'
                 : validandoNumero
