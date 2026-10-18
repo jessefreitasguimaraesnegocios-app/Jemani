@@ -109,6 +109,7 @@ interface EstadoDemo {
   turnos: TurnoMotorista[]
   mensagensEmpresa: MensagemEmpresa[]
   agendamentosVeiculo: AgendamentoVeiculo[]
+  veiculosExcluidos: string[]
 
   resetarDemo: () => void
   obterUsuario: () => Perfil | null
@@ -177,6 +178,7 @@ interface EstadoDemo {
     },
   ) => Motorista
   salvarVeiculo: (dados: Partial<Veiculo> & { empresa_id: string; marca: string; modelo: string; categoria_id: string }) => Veiculo
+  excluirVeiculo: (id: string) => void
   obterEmpresaDoUsuario: (usuarioId: string) => Empresa | undefined
   obterMotoristaDoUsuario: (usuarioId: string) => Motorista | undefined
   iniciarTurno: (motoristaId: string) => void
@@ -204,6 +206,7 @@ function estadoInicial() {
   const dados = criarDadosIniciais()
   return {
     sessaoId: null as string | null,
+    veiculosExcluidos: [] as string[],
     ...dados,
   }
 }
@@ -307,6 +310,7 @@ export const useDemoStore = create<EstadoDemo>()(
             empresas,
             veiculos,
             motoristas,
+            veiculosExcluidos: state.veiculosExcluidos,
           })
           empresas = catalogo.empresas
           veiculos = catalogo.veiculos
@@ -1707,6 +1711,27 @@ export const useDemoStore = create<EstadoDemo>()(
         return novo
       },
 
+      excluirVeiculo: (id) => {
+        const state = get()
+        const emViagem = state.viagens.some(
+          (viagem) =>
+            viagem.veiculo_id === id &&
+            viagem.status !== 'viagem_finalizada' &&
+            viagem.status !== 'cancelada' &&
+            viagem.status !== 'expired',
+        )
+        if (emViagem) {
+          throw new Error('Este veículo está em uma viagem. Encerre a corrida antes de excluir.')
+        }
+        set({
+          veiculos: state.veiculos.filter((veiculo) => veiculo.id !== id),
+          agendamentosVeiculo: (state.agendamentosVeiculo ?? []).filter((item) => item.veiculo_id !== id),
+          veiculosExcluidos: state.veiculosExcluidos.includes(id)
+            ? state.veiculosExcluidos
+            : [...state.veiculosExcluidos, id],
+        })
+      },
+
       aplicarViagemNuvem: (viagem, silencioso = false) => {
         const atual = get().viagens.find((v) => v.id === viagem.id)
         const fundida = fundirViagemNuvem(atual, viagem)
@@ -2030,11 +2055,13 @@ export const useDemoStore = create<EstadoDemo>()(
           turnos?: TurnoMotorista[]
           mensagensEmpresa?: MensagemEmpresa[]
           agendamentosVeiculo?: AgendamentoVeiculo[]
+          veiculosExcluidos?: string[]
         }
         const { senhas: _senhas, ...semSenha } = bruto ?? {}
         const base = completarCatalogo({
           ...atual,
           ...semSenha,
+          veiculosExcluidos: Array.isArray(bruto?.veiculosExcluidos) ? bruto.veiculosExcluidos : [],
         })
         return {
           ...base,

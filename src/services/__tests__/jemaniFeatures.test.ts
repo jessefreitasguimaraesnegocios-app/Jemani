@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { IDS, criarDadosIniciais } from '@/data/seed'
+import { IDS, completarCatalogo, criarDadosIniciais } from '@/data/seed'
 import { calcularDistanciaKm, interpretarFeatureMapbox } from '@/services/mapasService'
 import {
   empresaElegivel,
@@ -444,6 +444,21 @@ describe('gravacao na nuvem', () => {
         veiculo.status !== 'inativo',
     )
     expect(tem).toBe(true)
+  })
+
+  it('não recria o veículo que a empresa excluiu', () => {
+    const dados = criarDadosIniciais()
+    const expedition = dados.veiculos.find(
+      (veiculo) =>
+        veiculo.empresa_id === IDS.empresaLa && veiculo.categoria_id === IDS.catExpedition,
+    )
+    expect(expedition).toBeTruthy()
+    const deNovo = completarCatalogo({
+      ...dados,
+      veiculos: dados.veiculos.filter((veiculo) => veiculo.id !== expedition!.id),
+      veiculosExcluidos: [expedition!.id],
+    })
+    expect(deNovo.veiculos.some((veiculo) => veiculo.id === expedition!.id)).toBe(false)
   })
 
   it('não deixa a oferta local aberta desfazer o aceite da nuvem', () => {

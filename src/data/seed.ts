@@ -305,6 +305,7 @@ export function completarCatalogo<
     veiculos: Veiculo[]
     motoristas: Motorista[]
     configuracoes?: ConfiguracaoPlataforma[]
+    veiculosExcluidos?: string[]
   },
 >(estado: T): T {
   const agora = agoraIso()
@@ -325,9 +326,17 @@ export function completarCatalogo<
     }
   })
 
-  const veiculosBase = estado.veiculos.some((v) => v.id === ID_VEICULO_SHIELD)
-    ? estado.veiculos
-    : [...estado.veiculos, criarVeiculoShield(agora)]
+  const excluidos = new Set(estado.veiculosExcluidos ?? [])
+  const idsVistos = new Set<string>()
+  const veiculosSemExcluidos = estado.veiculos.filter((veiculo) => {
+    if (excluidos.has(veiculo.id) || idsVistos.has(veiculo.id)) return false
+    idsVistos.add(veiculo.id)
+    return true
+  })
+  const veiculosBase =
+    veiculosSemExcluidos.some((v) => v.id === ID_VEICULO_SHIELD) || excluidos.has(ID_VEICULO_SHIELD)
+      ? veiculosSemExcluidos
+      : [...veiculosSemExcluidos, criarVeiculoShield(agora)]
   let veiculos = veiculosBase.map((veiculo) =>
     veiculo.id === ID_VEICULO_SHIELD
       ? { ...veiculo, marca: 'Cadillac', modelo: 'Escalade' }
@@ -336,6 +345,8 @@ export function completarCatalogo<
   for (const empresa of empresas) {
     for (const item of FROTA_PARA_OFERTA) {
       if (!empresa.categorias_ids.includes(item.categoriaId)) continue
+      const idFrota = `99999999-9999-9999-9997-${item.sufixo}${empresa.id.slice(-2).padStart(11, '0')}`
+      if (excluidos.has(idFrota)) continue
       const jaTem = veiculos.some(
         (veiculo) =>
           veiculo.empresa_id === empresa.id &&
@@ -346,7 +357,7 @@ export function completarCatalogo<
       veiculos = [
         ...veiculos,
         {
-          id: `99999999-9999-9999-9999-999999999${item.sufixo}${empresa.id.slice(-2)}`,
+          id: idFrota,
           empresa_id: empresa.id,
           marca: item.marca,
           modelo: item.modelo,

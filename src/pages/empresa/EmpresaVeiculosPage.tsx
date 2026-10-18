@@ -1,8 +1,9 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { useDemoStore } from '@/store/demoStore'
-import type { AgendamentoVeiculo, StatusEntidade, TipoServicoVeiculo } from '@/types'
+import type { AgendamentoVeiculo, StatusEntidade, TipoServicoVeiculo, Veiculo } from '@/types'
 import { formatarData } from '@/utils/format'
 import './EmpresaVeiculosPage.css'
 
@@ -128,7 +129,9 @@ export function EmpresaVeiculosPage() {
   const categorias = useDemoStore((s) => s.categorias)
   const motoristas = useDemoStore((s) => s.motoristas)
   const agendamentos = useDemoStore((s) => s.agendamentosVeiculo)
+  const viagens = useDemoStore((s) => s.viagens)
   const salvarVeiculo = useDemoStore((s) => s.salvarVeiculo)
+  const excluirVeiculo = useDemoStore((s) => s.excluirVeiculo)
   const agendarServicoVeiculo = useDemoStore((s) => s.agendarServicoVeiculo)
   const removerAgendamentoVeiculo = useDemoStore((s) => s.removerAgendamentoVeiculo)
   const [marca, setMarca] = useState('')
@@ -138,8 +141,11 @@ export function EmpresaVeiculosPage() {
   const [capacidade, setCapacidade] = useState(4)
   const [placa, setPlaca] = useState('')
   const [cadastroAberto, setCadastroAberto] = useState(false)
+  const [editandoId, setEditandoId] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
+  const [erro, setErro] = useState('')
   const [veiculoId, setVeiculoId] = useState<string | null>(null)
+  const [confirmando, setConfirmando] = useState<Veiculo | null>(null)
 
   const mapaCategorias = useMemo(() => new Map(categorias.map((c) => [c.id, c.nome])), [categorias])
   const porVeiculo = useMemo(() => {
@@ -166,9 +172,75 @@ export function EmpresaVeiculosPage() {
     return t('empresa.veiculos.inativo')
   }
 
+  function limparFormulario() {
+    setMarca('')
+    setModelo('')
+    setPlaca('')
+    setAno(new Date().getFullYear())
+    setCapacidade(4)
+    setCategoriaId(categorias[0]?.id ?? '')
+    setEditandoId(null)
+    setCadastroAberto(false)
+  }
+
+  function abrirEdicao(veiculo: Veiculo) {
+    setEditandoId(veiculo.id)
+    setMarca(veiculo.marca)
+    setModelo(veiculo.modelo)
+    setAno(veiculo.ano)
+    setCategoriaId(veiculo.categoria_id)
+    setCapacidade(veiculo.capacidade)
+    setPlaca(veiculo.placa ?? '')
+    setCadastroAberto(true)
+    setMsg('')
+    setErro('')
+    setVeiculoId(null)
+  }
+
+  function veiculoEmViagem(id: string) {
+    return viagens.some(
+      (viagem) =>
+        viagem.veiculo_id === id &&
+        viagem.status !== 'viagem_finalizada' &&
+        viagem.status !== 'cancelada' &&
+        viagem.status !== 'expired',
+    )
+  }
+
+  function pedirExclusao() {
+    if (!editandoId) return
+    const veiculo = veiculos.find((item) => item.id === editandoId)
+    if (!veiculo) return
+    setMsg('')
+    if (veiculoEmViagem(veiculo.id)) {
+      setErro(t('empresa.veiculos.emViagem'))
+      return
+    }
+    setErro('')
+    setConfirmando(veiculo)
+  }
+
+  function confirmarExclusao() {
+    if (!confirmando) return
+    try {
+      excluirVeiculo(confirmando.id)
+    } catch (e) {
+      setConfirmando(null)
+      setErro(e instanceof Error ? e.message : t('empresa.veiculos.emViagem'))
+      return
+    }
+    if (veiculoId === confirmando.id) setVeiculoId(null)
+    setConfirmando(null)
+    limparFormulario()
+    setErro('')
+    setMsg(t('empresa.veiculos.excluido'))
+  }
+
   function enviar(e: FormEvent) {
     e.preventDefault()
+    const eraEdicao = Boolean(editandoId)
     salvarVeiculo({
+      id: editandoId ?? undefined,
       empresa_id: empresa!.id,
       marca: marca.trim(),
       modelo: modelo.trim(),
@@ -179,11 +251,9 @@ export function EmpresaVeiculosPage() {
       ar_condicionado: true,
       bagageiro: true,
     })
-    setMarca('')
-    setModelo('')
-    setPlaca('')
-    setCadastroAberto(false)
-    setMsg(t('empresa.veiculos.salvo'))
+    limparFormulario()
+    setErro('')
+    setMsg(eraEdicao ? t('empresa.veiculos.atualizado') : t('empresa.veiculos.salvo'))
   }
 
   function agendar(tipo: TipoServicoVeiculo, data: string, horario: string, observacao: string) {
@@ -214,6 +284,12 @@ export function EmpresaVeiculosPage() {
             {aberto.placa ? ` · ${aberto.placa}` : ''}
           </p>
         </div>
+        <div className="veiculo-acoes">
+          <button type="button" className="btn-secundario" onClick={() => abrirEdicao(aberto)}>
+            {t('empresa.veiculos.editar')}
+          </button>
+        </div>
+        {erro && <p className="veiculo-erro">{erro}</p>}
         <span className="badge-status">{rotuloStatus(aberto.status)}</span>
         <div className="veiculo-servicos">
           <PainelServico
@@ -238,10 +314,11 @@ export function EmpresaVeiculosPage() {
   return (
     <div className="animar-entrada space-y-4">
       <h1 className="fonte-display text-3xl">{t('empresa.veiculos.titulo')}</h1>
+      {erro && <p className="veiculo-erro">{erro}</p>}
       <div className="veiculo-lista">
         {veiculos.map((v) => (
           <div key={v.id} className="cartao veiculo-card">
-            <div>
+            <div className="veiculo-card-info">
               <button type="button" className="veiculo-nome" onClick={() => setVeiculoId(v.id)}>
                 {v.marca} {v.modelo} ({v.ano})
               </button>
@@ -249,6 +326,11 @@ export function EmpresaVeiculosPage() {
                 {mapaCategorias.get(v.categoria_id) ?? ''} · {t('empresa.veiculos.lugares', { n: v.capacidade })}
                 {v.placa ? ` · ${v.placa}` : ''}
               </p>
+              <div className="veiculo-acoes">
+                <button type="button" className="btn-secundario" onClick={() => abrirEdicao(v)}>
+                  {t('empresa.veiculos.editar')}
+                </button>
+              </div>
             </div>
             <span className="badge-status">{rotuloStatus(v.status)}</span>
           </div>
@@ -261,8 +343,10 @@ export function EmpresaVeiculosPage() {
             type="button"
             className="btn-primario"
             onClick={() => {
+              limparFormulario()
               setCadastroAberto(true)
               setMsg('')
+              setErro('')
             }}
           >
             {t('empresa.veiculos.cadastrar')}
@@ -273,7 +357,9 @@ export function EmpresaVeiculosPage() {
 
       {cadastroAberto && (
         <form className="cartao veiculo-form" onSubmit={enviar}>
-          <h2 className="fonte-display text-2xl">{t('empresa.veiculos.cadastrar')}</h2>
+          <h2 className="fonte-display text-2xl">
+            {editandoId ? t('empresa.veiculos.editarTitulo') : t('empresa.veiculos.cadastrar')}
+          </h2>
           <div className="veiculo-grade">
             <div>
               <label className="rotulo" htmlFor="vei-marca">
@@ -360,13 +446,49 @@ export function EmpresaVeiculosPage() {
             <button
               type="button"
               className="btn-secundario"
-              onClick={() => setCadastroAberto(false)}
+              onClick={limparFormulario}
             >
               {t('comum.cancelar')}
             </button>
+            {editandoId && (
+              <button type="button" className="btn-perigo" onClick={pedirExclusao}>
+                {t('empresa.veiculos.excluir')}
+              </button>
+            )}
           </div>
         </form>
       )}
+
+      {confirmando &&
+        createPortal(
+          <div className="veiculo-popup" role="presentation" onClick={() => setConfirmando(null)}>
+            <div
+              className="veiculo-popup-painel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="veiculo-popup-titulo"
+              onClick={(evento) => evento.stopPropagation()}
+            >
+              <h2 id="veiculo-popup-titulo" className="fonte-display text-2xl">
+                {t('empresa.veiculos.certeza')}
+              </h2>
+              <p>
+                {t('empresa.veiculos.confirmarExclusao', {
+                  nome: `${confirmando.marca} ${confirmando.modelo}`,
+                })}
+              </p>
+              <div className="veiculo-popup-acoes">
+                <button type="button" className="btn-secundario" onClick={() => setConfirmando(null)}>
+                  {t('comum.cancelar')}
+                </button>
+                <button type="button" className="btn-perigo" onClick={confirmarExclusao}>
+                  {t('empresa.veiculos.excluir')}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
