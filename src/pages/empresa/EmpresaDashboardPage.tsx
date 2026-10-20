@@ -14,9 +14,11 @@ export function EmpresaDashboardPage() {
 
   if (!empresa) return <div className="cartao">Empresa não vinculada ao usuário.</div>
 
-  const novas = atribuicoes.filter(
-    (a) => a.empresa_id === empresa.id && a.status === 'oferecida',
-  ).length
+  const novas = new Set(
+    atribuicoes
+      .filter((a) => a.empresa_id === empresa.id && a.status === 'oferecida')
+      .map((a) => a.viagem_id),
+  ).size
   const minhas = viagens.filter((v) => v.empresa_id === empresa.id)
   const hojeLista = minhas.filter((v) => v.data_viagem === hoje)
   const proximas = minhas.filter(

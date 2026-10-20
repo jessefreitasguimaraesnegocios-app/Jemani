@@ -7,13 +7,16 @@ export function ClienteNotificacoesPage() {
   const { usuario } = useAuth()
   const { t, locale } = usarIdioma()
   const todas = useDemoStore((s) => s.notificacoes)
-  const notificacoes = useMemo(
-    () =>
-      todas
-        .filter((n) => n.usuario_id === usuario?.id)
-        .sort((a, b) => b.created_at.localeCompare(a.created_at)),
-    [todas, usuario?.id],
-  )
+  const notificacoes = useMemo(() => {
+    const mapa = new Map<string, (typeof todas)[number]>()
+    for (const n of todas) {
+      if (n.usuario_id !== usuario?.id) continue
+      const chave = `${n.tipo}|${n.titulo}|${n.referencia_id ?? ''}|${n.mensagem}`
+      const atual = mapa.get(chave)
+      if (!atual || n.created_at > atual.created_at) mapa.set(chave, n)
+    }
+    return [...mapa.values()].sort((a, b) => b.created_at.localeCompare(a.created_at))
+  }, [todas, usuario?.id])
   const marcar = useDemoStore((s) => s.marcarNotificacaoLida)
 
   return (

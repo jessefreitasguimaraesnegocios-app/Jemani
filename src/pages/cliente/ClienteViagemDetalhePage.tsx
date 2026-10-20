@@ -23,13 +23,16 @@ export function ClienteViagemDetalhePage() {
   const veiculos = useDemoStore((s) => s.veiculos)
   const categorias = useDemoStore((s) => s.categorias)
   const todosHistoricos = useDemoStore((s) => s.historicos)
-  const historicos = useMemo(
-    () =>
-      todosHistoricos
-        .filter((h) => h.viagem_id === id)
-        .sort((a, b) => b.created_at.localeCompare(a.created_at)),
-    [todosHistoricos, id],
-  )
+  const historicos = useMemo(() => {
+    const mapa = new Map<string, (typeof todosHistoricos)[number]>()
+    for (const h of todosHistoricos) {
+      if (h.viagem_id !== id) continue
+      const chave = `${h.status_anterior ?? ''}|${h.status_novo}`
+      const atual = mapa.get(chave)
+      if (!atual || h.created_at < atual.created_at) mapa.set(chave, h)
+    }
+    return [...mapa.values()].sort((a, b) => b.created_at.localeCompare(a.created_at))
+  }, [todosHistoricos, id])
   const avaliacoes = useDemoStore((s) => s.avaliacoes)
   const cancelarViagem = useDemoStore((s) => s.cancelarViagem)
   const criarAvaliacao = useDemoStore((s) => s.criarAvaliacao)

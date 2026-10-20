@@ -18,13 +18,19 @@ export function EmpresaSolicitacoesPage() {
 
   if (!empresa) return <div className="cartao">{t('hist.empresaAusente')}</div>
 
-  const ofertas = atribuicoes
-    .filter((a) => a.empresa_id === empresa.id && a.status === 'oferecida')
-    .map((a) => ({
-      atribuicao: a,
-      viagem: viagens.find((v) => v.id === a.viagem_id),
-    }))
-    .filter((x) => x.viagem && ['aguardando_empresa', 'oferta_enviada'].includes(x.viagem.status))
+  const ofertas = (() => {
+    const vistas = new Set<string>()
+    const lista: { atribuicao: (typeof atribuicoes)[number]; viagem: (typeof viagens)[number] }[] = []
+    for (const a of atribuicoes) {
+      if (a.empresa_id !== empresa.id || a.status !== 'oferecida') continue
+      if (vistas.has(a.viagem_id)) continue
+      const viagem = viagens.find((v) => v.id === a.viagem_id)
+      if (!viagem || !['aguardando_empresa', 'oferta_enviada'].includes(viagem.status)) continue
+      vistas.add(a.viagem_id)
+      lista.push({ atribuicao: a, viagem })
+    }
+    return lista
+  })()
 
   function aceitar(viagemId: string) {
     setErro('')

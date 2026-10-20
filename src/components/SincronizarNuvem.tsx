@@ -42,6 +42,7 @@ export function SincronizarNuvem() {
   const aplicarAgendamentoNuvem = useDemoStore((s) => s.aplicarAgendamentoNuvem)
   const removerAgendamentoNuvem = useDemoStore((s) => s.removerAgendamentoNuvem)
   const aplicarHistoricoNuvem = useDemoStore((s) => s.aplicarHistoricoNuvem)
+  const limparDuplicatasNuvem = useDemoStore((s) => s.limparDuplicatasNuvem)
   const aplicarPerfisNuvem = useDemoStore((s) => s.aplicarPerfisNuvem)
   const aplicarMotoristasNuvem = useDemoStore((s) => s.aplicarMotoristasNuvem)
 
@@ -123,7 +124,6 @@ export function SincronizarNuvem() {
       const senha = useDemoStore.getState().senhas[sessao.email]
       const entrou = await entrarNuvem(sessao.email, senha ?? '')
       if (!entrou || !ativo) return
-      useDemoStore.getState().retomarCorridasPagas()
       const [viagens, ofertas, mensagens, turnos, agendamentos, historicos] = await Promise.all([
         listarViagensNuvem(),
         listarOfertasNuvem(),
@@ -135,6 +135,12 @@ export function SincronizarNuvem() {
       if (!ativo) return
       for (const viagem of viagens) aplicarViagemNuvem(viagem, true)
       for (const oferta of ofertas) aplicarOfertaNuvem(oferta, true)
+      for (const mensagem of mensagens) aplicarMensagemNuvem(mensagem, true)
+      for (const turno of turnos) aplicarTurnoNuvem(turno)
+      for (const item of agendamentos) aplicarAgendamentoNuvem(item, true)
+      for (const item of historicos) aplicarHistoricoNuvem(item)
+      limparDuplicatasNuvem()
+      useDemoStore.getState().retomarCorridasPagas()
       await puxarPerfisEFotos(viagens)
       if (sessao.tipo === 'cliente') {
         const locais = useDemoStore.getState().viagens.filter((v) => v.cliente_id === sessao.id)
@@ -146,6 +152,7 @@ export function SincronizarNuvem() {
         })
         if (paraSubir.length > 0) await gravarViagensNuvem(paraSubir)
         useDemoStore.getState().garantirOfertasAbertas()
+        limparDuplicatasNuvem()
         const idsLocais = new Set(locais.map((item) => item.id))
         await gravarOfertasNuvem(
           useDemoStore
@@ -155,10 +162,6 @@ export function SincronizarNuvem() {
             ),
         )
       }
-      for (const mensagem of mensagens) aplicarMensagemNuvem(mensagem, true)
-      for (const turno of turnos) aplicarTurnoNuvem(turno)
-      for (const item of agendamentos) aplicarAgendamentoNuvem(item, true)
-      for (const item of historicos) aplicarHistoricoNuvem(item)
 
       canalCorrida = assinarNuvem(
         (viagem) => aplicarViagemNuvem(viagem, false),
@@ -256,6 +259,7 @@ export function SincronizarNuvem() {
     aplicarAgendamentoNuvem,
     removerAgendamentoNuvem,
     aplicarHistoricoNuvem,
+    limparDuplicatasNuvem,
     aplicarPerfisNuvem,
     aplicarMotoristasNuvem,
   ])

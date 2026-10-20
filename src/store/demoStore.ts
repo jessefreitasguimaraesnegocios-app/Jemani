@@ -155,6 +155,7 @@ interface EstadoDemo {
   aplicarAgendamentoNuvem: (item: AgendamentoVeiculo, silencioso?: boolean) => void
   removerAgendamentoNuvem: (id: string) => void
   aplicarHistoricoNuvem: (item: HistoricoStatus) => void
+  limparDuplicatasNuvem: () => void
   aplicarPerfisNuvem: (perfis: Perfil[]) => void
   aplicarMotoristasNuvem: (motoristas: Motorista[]) => void
   solicitarFinalizacao: (viagemId: string) => { ok: boolean; mensagem: string }
@@ -214,6 +215,59 @@ function estadoInicial() {
   }
 }
 
+function chaveNotificacao(n: Pick<Notificacao, 'usuario_id' | 'tipo' | 'titulo' | 'referencia_id'>) {
+  return `${n.usuario_id}|${n.tipo}|${n.titulo}|${n.referencia_id ?? ''}`
+}
+
+function chaveHistorico(h: Pick<HistoricoStatus, 'viagem_id' | 'status_anterior' | 'status_novo'>) {
+  return `${h.viagem_id}|${h.status_anterior ?? ''}|${h.status_novo}`
+}
+
+function prioridadeOferta(status: AtribuicaoViagem['status']) {
+  if (status === 'aceita') return 4
+  if (status === 'oferecida') return 3
+  if (status === 'recusada') return 2
+  return 1
+}
+
+function deduplicarAtribuicoes(lista: AtribuicaoViagem[]) {
+  const mapa = new Map<string, AtribuicaoViagem>()
+  for (const oferta of lista) {
+    const chave = `${oferta.viagem_id}|${oferta.empresa_id}`
+    const atual = mapa.get(chave)
+    if (!atual) {
+      mapa.set(chave, oferta)
+      continue
+    }
+    const pNova = prioridadeOferta(oferta.status)
+    const pAtual = prioridadeOferta(atual.status)
+    if (pNova > pAtual || (pNova === pAtual && oferta.created_at >= atual.created_at)) {
+      mapa.set(chave, oferta)
+    }
+  }
+  return [...mapa.values()].sort((a, b) => b.created_at.localeCompare(a.created_at))
+}
+
+function deduplicarHistoricos(lista: HistoricoStatus[]) {
+  const mapa = new Map<string, HistoricoStatus>()
+  for (const item of lista) {
+    const chave = chaveHistorico(item)
+    const atual = mapa.get(chave)
+    if (!atual || item.created_at < atual.created_at) mapa.set(chave, item)
+  }
+  return [...mapa.values()].sort((a, b) => b.created_at.localeCompare(a.created_at))
+}
+
+function deduplicarNotificacoes(lista: Notificacao[]) {
+  const mapa = new Map<string, Notificacao>()
+  for (const item of lista) {
+    const chave = chaveNotificacao(item)
+    const atual = mapa.get(chave)
+    if (!atual || item.created_at > atual.created_at) mapa.set(chave, item)
+  }
+  return [...mapa.values()].sort((a, b) => b.created_at.localeCompare(a.created_at))
+}
+
 function notificar(
   set: (fn: (s: EstadoDemo) => Partial<EstadoDemo>) => void,
   get: () => EstadoDemo,
@@ -223,6 +277,13 @@ function notificar(
   tipo: string,
   referenciaId?: string,
 ) {
+  const chave = chaveNotificacao({
+    usuario_id: usuarioId,
+    tipo,
+    titulo,
+    referencia_id: referenciaId,
+  })
+  if (get().notificacoes.some((n) => chaveNotificacao(n) === chave)) return
   const n: Notificacao = {
     id: gerarId(),
     usuario_id: usuarioId,
@@ -248,6 +309,13 @@ function registrarHistorico(
   observacao?: string,
   enviarParaNuvem = true,
 ) {
+  const chave = chaveHistorico({
+    viagem_id: viagemId,
+    status_anterior: anterior,
+    status_novo: novo,
+  })
+  const existente = get().historicos.find((h) => chaveHistorico(h) === chave)
+  if (existente) return existente
   const h: HistoricoStatus = {
     id: gerarId(),
     viagem_id: viagemId,
@@ -647,6 +715,42 @@ export const useDemoStore = create<EstadoDemo>()(
           throw new Error('Embarque sem coordenadas — distribuição por proximidade impossível')
         }
 
+        const ofertasDaViagem = state.atribuicoes.filter((a) => a.viagem_id === viagemId)
+        if (ofertasDaViagem.length > 0) {
+          if (
+            viagem.status === 'paid' ||
+            viagem.status === 'pending_payment' ||
+            viagem.status === 'oferta_enviada'
+          ) {
+            const agora = agoraIso()
+            const atualizada: Viagem = {
+              ...viagem,
+              status: 'aguardando_empresa',
+              payment_status: 'paid',
+              version: viagem.version + 1,
+              updated_at: agora,
+            }
+            set({
+              viagens: state.viagens.map((v) => (v.id === viagemId ? atualizada : v)),
+              atribuicoes: deduplicarAtribuicoes(state.atribuicoes),
+            })
+            void gravarViagemNuvem(atualizada)
+            return atualizada
+          }
+          return viagem
+        }
+
+        if (
+          ![
+            'paid',
+            'pending_payment',
+            'aguardando_empresa',
+            'oferta_enviada',
+          ].includes(viagem.status)
+        ) {
+          return viagem
+        }
+
         const { ordenadas, historico } = ordenarEmpresasPorProximidade(
           state.empresas,
           viagem.origem_lat,
@@ -711,7 +815,7 @@ export const useDemoStore = create<EstadoDemo>()(
 
         set({
           viagens: state.viagens.map((v) => (v.id === viagemId ? atualizada : v)),
-          atribuicoes: [...atribuicoes, ...state.atribuicoes],
+          atribuicoes: deduplicarAtribuicoes([...atribuicoes, ...state.atribuicoes]),
           distribuicoes: [...oferecidas, ...hist, ...state.distribuicoes],
         })
 
@@ -880,7 +984,7 @@ export const useDemoStore = create<EstadoDemo>()(
         const porId = new Map(atualizadas.map((viagem) => [viagem.id, viagem]))
         set({
           viagens: get().viagens.map((viagem) => porId.get(viagem.id) ?? viagem),
-          atribuicoes: [...novasAtribuicoes, ...get().atribuicoes],
+          atribuicoes: deduplicarAtribuicoes([...novasAtribuicoes, ...get().atribuicoes]),
         })
         void gravarViagensNuvem(atualizadas).then((gravou) => {
           if (gravou) void gravarOfertasNuvem(novasAtribuicoes)
@@ -1802,16 +1906,22 @@ export const useDemoStore = create<EstadoDemo>()(
       aplicarOfertaNuvem: (oferta, silencioso = false) => {
         const lista = get().atribuicoes
         const indice = lista.findIndex(
-          (a) => a.id === oferta.id || (a.viagem_id === oferta.viagem_id && a.empresa_id === oferta.empresa_id),
+          (a) =>
+            a.id === oferta.id ||
+            (a.viagem_id === oferta.viagem_id && a.empresa_id === oferta.empresa_id),
         )
-        const nova = indice >= 0
+        const jaExistia = indice >= 0
+        const mesclada = jaExistia ? { ...lista[indice], ...oferta } : oferta
+        const semDuplicata = lista.filter(
+          (a, i) =>
+            i !== indice &&
+            a.id !== oferta.id &&
+            !(a.viagem_id === oferta.viagem_id && a.empresa_id === oferta.empresa_id),
+        )
         set({
-          atribuicoes:
-            indice >= 0
-              ? lista.map((a, i) => (i === indice ? { ...a, ...oferta } : a))
-              : [oferta, ...lista],
+          atribuicoes: deduplicarAtribuicoes([mesclada, ...semDuplicata]),
         })
-        if (silencioso || nova) return
+        if (silencioso || jaExistia) return
         const empresa = get().empresas.find((e) => e.id === oferta.empresa_id)
         const sessao = get().sessaoId
         if (!empresa || empresa.usuario_id !== sessao || oferta.status !== 'oferecida') return
@@ -2057,8 +2167,20 @@ export const useDemoStore = create<EstadoDemo>()(
       },
 
       aplicarHistoricoNuvem: (item) => {
-        if (get().historicos.some((atual) => atual.id === item.id)) return
-        set({ historicos: [item, ...get().historicos] })
+        const lista = get().historicos
+        if (lista.some((atual) => atual.id === item.id || chaveHistorico(atual) === chaveHistorico(item))) {
+          return
+        }
+        set({ historicos: deduplicarHistoricos([item, ...lista]) })
+      },
+
+      limparDuplicatasNuvem: () => {
+        const state = get()
+        set({
+          atribuicoes: deduplicarAtribuicoes(state.atribuicoes),
+          historicos: deduplicarHistoricos(state.historicos),
+          notificacoes: deduplicarNotificacoes(state.notificacoes),
+        })
       },
 
       aplicarPerfisNuvem: (perfis) => {
@@ -2087,12 +2209,20 @@ export const useDemoStore = create<EstadoDemo>()(
     }),
     {
       name: 'jemani-demo-v5',
-      version: 10,
+      version: 11,
       partialize: (estado): ReturnType<typeof estadoInicial> => {
         const { senhas: _senhas, ...resto } = estado
         return { ...(resto as unknown as ReturnType<typeof estadoInicial>), senhas: {} }
       },
-      migrate: (persistido) => completarCatalogo(persistido as ReturnType<typeof estadoInicial>),
+      migrate: (persistido) => {
+        const base = completarCatalogo(persistido as ReturnType<typeof estadoInicial>)
+        return {
+          ...base,
+          atribuicoes: deduplicarAtribuicoes(base.atribuicoes ?? []),
+          historicos: deduplicarHistoricos(base.historicos ?? []),
+          notificacoes: deduplicarNotificacoes(base.notificacoes ?? []),
+        }
+      },
       merge: (persistido, atual) => {
         const bruto = persistido as {
           senhas?: Record<string, string>
@@ -2100,6 +2230,9 @@ export const useDemoStore = create<EstadoDemo>()(
           mensagensEmpresa?: MensagemEmpresa[]
           agendamentosVeiculo?: AgendamentoVeiculo[]
           veiculosExcluidos?: string[]
+          atribuicoes?: AtribuicaoViagem[]
+          historicos?: HistoricoStatus[]
+          notificacoes?: Notificacao[]
         }
         const { senhas: _senhas, ...semSenha } = bruto ?? {}
         const base = completarCatalogo({
@@ -2113,6 +2246,9 @@ export const useDemoStore = create<EstadoDemo>()(
           turnos: Array.isArray(bruto?.turnos) ? bruto.turnos : [],
           mensagensEmpresa: Array.isArray(bruto?.mensagensEmpresa) ? bruto.mensagensEmpresa : [],
           agendamentosVeiculo: Array.isArray(bruto?.agendamentosVeiculo) ? bruto.agendamentosVeiculo : [],
+          atribuicoes: deduplicarAtribuicoes(base.atribuicoes ?? []),
+          historicos: deduplicarHistoricos(base.historicos ?? []),
+          notificacoes: deduplicarNotificacoes(base.notificacoes ?? []),
         }
       },
     },
