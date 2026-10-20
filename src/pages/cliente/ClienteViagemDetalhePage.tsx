@@ -1,3 +1,4 @@
+import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -109,8 +110,9 @@ export function ClienteViagemDetalhePage() {
     const noComputador =
       window.location.protocol === 'http:' &&
       ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
+    const noAppNativo = Capacitor.isNativePlatform()
     const janelaStripe =
-      noComputador || Capacitor.isNativePlatform() ? null : window.open('about:blank', '_blank')
+      noComputador || noAppNativo ? null : window.open('about:blank', '_blank')
     setPagando(true)
     setMsg('')
     try {
@@ -131,8 +133,8 @@ export function ClienteViagemDetalhePage() {
         window.location.assign(intencao.checkoutUrl)
         return
       }
-      if (Capacitor.isNativePlatform()) {
-        window.location.assign(intencao.checkoutUrl)
+      if (noAppNativo) {
+        await Browser.open({ url: intencao.checkoutUrl })
       } else if (janelaStripe) {
         janelaStripe.location.href = intencao.checkoutUrl
       } else {
@@ -157,6 +159,7 @@ export function ClienteViagemDetalhePage() {
             window.clearInterval(timer)
             setMsg('Pagamento confirmado via Stripe. Corrida liberada para as empresas.')
             setPagando(false)
+            if (noAppNativo) void Browser.close().catch(() => undefined)
           })
           .catch(() => {
             /* a sessão ainda não foi paga */

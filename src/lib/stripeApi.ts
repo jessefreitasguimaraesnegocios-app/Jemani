@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core'
+
 function urlDoApp() {
   try {
     const url = new URL(window.location.origin)
@@ -13,13 +15,34 @@ function urlDoApp() {
   return 'https://jemani.vercel.app'
 }
 
+function hostEhLoopback(host: string) {
+  return !host || host === 'localhost' || host === '127.0.0.1' || host === '::1'
+}
+
+/**
+ * Servidor Stripe de teste (npm run stripe:local).
+ * No APK/celular, 127.0.0.1 é o próprio aparelho — aí usamos as Edge Functions.
+ */
 const apiLocal = () => {
-  const local = (import.meta.env.VITE_STRIPE_API_URL as string | undefined)?.trim()
-  if (local) return local.replace(/\/$/, '')
-  if (import.meta.env.DEV && import.meta.env.VITE_STRIPE_ENABLED === 'true' && typeof window !== 'undefined') {
+  const configurada = (import.meta.env.VITE_STRIPE_API_URL as string | undefined)?.trim()
+  if (configurada) {
+    try {
+      const url = new URL(configurada)
+      if (Capacitor.isNativePlatform() && hostEhLoopback(url.hostname)) {
+        return ''
+      }
+      return configurada.replace(/\/$/, '')
+    } catch {
+      return ''
+    }
+  }
+  if (
+    import.meta.env.DEV &&
+    import.meta.env.VITE_STRIPE_ENABLED === 'true' &&
+    typeof window !== 'undefined'
+  ) {
     const host = window.location.hostname
-    const noComputador = !host || host === 'localhost' || host === '127.0.0.1' || host === '::1'
-    if (noComputador) return 'http://127.0.0.1:8787'
+    if (hostEhLoopback(host)) return 'http://127.0.0.1:8787'
     return `${window.location.origin}/api-stripe`
   }
   return ''
@@ -60,7 +83,7 @@ async function chamarFuncao<T>(nome: string, corpo: Record<string, unknown>): Pr
   } catch {
     throw new Error(
       local
-        ? 'Não consegui falar com o Stripe de teste neste aparelho. No celular, use a mesma rede do computador e deixe o servidor de teste ligado.'
+        ? 'Não consegui falar com o Stripe de teste neste aparelho. No celular, use a mesma rede do computador e deixe o servidor de teste ligado — ou use o APK publicado, que fala com o Supabase.'
         : 'Não foi possível falar com o Stripe.',
     )
   }
@@ -87,7 +110,7 @@ export function criarCheckoutStripe(dados: {
 }) {
   return chamarFuncao<{ session_id: string; url: string }>('stripe-criar-checkout', {
     ...dados,
-    app_url: urlDoApp(),
+    app_url: Capacitor.isNativePlatform() ? 'https://jemani.vercel.app' : urlDoApp(),
   })
 }
 
@@ -109,7 +132,9 @@ export function iniciarOnboardingConnect(dados: {
     'stripe-connect-onboarding',
     {
       ...dados,
-      app_url: window.location.origin,
+      app_url: Capacitor.isNativePlatform()
+        ? 'https://jemani.vercel.app'
+        : window.location.origin,
     },
   )
 }

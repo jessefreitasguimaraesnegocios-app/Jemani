@@ -29,6 +29,8 @@ const buildEnv = {
   GRADLE_USER_HOME: gradleHome,
   VITE_DEMO_MODE: 'false',
   VITE_ALLOW_DEV_PAYMENT: 'false',
+  // APK no celular não enxerga 127.0.0.1 do PC — Stripe vai pelas Edge Functions.
+  VITE_STRIPE_API_URL: '',
 }
 
 function run(command, args, cwd = root) {
