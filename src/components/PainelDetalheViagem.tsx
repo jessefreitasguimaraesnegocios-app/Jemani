@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { BadgeStatus } from '@/components/BadgeStatus'
+import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import type {
   CategoriaVeiculo,
   Empresa,
@@ -103,8 +104,15 @@ export function PainelDetalheViagem({
 
         <div className="cartao painel-detalhe-bloco">
           <h3 className="fonte-display text-xl">Pessoas</h3>
-          <div className="painel-detalhe-grade">
+          <div className="painel-detalhe-cliente">
+            <FotoPerfilCliente
+              url={cliente?.avatar_url}
+              nome={cliente?.nome ?? viagem.nome_passageiro ?? 'Cliente'}
+              tamanho="corrida"
+            />
             <Campo rotulo="Cliente" valor={cliente?.nome ?? '—'} />
+          </div>
+          <div className="painel-detalhe-grade">
             <Campo rotulo="Empresa" valor={empresa?.nome_comercial ?? 'Sem empresa'} />
             <Campo rotulo="Motorista" valor={motorista?.nome ?? '—'} />
             <Campo

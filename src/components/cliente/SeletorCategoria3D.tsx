@@ -21,7 +21,8 @@ export function SeletorCategoria3D({
   aoSelecionar,
   formatarAdicional,
 }: Props) {
-  const escolhaTravada = useRef(false)
+  const faixaRef = useRef<HTMLDivElement>(null)
+  const pausaFaixa = useRef(0)
   const [movimento, setMovimento] = useState(true)
 
   const selecionada = useMemo(
@@ -38,11 +39,6 @@ export function SeletorCategoria3D({
     [categorias, passageiros],
   )
 
-  const idsQueServem = useMemo(
-    () => categoriasValidas.filter((c) => c.serve).map((c) => c.id).join('|'),
-    [categoriasValidas],
-  )
-
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
     const aplicar = () => setMovimento(!media.matches)
@@ -52,17 +48,38 @@ export function SeletorCategoria3D({
   }, [])
 
   useEffect(() => {
-    if (!movimento) return
-    const ids = idsQueServem.split('|').filter(Boolean)
-    if (ids.length < 2) return
-    const timer = window.setInterval(() => {
-      if (escolhaTravada.current) return
-      const atual = ids.indexOf(categoriaId)
-      const proxima = ids[(atual + 1) % ids.length]
-      if (proxima && proxima !== categoriaId) aoSelecionar(proxima)
-    }, 3800)
-    return () => window.clearInterval(timer)
-  }, [movimento, idsQueServem, categoriaId, aoSelecionar])
+    const trilho = faixaRef.current
+    if (!trilho || !movimento) return
+    let quadro = 0
+    const andar = () => {
+      if (Date.now() >= pausaFaixa.current) {
+        const metade = trilho.scrollWidth / 2
+        if (metade > 0 && trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
+        trilho.scrollLeft += 0.55
+      }
+      quadro = window.requestAnimationFrame(andar)
+    }
+    const pausar = () => {
+      pausaFaixa.current = Number.POSITIVE_INFINITY
+    }
+    const seguir = () => {
+      pausaFaixa.current = 0
+    }
+    trilho.addEventListener('pointerenter', pausar)
+    trilho.addEventListener('pointerleave', seguir)
+    trilho.addEventListener('pointerdown', pausar)
+    trilho.addEventListener('pointerup', seguir)
+    trilho.addEventListener('pointercancel', seguir)
+    quadro = window.requestAnimationFrame(andar)
+    return () => {
+      window.cancelAnimationFrame(quadro)
+      trilho.removeEventListener('pointerenter', pausar)
+      trilho.removeEventListener('pointerleave', seguir)
+      trilho.removeEventListener('pointerdown', pausar)
+      trilho.removeEventListener('pointerup', seguir)
+      trilho.removeEventListener('pointercancel', seguir)
+    }
+  }, [movimento, categoriasValidas.length])
 
   if (!selecionada) return null
 
@@ -72,7 +89,7 @@ export function SeletorCategoria3D({
 
   function escolher(id: string, serve: boolean) {
     if (!serve) return
-    escolhaTravada.current = true
+    pausaFaixa.current = Date.now() + 1800
     aoSelecionar(id)
   }
 
@@ -133,18 +150,16 @@ export function SeletorCategoria3D({
         </li>
       </ul>
 
-      <div className="showroom-faixa" role="listbox" aria-label="Frota">
-        <div className={movimento ? 'showroom-faixa-trilho showroom-faixa-trilho--loop' : 'showroom-faixa-trilho'}>
-          {copias.map((copia) => (
-            <div
-              key={copia}
-              className="showroom-faixa-grupo"
-              aria-hidden={copia === 1 ? true : undefined}
-            >
-              {categoriasValidas.map((c) => cartao(c, copia))}
-            </div>
-          ))}
-        </div>
+      <div className="showroom-faixa" ref={faixaRef} role="listbox" aria-label="Frota">
+        {copias.map((copia) => (
+          <div
+            key={copia}
+            className="showroom-faixa-grupo"
+            aria-hidden={copia === 1 ? true : undefined}
+          >
+            {categoriasValidas.map((c) => cartao(c, copia))}
+          </div>
+        ))}
       </div>
     </section>
   )

@@ -50,3 +50,58 @@
 .cliente-switch-ligado span {
   transform: translateX(1.15rem);
 }
+
+.cliente-foto-bloco {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.cliente-foto-acoes {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.cliente-foto-dica {
+  margin: 0.2rem 0 0.7rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--color-slate);
+}
+
+.cliente-foto-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cliente-foto-botoes .btn-secundario,
+.cliente-foto-botoes .btn-perigo {
+  padding: 0.45rem 0.95rem;
+  font-size: 0.8125rem;
+}
+
+.cliente-foto-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.cliente-foto-erro,
+.cliente-foto-ok {
+  margin: 0.55rem 0 0;
+  font-size: 0.82rem;
+}
+
+.cliente-foto-erro {
+  color: var(--color-danger);
+}
+
+.cliente-foto-ok {
+  color: var(--color-success);
+}

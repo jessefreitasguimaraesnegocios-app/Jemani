@@ -1,0 +1,54 @@
+.foto-perfil {
+  display: block;
+  flex-shrink: 0;
+  object-fit: cover;
+  object-position: center;
+  border-radius: 50%;
+  background: #e8e2d8;
+}
+
+.foto-perfil--perfil {
+  width: 6.5rem;
+  height: 6.5rem;
+  border: 2px solid rgba(201, 164, 108, 0.55);
+}
+
+.foto-perfil--corrida {
+  width: 3.6rem;
+  height: 3.6rem;
+  border: 1px solid rgba(201, 164, 108, 0.4);
+}
+
+.foto-perfil--motorista {
+  width: 5.75rem;
+  height: 5.75rem;
+  border: 2px solid rgba(201, 164, 108, 0.65);
+  box-shadow: 0 0 0 3px rgba(201, 164, 108, 0.18);
+}
+
+.foto-perfil--vazio {
+  display: inline-grid;
+  place-items: center;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #6d6254;
+}
+
+.foto-perfil--perfil.foto-perfil--vazio {
+  font-size: 1.45rem;
+}
+
+.foto-perfil--corrida.foto-perfil--vazio {
+  font-size: 0.95rem;
+}
+
+.foto-perfil--motorista.foto-perfil--vazio {
+  font-size: 1.35rem;
+  color: #f6f1e8;
+  background: #2a2a2a;
+}
+
+html[data-tema='escuro'] .foto-perfil--vazio {
+  background: #2a2a2a;
+  color: #f6f1e8;
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AgendamentoCarro } from '@/components/AgendamentoCarro'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { ChatEmpresa } from '@/components/ChatEmpresa'
+import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { linkMapa, MapaCorrida } from '@/components/MapaCorrida'
 import { ModalFinalizarViagem } from '@/components/ModalFinalizarViagem'
 import { useAuth } from '@/contexts/AuthContext'
@@ -184,15 +185,29 @@ export function MotoristaDashboardPage() {
           </a>
 
           {ligar ? (
-            <a className="corrida-contato" href={ligar}>
-              <span>Contato do passageiro</span>
-              <strong>{nomePassageiro}</strong>
-              <em>{telefone}</em>
+            <a className="corrida-contato corrida-contato--com-foto" href={ligar}>
+              <FotoPerfilCliente
+                url={cliente?.avatar_url}
+                nome={nomePassageiro}
+                tamanho="motorista"
+              />
+              <span className="corrida-contato-texto">
+                <span>Contato do passageiro</span>
+                <strong>{nomePassageiro}</strong>
+                <em>{telefone}</em>
+              </span>
             </a>
           ) : (
-            <div className="corrida-contato">
-              <span>Contato do passageiro</span>
-              <strong>{nomePassageiro}</strong>
+            <div className="corrida-contato corrida-contato--com-foto">
+              <FotoPerfilCliente
+                url={cliente?.avatar_url}
+                nome={nomePassageiro}
+                tamanho="motorista"
+              />
+              <span className="corrida-contato-texto">
+                <span>Contato do passageiro</span>
+                <strong>{nomePassageiro}</strong>
+              </span>
             </div>
           )}
 

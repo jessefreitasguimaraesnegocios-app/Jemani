@@ -129,41 +129,22 @@
 }
 
 .showroom-faixa {
-  overflow: hidden;
-  padding-bottom: 0.2rem;
-}
-
-.showroom-faixa-trilho {
   display: flex;
-  width: max-content;
   gap: 0.55rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+  scroll-snap-type: none;
+  scrollbar-width: none;
 }
 
-.showroom-faixa-trilho--loop {
-  animation: showroom-loop 32s linear infinite;
-}
-
-.showroom-faixa:active .showroom-faixa-trilho--loop {
-  animation-play-state: paused;
-}
-
-@keyframes showroom-loop {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(calc(-50% - 0.275rem));
-  }
+.showroom-faixa::-webkit-scrollbar {
+  display: none;
 }
 
 .showroom-faixa-grupo {
   display: flex;
   flex: 0 0 auto;
   gap: 0.55rem;
-}
-
-.showroom-faixa::-webkit-scrollbar {
-  display: none;
 }
 
 .showroom-card {
@@ -212,10 +193,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .showroom-foto {
-    animation: none;
-  }
-
-  .showroom-faixa-trilho--loop {
     animation: none;
   }
 }

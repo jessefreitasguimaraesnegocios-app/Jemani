@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { BadgeStatus } from '@/components/BadgeStatus'
+import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { ModalFinalizarViagem } from '@/components/ModalFinalizarViagem'
 import { useAuth } from '@/contexts/AuthContext'
 import { SLUG_SHIELD } from '@/data/seed'
@@ -79,9 +80,11 @@ export function EmpresaViagemDetalhePage() {
   }
 
   const cat = categorias.find((c) => c.id === viagem.categoria_id)
+  const cliente = perfis.find((p) => p.id === viagem.cliente_id)
   const motoristaAtual = todosMotoristas.find((m) => m.id === viagem.motorista_id)
   const veiculoAtual = todosVeiculos.find((v) => v.id === viagem.veiculo_id)
   const proximo = PROXIMOS[viagem.status]
+  const nomeCliente = cliente?.nome ?? viagem.nome_passageiro ?? 'Cliente'
 
   function handleAtribuir(e: FormEvent) {
     e.preventDefault()
@@ -139,6 +142,14 @@ export function EmpresaViagemDetalhePage() {
         <div className="flex flex-wrap justify-between gap-2">
           <h1 className="fonte-display text-3xl">{viagem.codigo}</h1>
           <BadgeStatus status={viagem.status} />
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          <FotoPerfilCliente url={cliente?.avatar_url} nome={nomeCliente} tamanho="corrida" />
+          <div className="text-sm">
+            <p className="rotulo">Cliente</p>
+            <p className="font-medium">{nomeCliente}</p>
+            {cliente?.telefone && <p className="text-[var(--color-slate)]">{cliente.telefone}</p>}
+          </div>
         </div>
         <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
           <p>

@@ -61,6 +61,13 @@ html[data-tema='escuro'] .painel-detalhe {
   gap: 0.75rem;
 }
 
+.painel-detalhe-cliente {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
 .painel-detalhe-rotulo {
   margin: 0;
   font-size: 0.68rem;

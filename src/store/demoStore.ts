@@ -179,6 +179,7 @@ interface EstadoDemo {
   ) => Motorista
   salvarVeiculo: (dados: Partial<Veiculo> & { empresa_id: string; marca: string; modelo: string; categoria_id: string }) => Veiculo
   excluirVeiculo: (id: string) => void
+  atualizarAvatarCliente: (usuarioId: string, avatarUrl?: string | null) => void
   obterEmpresaDoUsuario: (usuarioId: string) => Empresa | undefined
   obterMotoristaDoUsuario: (usuarioId: string) => Motorista | undefined
   iniciarTurno: (motoristaId: string) => void
@@ -1730,6 +1731,21 @@ export const useDemoStore = create<EstadoDemo>()(
             ? state.veiculosExcluidos
             : [...state.veiculosExcluidos, id],
         })
+      },
+
+      atualizarAvatarCliente: (usuarioId, avatarUrl) => {
+        const agora = agoraIso()
+        set((state) => ({
+          perfis: state.perfis.map((perfil) =>
+            perfil.id === usuarioId
+              ? {
+                  ...perfil,
+                  avatar_url: avatarUrl?.trim() ? avatarUrl : undefined,
+                  updated_at: agora,
+                }
+              : perfil,
+          ),
+        }))
       },
 
       aplicarViagemNuvem: (viagem, silencioso = false) => {
