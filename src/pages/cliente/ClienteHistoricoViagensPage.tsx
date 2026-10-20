@@ -25,9 +25,14 @@ export function ClienteHistoricoViagensPage() {
   const { usuario } = useAuth()
   const { t } = usarIdioma()
   const todasViagens = useDemoStore((s) => s.viagens)
+  const avaliacoes = useDemoStore((s) => s.avaliacoes)
   const empresas = useDemoStore((s) => s.empresas)
   const motoristas = useDemoStore((s) => s.motoristas)
   const categorias = useDemoStore((s) => s.categorias)
+  const idsAvaliados = useMemo(
+    () => new Set(avaliacoes.map((a) => a.viagem_id)),
+    [avaliacoes],
+  )
 
   const historico = useMemo(() => {
     const doCliente = todasViagens.filter((v) => v.cliente_id === usuario?.id)
@@ -70,6 +75,11 @@ export function ClienteHistoricoViagensPage() {
                     empresa={viagem.empresa_id ? mapaEmpresas.get(viagem.empresa_id) : undefined}
                     motorista={
                       viagem.motorista_id ? mapaMotoristas.get(viagem.motorista_id) : undefined
+                    }
+                    pedirAvaliacao={
+                      viagem.status === 'viagem_finalizada' &&
+                      Boolean(viagem.empresa_id) &&
+                      !idsAvaliados.has(viagem.id)
                     }
                   />
                 ))}

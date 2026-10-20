@@ -1,0 +1,30 @@
+.viagem-avaliacao {
+  border-color: rgba(201, 164, 108, 0.55);
+  background: linear-gradient(180deg, rgba(201, 164, 108, 0.1), transparent 70%);
+}
+
+.viagem-avaliacao-titulo {
+  margin: 0;
+}
+
+.viagem-avaliacao-sub {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--color-slate);
+}
+
+.viagem-avaliacao-feita {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.viagem-avaliacao-feita strong {
+  font-size: 0.95rem;
+}
+
+.viagem-avaliacao-feita span {
+  font-size: 0.85rem;
+  color: var(--color-slate);
+}

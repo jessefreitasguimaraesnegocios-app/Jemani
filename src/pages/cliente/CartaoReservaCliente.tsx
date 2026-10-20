@@ -9,11 +9,13 @@ export function CartaoReservaCliente({
   categoria,
   empresa,
   motorista,
+  pedirAvaliacao,
 }: {
   viagem: Viagem
   categoria?: string
   empresa?: string
   motorista?: string
+  pedirAvaliacao?: boolean
 }) {
   const { t, locale } = usarIdioma()
 
@@ -37,6 +39,9 @@ export function CartaoReservaCliente({
               {t('comum.empresa')}: {empresa}
               {motorista ? ` · ${t('comum.motorista')}: ${motorista}` : ''}
             </p>
+          )}
+          {pedirAvaliacao && (
+            <p className="cliente-viagens-cartao-avaliar">{t('cliente.viagens.avaliarAgora')}</p>
           )}
         </div>
         <BadgeStatus status={viagem.status} />

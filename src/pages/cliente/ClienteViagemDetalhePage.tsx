@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { AvaliacaoEstrelas } from '@/components/AvaliacaoEstrelas'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { MapaCorrida } from '@/components/MapaCorrida'
@@ -9,6 +10,7 @@ import { stripeCheckoutDisponivel } from '@/lib/stripeApi'
 import { criarIntencaoPagamento, permitirSimulacaoPagamentoDev } from '@/services/pagamentoService'
 import { useDemoStore } from '@/store/demoStore'
 import { formatarData, formatarMoeda } from '@/utils/format'
+import './ClienteViagemDetalhePage.css'
 
 export function ClienteViagemDetalhePage() {
   const { id } = useParams()
@@ -41,6 +43,19 @@ export function ClienteViagemDetalhePage() {
   const [comentario, setComentario] = useState('')
   const [msg, setMsg] = useState('')
   const [pagando, setPagando] = useState(false)
+  const blocoAvaliacaoRef = useRef<HTMLFormElement>(null)
+
+  const avaliacaoFeita = useMemo(
+    () => (id ? avaliacoes.find((a) => a.viagem_id === id) : undefined),
+    [avaliacoes, id],
+  )
+  const precisaAvaliar = Boolean(
+    viagem &&
+      viagem.cliente_id === usuario?.id &&
+      viagem.status === 'viagem_finalizada' &&
+      !avaliacaoFeita &&
+      viagem.empresa_id,
+  )
 
   useEffect(() => {
     const status = params.get('pagamento')
@@ -66,6 +81,14 @@ export function ClienteViagemDetalhePage() {
     }
   }, [params, setParams, usuario, id, confirmarPagamentoStripe])
 
+  useEffect(() => {
+    if (!precisaAvaliar) return
+    const timer = window.setTimeout(() => {
+      blocoAvaliacaoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 180)
+    return () => window.clearTimeout(timer)
+  }, [precisaAvaliar, id])
+
   if (!viagem || viagem.cliente_id !== usuario?.id) {
     return (
       <div className="cartao">
@@ -78,7 +101,7 @@ export function ClienteViagemDetalhePage() {
   const motorista = motoristas.find((m) => m.id === viagem.motorista_id)
   const veiculo = veiculos.find((v) => v.id === viagem.veiculo_id)
   const categoria = categorias.find((c) => c.id === viagem.categoria_id)
-  const jaAvaliou = avaliacoes.some((a) => a.viagem_id === viagem.id)
+  const jaAvaliou = Boolean(avaliacaoFeita)
   const stripeOk = stripeCheckoutDisponivel()
 
   async function pagarComStripe() {
@@ -294,6 +317,70 @@ export function ClienteViagemDetalhePage() {
         </div>
       </div>
 
+      {precisaAvaliar && (
+        <form
+          ref={blocoAvaliacaoRef}
+          className="cartao space-y-3 viagem-avaliacao"
+          onSubmit={handleAvaliar}
+        >
+          <div>
+            <h2 className="fonte-display text-2xl viagem-avaliacao-titulo">Avaliação</h2>
+            <p className="viagem-avaliacao-sub">
+              Sua viagem terminou. Toque nas estrelas (1 a 5) para avaliar empresa, motorista e
+              serviço.
+            </p>
+          </div>
+          <AvaliacaoEstrelas rotulo="Empresa" valor={notaEmpresa} aoMudar={setNotaEmpresa} />
+          <AvaliacaoEstrelas
+            rotulo="Motorista"
+            valor={notaMotorista}
+            aoMudar={setNotaMotorista}
+          />
+          <AvaliacaoEstrelas rotulo="Serviço" valor={notaServico} aoMudar={setNotaServico} />
+          <textarea
+            className="campo"
+            placeholder="Comentário (opcional)"
+            value={comentario}
+            onChange={(e) => setComentario(e.target.value)}
+            rows={3}
+          />
+          <button type="submit" className="btn-primario">
+            Enviar avaliação
+          </button>
+        </form>
+      )}
+
+      {viagem.status === 'viagem_finalizada' && jaAvaliou && avaliacaoFeita && (
+        <div className="cartao viagem-avaliacao">
+          <h2 className="fonte-display text-2xl viagem-avaliacao-titulo">Avaliação</h2>
+          <div className="viagem-avaliacao-feita mt-3">
+            <strong>Obrigado! Você já avaliou esta viagem.</strong>
+            <span>
+              Empresa {avaliacaoFeita.nota_empresa} · Motorista {avaliacaoFeita.nota_motorista} ·
+              Serviço {avaliacaoFeita.nota_servico}
+            </span>
+          </div>
+          <AvaliacaoEstrelas
+            rotulo="Empresa"
+            valor={avaliacaoFeita.nota_empresa}
+            aoMudar={() => undefined}
+            desabilitado
+          />
+          <AvaliacaoEstrelas
+            rotulo="Motorista"
+            valor={avaliacaoFeita.nota_motorista}
+            aoMudar={() => undefined}
+            desabilitado
+          />
+          <AvaliacaoEstrelas
+            rotulo="Serviço"
+            valor={avaliacaoFeita.nota_servico}
+            aoMudar={() => undefined}
+            desabilitado
+          />
+        </div>
+      )}
+
       <div className="cartao">
         <h2 className="fonte-display text-2xl">Histórico</h2>
         <ul className="mt-3 space-y-2">
@@ -324,24 +411,6 @@ export function ClienteViagemDetalhePage() {
         </form>
       )}
 
-      {viagem.status === 'viagem_finalizada' && !jaAvaliou && viagem.empresa_id && (
-        <form className="cartao space-y-3" onSubmit={handleAvaliar}>
-          <h2 className="fonte-display text-2xl">Avaliar serviço</h2>
-          <Nota label="Empresa" valor={notaEmpresa} onChange={setNotaEmpresa} />
-          <Nota label="Motorista" valor={notaMotorista} onChange={setNotaMotorista} />
-          <Nota label="Serviço" valor={notaServico} onChange={setNotaServico} />
-          <textarea
-            className="campo"
-            placeholder="Comentário"
-            value={comentario}
-            onChange={(e) => setComentario(e.target.value)}
-          />
-          <button type="submit" className="btn-primario">
-            Enviar avaliação
-          </button>
-        </form>
-      )}
-
       {msg && <p className="text-sm text-[var(--color-success)]">{msg}</p>}
     </div>
   )
@@ -353,32 +422,5 @@ function Info({ label, valor }: { label: string; valor: string }) {
       <p className="text-xs uppercase tracking-wide text-[var(--color-slate)]">{label}</p>
       <p className="mt-1 font-medium">{valor}</p>
     </div>
-  )
-}
-
-function Nota({
-  label,
-  valor,
-  onChange,
-}: {
-  label: string
-  valor: number
-  onChange: (n: number) => void
-}) {
-  return (
-    <label className="flex items-center justify-between gap-3 text-sm">
-      <span>{label}</span>
-      <select
-        className="campo !w-24"
-        value={valor}
-        onChange={(e) => onChange(Number(e.target.value))}
-      >
-        {[1, 2, 3, 4, 5].map((n) => (
-          <option key={n} value={n}>
-            {n}
-          </option>
-        ))}
-      </select>
-    </label>
   )
 }
