@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { BadgeStatus } from '@/components/BadgeStatus'
+import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { MapaCorrida } from '@/components/MapaCorrida'
 import { useAuth } from '@/contexts/AuthContext'
 import { stripeCheckoutDisponivel } from '@/lib/stripeApi'
@@ -263,7 +264,21 @@ export function ClienteViagemDetalhePage() {
           <Info label="Passageiros" valor={String(viagem.passageiros)} />
           <Info label="Preço" valor={formatarMoeda(viagem.preco_total)} />
           <Info label="Empresa" valor={empresa?.nome_comercial ?? 'Aguardando'} />
-          <Info label="Motorista" valor={motorista?.nome ?? '—'} />
+          <div>
+            <p className="text-xs uppercase tracking-wide text-[var(--color-slate)]">Motorista</p>
+            {motorista ? (
+              <div className="mt-1 flex items-center gap-3">
+                <FotoPerfilCliente
+                  url={motorista.foto_url}
+                  nome={motorista.nome}
+                  tamanho="corrida"
+                />
+                <p className="font-medium">{motorista.nome}</p>
+              </div>
+            ) : (
+              <p className="mt-1 font-medium">—</p>
+            )}
+          </div>
           <Info
             label="Veículo"
             valor={veiculo ? `${veiculo.marca} ${veiculo.modelo}` : '—'}

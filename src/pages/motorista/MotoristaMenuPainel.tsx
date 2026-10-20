@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { BadgeStatus } from '@/components/BadgeStatus'
+import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { useAuth } from '@/contexts/AuthContext'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import type { IdiomaApp } from '@/i18n/tipos'
@@ -55,6 +56,14 @@ function PerfilMotorista({ motorista }: { motorista: Motorista }) {
   return (
     <div className="motorista-painel">
       <h1 className="fonte-display">{t('motorista.perfil.titulo')}</h1>
+      <section className="motorista-cartao motorista-perfil-foto">
+        <FotoPerfilCliente
+          url={motorista.foto_url}
+          nome={motorista.nome}
+          tamanho="perfil"
+        />
+        <p className="motorista-foto-aviso">{t('motorista.perfil.fotoAviso')}</p>
+      </section>
       <section className="motorista-cartao">
         <Linha rotulo={t('comum.nome')} valor={motorista.nome} />
         <Linha rotulo={t('comum.email')} valor={usuario?.email ?? '—'} />

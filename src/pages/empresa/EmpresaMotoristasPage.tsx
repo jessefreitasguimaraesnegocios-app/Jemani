@@ -1,7 +1,9 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type FormEvent } from 'react'
 import { BadgeStatus } from '@/components/BadgeStatus'
+import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
+import { enviarFotoMotorista } from '@/services/fotoMotorista'
 import {
   dataEstaNoPeriodo,
   filtrarCorridas,
@@ -60,6 +62,10 @@ export function EmpresaMotoristasPage() {
   const [cadastroAberto, setCadastroAberto] = useState(false)
   const [motoristaId, setMotoristaId] = useState<string | null>(null)
   const [periodo, setPeriodo] = useState<PeriodoMotorista>('tudo')
+  const [enviandoFoto, setEnviandoFoto] = useState(false)
+  const [erroFoto, setErroFoto] = useState('')
+  const [okFoto, setOkFoto] = useState('')
+  const inputFotoRef = useRef<HTMLInputElement>(null)
 
   const motoristaAberto = motoristas.find((m) => m.id === motoristaId) ?? null
   const historico = useMemo(() => {
@@ -132,6 +138,39 @@ export function EmpresaMotoristasPage() {
   function abrirHistorico(id: string) {
     setMotoristaId(id)
     setPeriodo('tudo')
+    setErroFoto('')
+    setOkFoto('')
+  }
+
+  async function aoEscolherFoto(arquivo?: File | null) {
+    if (!motoristaAberto || !arquivo) return
+    setErroFoto('')
+    setOkFoto('')
+    setEnviandoFoto(true)
+    try {
+      const url = await enviarFotoMotorista(motoristaAberto.id, arquivo)
+      salvarMotorista({
+        ...motoristaAberto,
+        foto_url: url,
+      })
+      setOkFoto(t('empresa.motoristas.fotoSalva'))
+    } catch (err) {
+      setErroFoto(err instanceof Error ? err.message : t('empresa.motoristas.fotoErro'))
+    } finally {
+      setEnviandoFoto(false)
+      if (inputFotoRef.current) inputFotoRef.current.value = ''
+    }
+  }
+
+  function aoRemoverFoto() {
+    if (!motoristaAberto?.foto_url) return
+    setErroFoto('')
+    setOkFoto('')
+    salvarMotorista({
+      ...motoristaAberto,
+      foto_url: undefined,
+    })
+    setOkFoto(t('empresa.motoristas.fotoRemovida'))
   }
 
   if (motoristaAberto && historico) {
@@ -145,11 +184,59 @@ export function EmpresaMotoristasPage() {
           <button type="button" className="btn-secundario motorista-voltar" onClick={() => setMotoristaId(null)}>
             {t('empresa.motoristas.voltar')}
           </button>
-          <h1 className="fonte-display text-3xl">{motoristaAberto.nome}</h1>
-          <p className="motorista-historico-sub">
-            {perfil?.email ? `${perfil.email} · ` : ''}
-            {motoristaAberto.telefone} · CNH {motoristaAberto.categoria_cnh} · {motoristaAberto.experiencia_anos} anos
-          </p>
+          <div className="motorista-detalhe-topo">
+            <FotoPerfilCliente
+              url={motoristaAberto.foto_url}
+              nome={motoristaAberto.nome}
+              tamanho="perfil"
+            />
+            <div>
+              <h1 className="fonte-display text-3xl">{motoristaAberto.nome}</h1>
+              <p className="motorista-historico-sub">
+                {perfil?.email ? `${perfil.email} · ` : ''}
+                {motoristaAberto.telefone} · CNH {motoristaAberto.categoria_cnh} ·{' '}
+                {motoristaAberto.experiencia_anos} anos
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="cartao motorista-foto-bloco">
+          <div>
+            <p className="rotulo">{t('empresa.motoristas.foto')}</p>
+            <p className="motorista-foto-dica">{t('empresa.motoristas.fotoDica')}</p>
+            <div className="motorista-foto-botoes">
+              <button
+                type="button"
+                className="btn-secundario"
+                disabled={enviandoFoto}
+                onClick={() => inputFotoRef.current?.click()}
+              >
+                {enviandoFoto
+                  ? t('empresa.motoristas.enviandoFoto')
+                  : t('empresa.motoristas.trocarFoto')}
+              </button>
+              {motoristaAberto.foto_url && (
+                <button
+                  type="button"
+                  className="btn-perigo"
+                  disabled={enviandoFoto}
+                  onClick={aoRemoverFoto}
+                >
+                  {t('empresa.motoristas.removerFoto')}
+                </button>
+              )}
+            </div>
+            <input
+              ref={inputFotoRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="motorista-foto-input"
+              onChange={(e) => void aoEscolherFoto(e.target.files?.[0])}
+            />
+            {erroFoto && <p className="motorista-erro">{erroFoto}</p>}
+            {okFoto && <p className="motorista-ok">{okFoto}</p>}
+          </div>
         </div>
 
         <div className="motorista-periodos">
@@ -269,14 +356,24 @@ export function EmpresaMotoristasPage() {
           const perfil = m.usuario_id ? mapaPerfis.get(m.usuario_id) : undefined
           return (
             <div key={m.id} className="cartao motorista-card">
-              <div>
-                <button type="button" className="motorista-nome" onClick={() => abrirHistorico(m.id)}>
-                  {m.nome}
+              <div className="motorista-card-info">
+                <button
+                  type="button"
+                  className="motorista-card-foto"
+                  onClick={() => abrirHistorico(m.id)}
+                  aria-label={m.nome}
+                >
+                  <FotoPerfilCliente url={m.foto_url} nome={m.nome} tamanho="corrida" />
                 </button>
-                <p className="motorista-meta">
-                  {perfil?.email ? `${perfil.email} · ` : ''}
-                  {m.telefone} · CNH {m.categoria_cnh} · {m.experiencia_anos} anos
-                </p>
+                <div>
+                  <button type="button" className="motorista-nome" onClick={() => abrirHistorico(m.id)}>
+                    {m.nome}
+                  </button>
+                  <p className="motorista-meta">
+                    {perfil?.email ? `${perfil.email} · ` : ''}
+                    {m.telefone} · CNH {m.categoria_cnh} · {m.experiencia_anos} anos
+                  </p>
+                </div>
               </div>
               <div className="motorista-lado">
                 {m.eh_categoria_shield && <span className="motorista-selo-shield">Shield</span>}

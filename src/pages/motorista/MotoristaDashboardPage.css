@@ -120,6 +120,12 @@
   line-height: 1.4;
 }
 
+.corrida-sem-viagem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
 .corrida-vazia {
   padding: 2rem 1rem;
   text-align: center;

@@ -86,12 +86,14 @@ export function ReservarPage() {
     if (!categoriaId && categorias[0]) setCategoriaId(categorias[0].id)
   }, [categorias, categoriaId])
 
+  const trechoComAeroporto = embarqueAeroporto || destinoAeroporto
+
   useEffect(() => {
-    if (!embarqueAeroporto) {
+    if (!trechoComAeroporto) {
       setNumeroVoo('')
       setTerminal('')
     }
-  }, [embarqueAeroporto])
+  }, [trechoComAeroporto])
 
   useEffect(() => {
     const id = window.setInterval(() => setAgoraTick(Date.now()), 60_000)
@@ -168,7 +170,7 @@ export function ReservarPage() {
   function montarObservacoes(): string | undefined {
     const partes: string[] = []
     if (telefoneContato.trim()) partes.push(`Contato: ${telefoneContato.trim()}`)
-    if (embarqueAeroporto && terminal.trim()) {
+    if (trechoComAeroporto && terminal.trim()) {
       partes.push(`Portão: ${terminal.trim()}`)
     }
     if (observacoes.trim()) partes.push(observacoes.trim())
@@ -244,8 +246,12 @@ export function ReservarPage() {
         setErro('Informe o nome do passageiro principal.')
         return
       }
-      if (embarqueAeroporto && !numeroVoo.trim()) {
-        setErro('Embarque no aeroporto: informe o número do voo para o motorista acompanhar o pouso.')
+      if (trechoComAeroporto && !numeroVoo.trim()) {
+        setErro(
+          embarqueAeroporto
+            ? 'Embarque no aeroporto: informe o número do voo para o motorista acompanhar o pouso.'
+            : 'Destino no aeroporto: informe o número do voo para o motorista acompanhar a partida.',
+        )
         return
       }
       if (malas < 0 || malas > MAX_MALAS) {
@@ -284,7 +290,7 @@ export function ReservarPage() {
         passageiros,
         categoria_id: categoriaId,
         malas,
-        numero_voo: embarqueAeroporto && numeroVoo.trim() ? numeroVoo.trim().toUpperCase() : undefined,
+        numero_voo: trechoComAeroporto && numeroVoo.trim() ? numeroVoo.trim().toUpperCase() : undefined,
         nome_passageiro: nomePassageiro.trim(),
         observacoes: montarObservacoes(),
         distancia_km: rota.distanciaKm,
@@ -508,12 +514,20 @@ export function ReservarPage() {
               </p>
             </div>
 
-            {embarqueAeroporto && (
+            {trechoComAeroporto && (
               <div className="space-y-4 rounded-2xl border border-[var(--color-line)] p-3">
-                <p className="text-sm font-medium">Dados do voo (embarque no aeroporto)</p>
+                <p className="text-sm font-medium">
+                  {embarqueAeroporto
+                    ? 'Dados do voo (embarque no aeroporto)'
+                    : 'Dados do voo (destino no aeroporto)'}
+                </p>
+                <p className="text-xs text-[var(--color-slate)]">
+                  Obrigatório. O motorista acompanha a previsão de{' '}
+                  {embarqueAeroporto ? 'pouso' : 'decolagem'} pelo número do voo.
+                </p>
                 <div>
                   <label className="rotulo" htmlFor="numero-voo">
-                    Número do voo
+                    Número do voo *
                   </label>
                   <input
                     id="numero-voo"
@@ -568,10 +582,10 @@ export function ReservarPage() {
             <Linha label="Passageiros" valor={String(passageiros)} />
             <Linha label="Malas" valor={String(malas)} />
             <Linha label="Passageiro" valor={nomePassageiro.trim() || '—'} />
-            {embarqueAeroporto && numeroVoo.trim() && (
+            {trechoComAeroporto && numeroVoo.trim() && (
               <Linha label="Voo" valor={numeroVoo.trim().toUpperCase()} />
             )}
-            {embarqueAeroporto && terminal.trim() && (
+            {trechoComAeroporto && terminal.trim() && (
               <Linha label="Portão" valor={terminal.trim()} />
             )}
             <Linha label="Categoria" valor={categoria?.nome ?? '—'} />

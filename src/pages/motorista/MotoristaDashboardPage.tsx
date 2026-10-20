@@ -5,6 +5,9 @@ import { ChatEmpresa } from '@/components/ChatEmpresa'
 import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { linkMapa, MapaCorrida } from '@/components/MapaCorrida'
 import { ModalFinalizarViagem } from '@/components/ModalFinalizarViagem'
+import { ClimaCorrida } from '@/components/motorista/ClimaCorrida'
+import { ObservacoesCorrida } from '@/components/motorista/ObservacoesCorrida'
+import { PainelVoo } from '@/components/motorista/PainelVoo'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarAvisoDoSistema } from '@/hooks/usarAvisoDoSistema'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -72,6 +75,8 @@ export function MotoristaDashboardPage() {
   const [mostrarFinalizar, setMostrarFinalizar] = useState(false)
   const [erro, setErro] = useState('')
   const [avisoGps, setAvisoGps] = useState('')
+  const [gpsLat, setGpsLat] = useState<number | undefined>()
+  const [gpsLng, setGpsLng] = useState<number | undefined>()
   const { aba } = usarAbaMotorista()
   const { t } = usarIdioma()
 
@@ -86,10 +91,6 @@ export function MotoristaDashboardPage() {
     const seguirCorrida = Boolean(proxima && COM_GPS.includes(proxima.status))
     const viagemId = proxima?.id
     const motoristaId = motorista?.id
-    if (!seguirCorrida && !online) {
-      setAvisoGps('')
-      return
-    }
     if (!navigator.geolocation) {
       setAvisoGps(t('motorista.gps.indisponivel'))
       return
@@ -97,6 +98,8 @@ export function MotoristaDashboardPage() {
     const id = navigator.geolocation.watchPosition(
       (pos) => {
         setAvisoGps('')
+        setGpsLat(pos.coords.latitude)
+        setGpsLng(pos.coords.longitude)
         if (seguirCorrida && viagemId) {
           atualizarPosicaoMotorista(viagemId, pos.coords.latitude, pos.coords.longitude)
         }
@@ -105,7 +108,9 @@ export function MotoristaDashboardPage() {
         }
       },
       (falha) => {
-        setAvisoGps(falha.code === 1 ? t('motorista.gps.negado') : t('motorista.gps.falha'))
+        if (seguirCorrida || online) {
+          setAvisoGps(falha.code === 1 ? t('motorista.gps.negado') : t('motorista.gps.falha'))
+        }
       },
       { enableHighAccuracy: true, maximumAge: 8000 },
     )
@@ -144,7 +149,10 @@ export function MotoristaDashboardPage() {
       ) : aba === 'carro' ? (
         <AgendamentoCarro motoristaId={motorista.id} empresaId={motorista.empresa_id} />
       ) : !proxima ? (
-        <p className="corrida-vazia">Nenhuma viagem atribuída no momento.</p>
+        <div className="corrida-sem-viagem">
+          <ClimaCorrida gpsLat={gpsLat} gpsLng={gpsLng} />
+          <p className="corrida-vazia">Nenhuma viagem atribuída no momento.</p>
+        </div>
       ) : (
         <>
           <header className="corrida-topo">
@@ -155,15 +163,19 @@ export function MotoristaDashboardPage() {
             <BadgeStatus status={proxima.status} />
           </header>
 
+          <ClimaCorrida viagem={proxima} gpsLat={gpsLat} gpsLng={gpsLng} />
+
           <MapaCorrida
             origemLat={proxima.origem_lat}
             origemLng={proxima.origem_lng}
             destinoLat={proxima.destino_lat}
             destinoLng={proxima.destino_lng}
-            motoristaLat={proxima.motorista_lat}
-            motoristaLng={proxima.motorista_lng}
+            motoristaLat={proxima.motorista_lat ?? gpsLat}
+            motoristaLng={proxima.motorista_lng ?? gpsLng}
             legenda={`${proxima.origem} até ${proxima.destino}`}
           />
+
+          <PainelVoo viagem={proxima} />
 
           <a
             className="corrida-endereco"
@@ -183,6 +195,8 @@ export function MotoristaDashboardPage() {
             <span>Destino</span>
             <strong>{proxima.destino}</strong>
           </a>
+
+          <ObservacoesCorrida observacoes={proxima.observacoes} />
 
           {ligar ? (
             <a className="corrida-contato corrida-contato--com-foto" href={ligar}>

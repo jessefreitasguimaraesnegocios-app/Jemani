@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { ListaHistoricoCorridas } from '@/components/ListaHistoricoCorridas'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { montarResumoHistorico } from '@/services/historicoCorridas'
@@ -43,11 +44,26 @@ export function AdminClienteHistoricoPage() {
           {t('hist.voltarClientes')}
         </Link>
         <div className="admin-historico-cabecalho">
-          <div>
-            <h1 className="fonte-display text-3xl">{t('hist.clienteTitulo')}</h1>
-            <p className="admin-historico-sub">
-              {cliente.nome} · {cliente.email} · {cliente.telefone ?? t('admin.clientes.semTel')}
-            </p>
+          <div className="admin-historico-perfil">
+            <FotoPerfilCliente
+              url={cliente.avatar_url}
+              nome={cliente.nome}
+              tamanho="perfil"
+            />
+            <div>
+              <p className="admin-historico-kicker">{t('hist.clienteTitulo')}</p>
+              <h1 className="fonte-display text-3xl">{cliente.nome}</h1>
+              <div className="admin-historico-contatos">
+                <p>
+                  <span>{t('comum.email')}</span>
+                  <strong>{cliente.email}</strong>
+                </p>
+                <p>
+                  <span>{t('comum.telefone')}</span>
+                  <strong>{cliente.telefone ?? t('admin.clientes.semTel')}</strong>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

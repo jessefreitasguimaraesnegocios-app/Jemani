@@ -34,6 +34,18 @@
   border: 1px solid #2a2a2a;
 }
 
+.motorista-perfil-foto {
+  align-items: center;
+  text-align: center;
+}
+
+.motorista-foto-aviso {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #9a9a9a;
+}
+
 .motorista-linha {
   display: flex;
   flex-direction: column;

@@ -1,0 +1,47 @@
+.painel-voo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  background: linear-gradient(145deg, #1a1712 0%, #141414 55%);
+  border: 1px solid rgba(201, 164, 108, 0.35);
+}
+
+.painel-voo--atraso {
+  border-color: rgba(220, 120, 80, 0.55);
+}
+
+.painel-voo-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.painel-voo-topo span {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(246, 241, 232, 0.5);
+}
+
+.painel-voo-topo strong {
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  color: #c9a46c;
+}
+
+.painel-voo-status {
+  margin: 0.35rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.painel-voo-detalhe,
+.painel-voo-hora {
+  margin: 0.15rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: rgba(246, 241, 232, 0.72);
+}
