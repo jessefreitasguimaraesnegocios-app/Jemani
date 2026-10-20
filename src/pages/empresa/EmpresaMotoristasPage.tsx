@@ -3,7 +3,7 @@ import { BadgeStatus } from '@/components/BadgeStatus'
 import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
-import { enviarFotoMotorista } from '@/services/fotoMotorista'
+import { enviarFotoMotorista, removerFotoMotorista } from '@/services/fotoMotorista'
 import {
   dataEstaNoPeriodo,
   filtrarCorridas,
@@ -162,15 +162,23 @@ export function EmpresaMotoristasPage() {
     }
   }
 
-  function aoRemoverFoto() {
+  async function aoRemoverFoto() {
     if (!motoristaAberto?.foto_url) return
     setErroFoto('')
     setOkFoto('')
-    salvarMotorista({
-      ...motoristaAberto,
-      foto_url: undefined,
-    })
-    setOkFoto(t('empresa.motoristas.fotoRemovida'))
+    setEnviandoFoto(true)
+    try {
+      await removerFotoMotorista(motoristaAberto.id)
+      salvarMotorista({
+        ...motoristaAberto,
+        foto_url: undefined,
+      })
+      setOkFoto(t('empresa.motoristas.fotoRemovida'))
+    } catch (err) {
+      setErroFoto(err instanceof Error ? err.message : t('empresa.motoristas.fotoErro'))
+    } finally {
+      setEnviandoFoto(false)
+    }
   }
 
   if (motoristaAberto && historico) {

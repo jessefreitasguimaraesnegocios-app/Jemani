@@ -23,6 +23,12 @@ import {
   listarMensagensNuvem,
   listarTurnosNuvem,
 } from '@/services/nuvemOperacao'
+import {
+  buscarClientesNuvem,
+  buscarMotoristasNuvem,
+  buscarPerfisNuvem,
+  refrescarMeuPerfilNuvem,
+} from '@/services/nuvemPerfis'
 import { useDemoStore } from '@/store/demoStore'
 import type { TurnoMotorista } from '@/types'
 import { gerarId } from '@/utils/format'
@@ -36,16 +42,73 @@ export function SincronizarNuvem() {
   const aplicarAgendamentoNuvem = useDemoStore((s) => s.aplicarAgendamentoNuvem)
   const removerAgendamentoNuvem = useDemoStore((s) => s.removerAgendamentoNuvem)
   const aplicarHistoricoNuvem = useDemoStore((s) => s.aplicarHistoricoNuvem)
+  const aplicarPerfisNuvem = useDemoStore((s) => s.aplicarPerfisNuvem)
+  const aplicarMotoristasNuvem = useDemoStore((s) => s.aplicarMotoristasNuvem)
 
   useEffect(() => {
     if (!usuario) return
+    const sessao = usuario
     let ativo = true
     let relogio = 0
     let aoVoltar: (() => void) | null = null
     let canalCorrida: RealtimeChannel | null = null
     let canalOperacao: RealtimeChannel | null = null
 
-    async function puxarCorridasAoVivo() {
+    async function puxarPerfisEFotos(viagensAgora: Awaited<ReturnType<typeof listarViagensNuvem>>) {
+      const meuPerfil = await refrescarMeuPerfilNuvem(sessao.id)
+      if (!ativo) return
+      if (meuPerfil) aplicarPerfisNuvem([meuPerfil])
+
+      const idsCliente = [...new Set(viagensAgora.map((v) => v.cliente_id).filter(Boolean))]
+      const idsMotorista = [
+        ...new Set(viagensAgora.map((v) => v.motorista_id).filter(Boolean) as string[]),
+      ]
+      const empresa = useDemoStore.getState().obterEmpresaDoUsuario(sessao.id)
+
+      if (sessao.tipo === 'admin') {
+        const [clientes, motoristas] = await Promise.all([
+          buscarClientesNuvem(),
+          buscarMotoristasNuvem(),
+        ])
+        if (!ativo) return
+        aplicarPerfisNuvem(clientes)
+        aplicarMotoristasNuvem(motoristas)
+        return
+      }
+
+      if (sessao.tipo === 'empresa') {
+        const [motoristas, clientes] = await Promise.all([
+          buscarMotoristasNuvem(empresa ? { empresaId: empresa.id } : undefined),
+          buscarPerfisNuvem(idsCliente),
+        ])
+        if (!ativo) return
+        aplicarMotoristasNuvem(motoristas)
+        aplicarPerfisNuvem(clientes)
+        return
+      }
+
+      if (sessao.tipo === 'motorista') {
+        const meuMotorista = useDemoStore.getState().obterMotoristaDoUsuario(sessao.id)
+        const [motoristas, clientes] = await Promise.all([
+          buscarMotoristasNuvem({
+            ids: [...new Set([...(meuMotorista ? [meuMotorista.id] : []), ...idsMotorista])],
+          }),
+          buscarPerfisNuvem(idsCliente),
+        ])
+        if (!ativo) return
+        aplicarMotoristasNuvem(motoristas)
+        aplicarPerfisNuvem(clientes)
+        return
+      }
+
+      if (sessao.tipo === 'cliente' && idsMotorista.length > 0) {
+        const motoristas = await buscarMotoristasNuvem({ ids: idsMotorista })
+        if (!ativo) return
+        aplicarMotoristasNuvem(motoristas)
+      }
+    }
+
+    async function puxarCorridasAoVivo(comPerfis = false) {
       const [viagensAgora, ofertasAgora] = await Promise.all([
         listarViagensNuvem(),
         listarOfertasNuvem(),
@@ -53,11 +116,12 @@ export function SincronizarNuvem() {
       if (!ativo) return
       for (const viagem of viagensAgora) aplicarViagemNuvem(viagem, false)
       for (const oferta of ofertasAgora) aplicarOfertaNuvem(oferta, true)
+      if (comPerfis) await puxarPerfisEFotos(viagensAgora)
     }
 
     void (async () => {
-      const senha = useDemoStore.getState().senhas[usuario.email]
-      const entrou = await entrarNuvem(usuario.email, senha ?? '')
+      const senha = useDemoStore.getState().senhas[sessao.email]
+      const entrou = await entrarNuvem(sessao.email, senha ?? '')
       if (!entrou || !ativo) return
       useDemoStore.getState().retomarCorridasPagas()
       const [viagens, ofertas, mensagens, turnos, agendamentos, historicos] = await Promise.all([
@@ -71,8 +135,9 @@ export function SincronizarNuvem() {
       if (!ativo) return
       for (const viagem of viagens) aplicarViagemNuvem(viagem, true)
       for (const oferta of ofertas) aplicarOfertaNuvem(oferta, true)
-      if (usuario.tipo === 'cliente') {
-        const locais = useDemoStore.getState().viagens.filter((v) => v.cliente_id === usuario.id)
+      await puxarPerfisEFotos(viagens)
+      if (sessao.tipo === 'cliente') {
+        const locais = useDemoStore.getState().viagens.filter((v) => v.cliente_id === sessao.id)
         const porId = new Map(viagens.map((item) => [item.id, item]))
         const paraSubir = locais.flatMap((local) => {
           const atual = useDemoStore.getState().viagens.find((v) => v.id === local.id) ?? local
@@ -113,18 +178,18 @@ export function SincronizarNuvem() {
       )
       if (!ativo) return
       aoVoltar = () => {
-        if (document.visibilityState === 'visible') void puxarCorridasAoVivo()
+        if (document.visibilityState === 'visible') void puxarCorridasAoVivo(true)
       }
       document.addEventListener('visibilitychange', aoVoltar)
       relogio = window.setInterval(() => {
-        if (document.visibilityState === 'visible') void puxarCorridasAoVivo()
+        if (document.visibilityState === 'visible') void puxarCorridasAoVivo(false)
       }, 4000)
 
       const depois = useDemoStore.getState()
-      const motorista = depois.motoristas.find((m) => m.usuario_id === usuario.id)
-      const empresa = depois.obterEmpresaDoUsuario(usuario.id)
+      const motorista = depois.motoristas.find((m) => m.usuario_id === sessao.id)
+      const empresa = depois.obterEmpresaDoUsuario(sessao.id)
       const daEmpresa = (empresaId: string) => {
-        if (usuario.tipo === 'admin') return true
+        if (sessao.tipo === 'admin') return true
         if (empresa) return empresaId === empresa.id
         if (motorista) return empresaId === motorista.empresa_id
         return false
@@ -191,6 +256,8 @@ export function SincronizarNuvem() {
     aplicarAgendamentoNuvem,
     removerAgendamentoNuvem,
     aplicarHistoricoNuvem,
+    aplicarPerfisNuvem,
+    aplicarMotoristasNuvem,
   ])
 
   return null

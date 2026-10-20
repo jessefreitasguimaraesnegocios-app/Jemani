@@ -1,10 +1,10 @@
-import { supabase, supabaseConfigurado } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { otimizarFotoPerfil } from '@/utils/otimizarFoto'
 
 export async function enviarAvatarCliente(usuarioId: string, arquivo: File): Promise<string> {
   const otimizada = await otimizarFotoPerfil(arquivo)
 
-  if (supabaseConfigurado && supabase) {
+  if (supabase) {
     const caminho = `${usuarioId}/perfil.${otimizada.extensao}`
     const { error: erroUpload } = await supabase.storage
       .from('avatars')
@@ -21,14 +21,16 @@ export async function enviarAvatarCliente(usuarioId: string, arquivo: File): Pro
         .update({ avatar_url: urlPublica, updated_at: new Date().toISOString() })
         .eq('id', usuarioId)
       if (!erroPerfil) return urlPublica
+      throw new Error(erroPerfil.message)
     }
+    if (erroUpload) throw new Error(erroUpload.message)
   }
 
   return otimizada.dataUrl
 }
 
 export async function removerAvatarCliente(usuarioId: string, avatarAtual?: string): Promise<void> {
-  if (supabaseConfigurado && supabase) {
+  if (supabase) {
     const pasta = `${usuarioId}`
     const { data: arquivos } = await supabase.storage.from('avatars').list(pasta)
     if (arquivos?.length) {

@@ -155,6 +155,8 @@ interface EstadoDemo {
   aplicarAgendamentoNuvem: (item: AgendamentoVeiculo, silencioso?: boolean) => void
   removerAgendamentoNuvem: (id: string) => void
   aplicarHistoricoNuvem: (item: HistoricoStatus) => void
+  aplicarPerfisNuvem: (perfis: Perfil[]) => void
+  aplicarMotoristasNuvem: (motoristas: Motorista[]) => void
   solicitarFinalizacao: (viagemId: string) => { ok: boolean; mensagem: string }
   confirmarFinalizacao: (viagemId: string, usuarioId: string, confirmado: boolean) => Viagem
   cancelarViagem: (viagemId: string, usuarioId: string, motivo: string) => Viagem
@@ -276,7 +278,11 @@ export const useDemoStore = create<EstadoDemo>()(
         const emailLimpo = email.trim().toLowerCase()
         const state = get()
         const local = state.perfis.find((p) => p.email.toLowerCase() === emailLimpo)
-        if (local && state.senhas[local.email] === senha) {
+        const senhaLocalOk = Boolean(local && state.senhas[local.email] === senha)
+
+        const conta = await entrarContaNuvem(emailLimpo, senha)
+        if (!conta && !senhaLocalOk) throw new Error('E-mail ou senha inválidos')
+        if (!conta && local) {
           if (!local.ativo) throw new Error('Usuário inativo')
           set({
             sessaoId: local.id,
@@ -284,8 +290,6 @@ export const useDemoStore = create<EstadoDemo>()(
           })
           return local
         }
-
-        const conta = await entrarContaNuvem(emailLimpo, senha)
         if (!conta) throw new Error('E-mail ou senha inválidos')
         if (!conta.perfil.ativo) {
           await sairNuvem()
@@ -2055,6 +2059,30 @@ export const useDemoStore = create<EstadoDemo>()(
       aplicarHistoricoNuvem: (item) => {
         if (get().historicos.some((atual) => atual.id === item.id)) return
         set({ historicos: [item, ...get().historicos] })
+      },
+
+      aplicarPerfisNuvem: (perfis) => {
+        if (!perfis.length) return
+        set((state) => {
+          const mapa = new Map(state.perfis.map((p) => [p.id, p]))
+          for (const remoto of perfis) {
+            const local = mapa.get(remoto.id)
+            mapa.set(remoto.id, local ? { ...local, ...remoto } : remoto)
+          }
+          return { perfis: [...mapa.values()] }
+        })
+      },
+
+      aplicarMotoristasNuvem: (motoristas) => {
+        if (!motoristas.length) return
+        set((state) => {
+          const mapa = new Map(state.motoristas.map((m) => [m.id, m]))
+          for (const remoto of motoristas) {
+            const local = mapa.get(remoto.id)
+            mapa.set(remoto.id, local ? { ...local, ...remoto } : remoto)
+          }
+          return { motoristas: [...mapa.values()] }
+        })
       },
     }),
     {
