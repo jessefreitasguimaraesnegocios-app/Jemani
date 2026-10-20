@@ -20,32 +20,22 @@ function hostEhLoopback(host: string) {
 }
 
 /**
- * Servidor Stripe de teste (npm run stripe:local).
- * No APK/celular, 127.0.0.1 é o próprio aparelho — aí usamos as Edge Functions.
+ * Padrão: Edge Functions no Supabase (sempre no ar).
+ * Só usa servidor local se VITE_STRIPE_API_URL estiver setada de propósito
+ * (ex.: npm run stripe:local). No APK, loopback é ignorado.
  */
 const apiLocal = () => {
   const configurada = (import.meta.env.VITE_STRIPE_API_URL as string | undefined)?.trim()
-  if (configurada) {
-    try {
-      const url = new URL(configurada)
-      if (Capacitor.isNativePlatform() && hostEhLoopback(url.hostname)) {
-        return ''
-      }
-      return configurada.replace(/\/$/, '')
-    } catch {
+  if (!configurada) return ''
+  try {
+    const url = new URL(configurada)
+    if (Capacitor.isNativePlatform() && hostEhLoopback(url.hostname)) {
       return ''
     }
+    return configurada.replace(/\/$/, '')
+  } catch {
+    return ''
   }
-  if (
-    import.meta.env.DEV &&
-    import.meta.env.VITE_STRIPE_ENABLED === 'true' &&
-    typeof window !== 'undefined'
-  ) {
-    const host = window.location.hostname
-    if (hostEhLoopback(host)) return 'http://127.0.0.1:8787'
-    return `${window.location.origin}/api-stripe`
-  }
-  return ''
 }
 
 const urlBaseSupabase = () => {

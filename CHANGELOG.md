@@ -26,7 +26,7 @@ Registro das mudanças do Jemani.
 
 ### Observação
 
-Stripe segue em modo teste. Para pagar pelo celular na rede local, o servidor `npm run stripe:local` precisa estar ligado. O firewall do Windows ainda bloqueia a porta 8787 sem liberação de administrador.
+Stripe de teste usa as Edge Functions do Supabase (sempre ligadas). Não precisa de `npm run stripe:local` no dia a dia. Checklist de produção real: `docs/STRIPE_PRODUCAO.md`.
 
 Os erros `42501` em `trips` e `trip_assignments` (a política recusa gravar a linha) continuam no log do Supabase. Não foram alterados nesta etapa.
 
