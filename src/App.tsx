@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { AvisoAtualizacaoApp } from '@/components/AvisoAtualizacaoApp'
 import { SincronizarIdioma } from '@/components/SincronizarIdioma'
 import { PrepararAlertas } from '@/components/PrepararAlertas'
 import { SincronizarNuvem } from '@/components/SincronizarNuvem'
@@ -48,6 +49,7 @@ export default function App() {
       <>
       <PrepararAlertas />
       <SincronizarNuvem />
+      <AvisoAtualizacaoApp />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />

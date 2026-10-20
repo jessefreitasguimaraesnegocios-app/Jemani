@@ -7,6 +7,8 @@ alwaysApply: true
 
 O arquivo publicado é `public/downloads/jemani-android.apk`, gerado por `npm run android:apk`.
 
+O script sobe o `versionCode` e grava `public/downloads/versao-android.json` para o app nativo avisar atualização. Inclua APK + JSON no commit.
+
 Quando uma alteração entra no app que o APK empacota (páginas, componentes, serviços, store, assets web ou configuração do Capacitor), regenere o APK no mesmo trabalho e inclua o arquivo novo no commit. Não encerre a tarefa com o APK mais antigo que o código.
 
 Não regenere por mudança que o APK não carrega: só SQL, só documentação, ou só regra do editor.
