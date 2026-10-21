@@ -20,6 +20,14 @@
   min-width: 0;
 }
 
+.veiculo-card-foto {
+  width: 7.5rem;
+  height: 4.6rem;
+  object-fit: cover;
+  border-radius: 0.55rem;
+  background: rgba(0, 0, 0, 0.06);
+}
+
 .veiculo-acoes {
   display: flex;
   flex-wrap: wrap;

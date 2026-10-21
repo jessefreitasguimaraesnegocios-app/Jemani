@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { fundirCatalogoComFrota } from '@/data/catalogoFotosFrota'
 import { completarCatalogo, criarDadosIniciais, SLUG_SHIELD } from '@/data/seed'
 import {
   calcularRepasseComissao,
@@ -61,6 +62,7 @@ import type {
   ConfiguracaoPlataforma,
   Empresa,
   EnderecoLocal,
+  FotoCatalogoVeiculo,
   HistoricoDistribuicao,
   HistoricoStatus,
   MensagemEmpresa,
@@ -119,6 +121,7 @@ interface EstadoDemo {
   mensagensEmpresa: MensagemEmpresa[]
   agendamentosVeiculo: AgendamentoVeiculo[]
   veiculosExcluidos: string[]
+  fotosCatalogoVeiculo: FotoCatalogoVeiculo[]
 
   resetarDemo: () => void
   obterUsuario: () => Perfil | null
@@ -166,8 +169,13 @@ interface EstadoDemo {
   aplicarHistoricoNuvem: (item: HistoricoStatus) => void
   limparDuplicatasNuvem: () => void
   aplicarPerfisNuvem: (perfis: Perfil[]) => void
+  substituirClientesNuvem: (clientes: Perfil[]) => void
   removerUsuarioLocal: (usuarioId: string) => void
+  removerEmpresaLocal: (empresaId: string) => void
   aplicarMotoristasNuvem: (motoristas: Motorista[]) => void
+  substituirCatalogoFotosVeiculo: (fotos: FotoCatalogoVeiculo[]) => void
+  adicionarFotoCatalogoVeiculo: (foto: FotoCatalogoVeiculo) => void
+  removerFotoCatalogoVeiculoLocal: (id: string) => void
   solicitarFinalizacao: (viagemId: string) => { ok: boolean; mensagem: string }
   confirmarFinalizacao: (viagemId: string, usuarioId: string, confirmado: boolean) => Viagem
   cancelarViagem: (viagemId: string, usuarioId: string, motivo: string) => Viagem
@@ -221,6 +229,7 @@ function estadoInicial() {
   return {
     sessaoId: null as string | null,
     veiculosExcluidos: [] as string[],
+    fotosCatalogoVeiculo: fundirCatalogoComFrota([]),
     ...dados,
   }
 }
@@ -2231,6 +2240,18 @@ export const useDemoStore = create<EstadoDemo>()(
         })
       },
 
+      substituirClientesNuvem: (clientes) => {
+        set((state) => {
+          const outros = state.perfis.filter((p) => p.tipo !== 'cliente')
+          const mapa = new Map<string, Perfil>()
+          for (const remoto of clientes) {
+            if (remoto.tipo !== 'cliente') continue
+            mapa.set(remoto.id, remoto)
+          }
+          return { perfis: [...outros, ...mapa.values()] }
+        })
+      },
+
       removerUsuarioLocal: (usuarioId) => {
         if (!usuarioId) return
         set((state) => {
@@ -2260,6 +2281,48 @@ export const useDemoStore = create<EstadoDemo>()(
         })
       },
 
+      removerEmpresaLocal: (empresaId) => {
+        if (!empresaId) return
+        set((state) => {
+          const empresa = state.empresas.find((e) => e.id === empresaId)
+          const usuarioId = empresa?.usuario_id
+          const idsMotorista = new Set(
+            state.motoristas.filter((m) => m.empresa_id === empresaId).map((m) => m.id),
+          )
+          return {
+            empresas: state.empresas.filter((e) => e.id !== empresaId),
+            motoristas: state.motoristas.filter((m) => m.empresa_id !== empresaId),
+            veiculos: state.veiculos.filter((v) => v.empresa_id !== empresaId),
+            atribuicoes: state.atribuicoes.filter((a) => a.empresa_id !== empresaId),
+            comissoes: state.comissoes.filter((c) => c.empresa_id !== empresaId),
+            turnos: state.turnos.filter((t) => t.empresa_id !== empresaId),
+            mensagensEmpresa: state.mensagensEmpresa.filter((m) => m.empresa_id !== empresaId),
+            agendamentosVeiculo: state.agendamentosVeiculo.filter((a) => a.empresa_id !== empresaId),
+            viagens: state.viagens.map((v) =>
+              v.empresa_id === empresaId
+                ? {
+                    ...v,
+                    empresa_id: undefined,
+                    motorista_id: undefined,
+                    veiculo_id: undefined,
+                  }
+                : v,
+            ),
+            avaliacoes: state.avaliacoes.filter(
+              (a) =>
+                a.empresa_id !== empresaId &&
+                !(a.motorista_id && idsMotorista.has(a.motorista_id)),
+            ),
+            perfis: usuarioId
+              ? state.perfis.filter((p) => p.id !== usuarioId)
+              : state.perfis,
+            notificacoes: usuarioId
+              ? state.notificacoes.filter((n) => n.usuario_id !== usuarioId)
+              : state.notificacoes,
+          }
+        })
+      },
+
       aplicarMotoristasNuvem: (motoristas) => {
         if (!motoristas.length) return
         set((state) => {
@@ -2271,18 +2334,52 @@ export const useDemoStore = create<EstadoDemo>()(
           return { motoristas: [...mapa.values()] }
         })
       },
+
+      substituirCatalogoFotosVeiculo: (fotos) => {
+        set({ fotosCatalogoVeiculo: fundirCatalogoComFrota(fotos) })
+      },
+
+      adicionarFotoCatalogoVeiculo: (foto) => {
+        set((state) => ({
+          fotosCatalogoVeiculo: fundirCatalogoComFrota([
+            foto,
+            ...state.fotosCatalogoVeiculo.filter((item) => item.id !== foto.id),
+          ]),
+        }))
+      },
+
+      removerFotoCatalogoVeiculoLocal: (id) => {
+        set((state) => ({
+          fotosCatalogoVeiculo: state.fotosCatalogoVeiculo.filter((item) => item.id !== id),
+        }))
+      },
     }),
     {
       name: 'jemani-demo-v5',
-      version: 11,
+      version: 14,
       partialize: (estado): ReturnType<typeof estadoInicial> => {
         const { senhas: _senhas, ...resto } = estado
         return { ...(resto as unknown as ReturnType<typeof estadoInicial>), senhas: {} }
       },
       migrate: (persistido) => {
         const base = completarCatalogo(persistido as ReturnType<typeof estadoInicial>)
+        const fantasmas = new Set([
+          '22222222-2222-2222-2222-222222222202',
+          '22222222-2222-2222-2222-222222222203',
+          'joao.silva@email.com',
+          'maria.santos@email.com',
+        ])
+        const fotosSalvas = Array.isArray(
+          (persistido as { fotosCatalogoVeiculo?: FotoCatalogoVeiculo[] }).fotosCatalogoVeiculo,
+        )
+          ? (persistido as { fotosCatalogoVeiculo: FotoCatalogoVeiculo[] }).fotosCatalogoVeiculo
+          : []
         return {
           ...base,
+          fotosCatalogoVeiculo: fundirCatalogoComFrota(fotosSalvas),
+          perfis: (base.perfis ?? []).filter(
+            (p) => !fantasmas.has(p.id) && !fantasmas.has(p.email.toLowerCase()),
+          ),
           atribuicoes: deduplicarAtribuicoes(base.atribuicoes ?? []),
           historicos: deduplicarHistoricos(base.historicos ?? []),
           notificacoes: deduplicarNotificacoes(base.notificacoes ?? []),
@@ -2295,6 +2392,7 @@ export const useDemoStore = create<EstadoDemo>()(
           mensagensEmpresa?: MensagemEmpresa[]
           agendamentosVeiculo?: AgendamentoVeiculo[]
           veiculosExcluidos?: string[]
+          fotosCatalogoVeiculo?: FotoCatalogoVeiculo[]
           atribuicoes?: AtribuicaoViagem[]
           historicos?: HistoricoStatus[]
           notificacoes?: Notificacao[]
@@ -2311,6 +2409,11 @@ export const useDemoStore = create<EstadoDemo>()(
           turnos: Array.isArray(bruto?.turnos) ? bruto.turnos : [],
           mensagensEmpresa: Array.isArray(bruto?.mensagensEmpresa) ? bruto.mensagensEmpresa : [],
           agendamentosVeiculo: Array.isArray(bruto?.agendamentosVeiculo) ? bruto.agendamentosVeiculo : [],
+          fotosCatalogoVeiculo: fundirCatalogoComFrota(
+            Array.isArray(bruto?.fotosCatalogoVeiculo)
+              ? bruto.fotosCatalogoVeiculo
+              : (atual.fotosCatalogoVeiculo ?? []),
+          ),
           atribuicoes: deduplicarAtribuicoes(base.atribuicoes ?? []),
           historicos: deduplicarHistoricos(base.historicos ?? []),
           notificacoes: deduplicarNotificacoes(base.notificacoes ?? []),

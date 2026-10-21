@@ -51,8 +51,11 @@ function blobParaDataUrl(blob: Blob): Promise<string> {
   })
 }
 
-/** Redimensiona e compacta a foto para WebP (ou JPEG) sem pesar no Storage. */
-export async function otimizarFotoPerfil(arquivo: File): Promise<FotoOtimizada> {
+async function otimizarFoto(
+  arquivo: File,
+  ladoMax: number,
+  tamanhoMaxOtimizado: number,
+): Promise<FotoOtimizada> {
   if (!arquivo.type.startsWith('image/')) {
     throw new Error('Envie um arquivo de imagem (JPG, PNG ou WebP).')
   }
@@ -62,7 +65,7 @@ export async function otimizarFotoPerfil(arquivo: File): Promise<FotoOtimizada> 
 
   const imagem = await lerArquivoComoImagem(arquivo)
   const maiorLado = Math.max(imagem.naturalWidth, imagem.naturalHeight)
-  const escala = maiorLado > LADO_MAX ? LADO_MAX / maiorLado : 1
+  const escala = maiorLado > ladoMax ? ladoMax / maiorLado : 1
   const largura = Math.max(1, Math.round(imagem.naturalWidth * escala))
   const altura = Math.max(1, Math.round(imagem.naturalHeight * escala))
 
@@ -88,14 +91,14 @@ export async function otimizarFotoPerfil(arquivo: File): Promise<FotoOtimizada> 
       const blob = await canvasParaBlob(canvas, tentativa.tipo, tentativa.qualidade)
       melhor = blob
       tipoUsado = tentativa.tipo
-      if (blob.size <= TAMANHO_MAX_OTIMIZADO_BYTES) break
+      if (blob.size <= tamanhoMaxOtimizado) break
     } catch {
       // WebP pode falhar em alguns navegadores; segue para JPEG.
     }
   }
 
   if (!melhor) throw new Error('Não foi possível otimizar a foto.')
-  if (melhor.size > TAMANHO_MAX_OTIMIZADO_BYTES) {
+  if (melhor.size > tamanhoMaxOtimizado) {
     throw new Error('A foto ficou grande demais depois da otimização. Escolha outra imagem.')
   }
 
@@ -105,4 +108,14 @@ export async function otimizarFotoPerfil(arquivo: File): Promise<FotoOtimizada> 
     extensao: tipoUsado === 'image/webp' ? 'webp' : 'jpg',
     dataUrl: await blobParaDataUrl(melhor),
   }
+}
+
+/** Redimensiona e compacta a foto para WebP (ou JPEG) sem pesar no Storage. */
+export async function otimizarFotoPerfil(arquivo: File): Promise<FotoOtimizada> {
+  return otimizarFoto(arquivo, LADO_MAX, TAMANHO_MAX_OTIMIZADO_BYTES)
+}
+
+/** Foto de veículo no catálogo (maior que avatar). */
+export async function otimizarFotoVeiculo(arquivo: File): Promise<FotoOtimizada> {
+  return otimizarFoto(arquivo, 1280, 900 * 1024)
 }

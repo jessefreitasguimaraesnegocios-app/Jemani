@@ -122,6 +122,18 @@ export interface Veiculo {
   updated_at: string
 }
 
+/** Foto do catálogo global — admin sobe; empresa escolhe ao cadastrar veículo. */
+export interface FotoCatalogoVeiculo {
+  id: string
+  marca: string
+  modelo: string
+  ano: number
+  nome: string
+  url: string
+  created_at: string
+  updated_at: string
+}
+
 export type TipoServicoVeiculo = 'mecanica' | 'lava_jato'
 
 export interface AgendamentoVeiculo {

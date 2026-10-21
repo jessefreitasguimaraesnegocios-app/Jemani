@@ -25,6 +25,10 @@ import {
   listarTurnosNuvem,
 } from '@/services/nuvemOperacao'
 import {
+  garantirFotosFrotaNoCatalogo,
+  listarCatalogoFotosVeiculo,
+} from '@/services/catalogoFotosVeiculo'
+import {
   buscarClientesNuvem,
   buscarMotoristasNuvem,
   buscarPerfisNuvem,
@@ -65,24 +69,28 @@ export function SincronizarNuvem() {
       const empresa = store().obterEmpresaDoUsuario(sessao.id)
 
       if (sessao.tipo === 'admin') {
-        const [clientes, motoristas] = await Promise.all([
+        const [clientes, motoristas, catalogo] = await Promise.all([
           buscarClientesNuvem(),
           buscarMotoristasNuvem(),
+          garantirFotosFrotaNoCatalogo(),
         ])
         if (!ativoRef.current) return
-        store().aplicarPerfisNuvem(clientes)
+        store().substituirClientesNuvem(clientes)
         store().aplicarMotoristasNuvem(motoristas)
+        store().substituirCatalogoFotosVeiculo(catalogo)
         return
       }
 
       if (sessao.tipo === 'empresa') {
-        const [motoristas, clientes] = await Promise.all([
+        const [motoristas, clientes, catalogo] = await Promise.all([
           buscarMotoristasNuvem(empresa ? { empresaId: empresa.id } : undefined),
           buscarPerfisNuvem(idsCliente),
+          listarCatalogoFotosVeiculo(),
         ])
         if (!ativoRef.current) return
         store().aplicarMotoristasNuvem(motoristas)
         store().aplicarPerfisNuvem(clientes)
+        store().substituirCatalogoFotosVeiculo(catalogo)
         return
       }
 

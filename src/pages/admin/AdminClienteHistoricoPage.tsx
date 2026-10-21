@@ -49,6 +49,14 @@ export function AdminClienteHistoricoPage() {
       setMsg(t('admin.clientes.excluido'))
       navigate('/admin/clientes', { replace: true })
     } catch (e) {
+      // Mesmo se a nuvem já não tiver o usuário, tira o fantasma do painel.
+      const texto = e instanceof Error ? e.message.toLowerCase() : ''
+      if (texto.includes('encontrado') || texto.includes('not found')) {
+        removerUsuarioLocal(cliente.id)
+        setConfirmando(false)
+        navigate('/admin/clientes', { replace: true })
+        return
+      }
       setErro(e instanceof Error ? e.message : t('admin.clientes.erroExcluir'))
     } finally {
       setExcluindo(false)

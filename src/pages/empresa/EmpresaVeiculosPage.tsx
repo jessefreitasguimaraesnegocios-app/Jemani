@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { SeletorFotoVeiculo } from '@/components/SeletorFotoVeiculo'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { useDemoStore } from '@/store/demoStore'
@@ -140,6 +141,7 @@ export function EmpresaVeiculosPage() {
   const [categoriaId, setCategoriaId] = useState(categorias[0]?.id ?? '')
   const [capacidade, setCapacidade] = useState(4)
   const [placa, setPlaca] = useState('')
+  const [fotoUrl, setFotoUrl] = useState<string | undefined>()
   const [cadastroAberto, setCadastroAberto] = useState(false)
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
@@ -176,6 +178,7 @@ export function EmpresaVeiculosPage() {
     setMarca('')
     setModelo('')
     setPlaca('')
+    setFotoUrl(undefined)
     setAno(new Date().getFullYear())
     setCapacidade(4)
     setCategoriaId(categorias[0]?.id ?? '')
@@ -191,6 +194,7 @@ export function EmpresaVeiculosPage() {
     setCategoriaId(veiculo.categoria_id)
     setCapacidade(veiculo.capacidade)
     setPlaca(veiculo.placa ?? '')
+    setFotoUrl(veiculo.fotos[0])
     setCadastroAberto(true)
     setMsg('')
     setErro('')
@@ -248,6 +252,7 @@ export function EmpresaVeiculosPage() {
       categoria_id: categoriaId,
       capacidade,
       placa: placa.trim(),
+      fotos: fotoUrl ? [fotoUrl] : [],
       ar_condicionado: true,
       bagageiro: true,
     })
@@ -319,6 +324,9 @@ export function EmpresaVeiculosPage() {
         {veiculos.map((v) => (
           <div key={v.id} className="cartao veiculo-card">
             <div className="veiculo-card-info">
+              {v.fotos[0] && (
+                <img src={v.fotos[0]} alt="" className="veiculo-card-foto" />
+              )}
               <button type="button" className="veiculo-nome" onClick={() => setVeiculoId(v.id)}>
                 {v.marca} {v.modelo} ({v.ano})
               </button>
@@ -437,6 +445,9 @@ export function EmpresaVeiculosPage() {
                 value={placa}
                 onChange={(e) => setPlaca(e.target.value)}
               />
+            </div>
+            <div className="veiculo-campo-largo">
+              <SeletorFotoVeiculo urlAtual={fotoUrl} onEscolher={setFotoUrl} />
             </div>
           </div>
           <div className="veiculo-form-acoes">

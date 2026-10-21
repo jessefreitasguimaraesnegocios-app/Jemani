@@ -1,0 +1,9 @@
+android
+ios
+node_modules
+.gradle
+.gradle-home
+dist
+.git
+supabase/.temp
+.cursor

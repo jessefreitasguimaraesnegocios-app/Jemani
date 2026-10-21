@@ -1,0 +1,112 @@
+.seletor-foto-veiculo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.seletor-foto-veiculo-atual {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.seletor-foto-veiculo-preview,
+.seletor-foto-veiculo-vazio {
+  width: 8.5rem;
+  height: 5.4rem;
+  border-radius: 0.65rem;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.seletor-foto-veiculo-vazio {
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  color: var(--color-slate);
+  text-align: center;
+  padding: 0.35rem;
+  border: 1px dashed var(--color-line);
+}
+
+.seletor-foto-veiculo-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.seletor-foto-veiculo-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(12, 14, 18, 0.55);
+}
+
+.seletor-foto-veiculo-painel {
+  width: min(100%, 40rem);
+  max-height: min(90vh, 40rem);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem;
+  border-radius: 0.9rem;
+  background: var(--color-cream, #fff);
+  color: var(--color-ink);
+}
+
+.seletor-foto-veiculo-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.seletor-foto-veiculo-grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+@media (min-width: 720px) {
+  .seletor-foto-veiculo-grade {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.seletor-foto-veiculo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.4rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.7rem;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.seletor-foto-veiculo-item--ativo {
+  border-color: rgba(184, 149, 108, 0.7);
+}
+
+.seletor-foto-veiculo-item img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 0.45rem;
+}
+
+.seletor-foto-veiculo-item span {
+  font-size: 0.72rem;
+  color: var(--color-slate);
+}
+
+html[data-tema='escuro'] .seletor-foto-veiculo-painel {
+  background: #1a1a1a;
+  color: #f6f1e8;
+}
