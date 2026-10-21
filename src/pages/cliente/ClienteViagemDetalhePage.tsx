@@ -39,6 +39,8 @@ export function ClienteViagemDetalhePage() {
   const simularPagamentoEDistribuir = useDemoStore((s) => s.simularPagamentoEDistribuir)
   const confirmarPagamentoStripe = useDemoStore((s) => s.confirmarPagamentoStripe)
   const confirmandoRef = useRef(false)
+  const stripeTimerRef = useRef(0)
+  const stripeConsultaEmCursoRef = useRef(false)
 
   const [motivo, setMotivo] = useState('')
   const [notaEmpresa, setNotaEmpresa] = useState(5)
@@ -48,6 +50,14 @@ export function ClienteViagemDetalhePage() {
   const [msg, setMsg] = useState('')
   const [pagando, setPagando] = useState(false)
   const blocoAvaliacaoRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (stripeTimerRef.current) window.clearInterval(stripeTimerRef.current)
+      stripeTimerRef.current = 0
+      stripeConsultaEmCursoRef.current = false
+    }
+  }, [])
 
   const avaliacaoFeita = useMemo(
     () => (id ? avaliacoes.find((a) => a.viagem_id === id) : undefined),
@@ -148,18 +158,25 @@ export function ClienteViagemDetalhePage() {
       const viagemId = viagem!.id
       const usuarioId = usuario.id
       const sessao = intencao.sessionId
+      if (stripeTimerRef.current) window.clearInterval(stripeTimerRef.current)
       let tentativas = 0
-      const timer = window.setInterval(() => {
+      // 5s × 36 ≈ 3 min — confirma sem rajada; pausa com aba oculta.
+      stripeTimerRef.current = window.setInterval(() => {
+        if (document.visibilityState !== 'visible') return
+        if (stripeConsultaEmCursoRef.current) return
         tentativas += 1
-        if (tentativas > 40) {
-          window.clearInterval(timer)
+        if (tentativas > 36) {
+          window.clearInterval(stripeTimerRef.current)
+          stripeTimerRef.current = 0
           setPagando(false)
           setMsg('O Stripe ainda não confirmou. Se o pagamento passou, abra a viagem de novo.')
           return
         }
+        stripeConsultaEmCursoRef.current = true
         void confirmarPagamentoStripe(viagemId, usuarioId, sessao)
           .then(() => {
-            window.clearInterval(timer)
+            window.clearInterval(stripeTimerRef.current)
+            stripeTimerRef.current = 0
             setMsg('Pagamento confirmado via Stripe. Corrida liberada para as empresas.')
             setPagando(false)
             if (noAppNativo) void Browser.close().catch(() => undefined)
@@ -167,7 +184,10 @@ export function ClienteViagemDetalhePage() {
           .catch(() => {
             /* a sessão ainda não foi paga */
           })
-      }, 3000)
+          .finally(() => {
+            stripeConsultaEmCursoRef.current = false
+          })
+      }, 5000)
     } catch (err) {
       janelaStripe?.close()
       setMsg(err instanceof Error ? err.message : 'Erro ao iniciar Stripe')

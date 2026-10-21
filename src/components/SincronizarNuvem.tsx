@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from '@/contexts/AuthContext'
 import { ofertaLocalPodeSubir } from '@/services/filtroGravacaoNuvem'
@@ -9,6 +9,7 @@ import {
   entrarNuvem,
   gravarOfertasNuvem,
   gravarViagensNuvem,
+  INTERVALO_SEGURANCA_NUVEM_MS,
   listarOfertasNuvem,
   listarViagensNuvem,
 } from '@/services/nuvemCorrida'
@@ -30,50 +31,47 @@ import {
   refrescarMeuPerfilNuvem,
 } from '@/services/nuvemPerfis'
 import { useDemoStore } from '@/store/demoStore'
-import type { TurnoMotorista } from '@/types'
+import type { TurnoMotorista, Viagem } from '@/types'
 import { gerarId } from '@/utils/format'
 
 export function SincronizarNuvem() {
   const { usuario } = useAuth()
-  const aplicarViagemNuvem = useDemoStore((s) => s.aplicarViagemNuvem)
-  const aplicarOfertaNuvem = useDemoStore((s) => s.aplicarOfertaNuvem)
-  const aplicarMensagemNuvem = useDemoStore((s) => s.aplicarMensagemNuvem)
-  const aplicarTurnoNuvem = useDemoStore((s) => s.aplicarTurnoNuvem)
-  const aplicarAgendamentoNuvem = useDemoStore((s) => s.aplicarAgendamentoNuvem)
-  const removerAgendamentoNuvem = useDemoStore((s) => s.removerAgendamentoNuvem)
-  const aplicarHistoricoNuvem = useDemoStore((s) => s.aplicarHistoricoNuvem)
-  const limparDuplicatasNuvem = useDemoStore((s) => s.limparDuplicatasNuvem)
-  const aplicarPerfisNuvem = useDemoStore((s) => s.aplicarPerfisNuvem)
-  const aplicarMotoristasNuvem = useDemoStore((s) => s.aplicarMotoristasNuvem)
+  const ativoRef = useRef(true)
+  const puxandoRef = useRef(false)
+  const ultimaViagemSyncRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!usuario) return
     const sessao = usuario
-    let ativo = true
+    ativoRef.current = true
+    puxandoRef.current = false
+    ultimaViagemSyncRef.current = null
     let relogio = 0
     let aoVoltar: (() => void) | null = null
     let canalCorrida: RealtimeChannel | null = null
     let canalOperacao: RealtimeChannel | null = null
 
-    async function puxarPerfisEFotos(viagensAgora: Awaited<ReturnType<typeof listarViagensNuvem>>) {
+    const store = () => useDemoStore.getState()
+
+    async function puxarPerfisEFotos(viagensAgora: Viagem[]) {
       const meuPerfil = await refrescarMeuPerfilNuvem(sessao.id)
-      if (!ativo) return
-      if (meuPerfil) aplicarPerfisNuvem([meuPerfil])
+      if (!ativoRef.current) return
+      if (meuPerfil) store().aplicarPerfisNuvem([meuPerfil])
 
       const idsCliente = [...new Set(viagensAgora.map((v) => v.cliente_id).filter(Boolean))]
       const idsMotorista = [
         ...new Set(viagensAgora.map((v) => v.motorista_id).filter(Boolean) as string[]),
       ]
-      const empresa = useDemoStore.getState().obterEmpresaDoUsuario(sessao.id)
+      const empresa = store().obterEmpresaDoUsuario(sessao.id)
 
       if (sessao.tipo === 'admin') {
         const [clientes, motoristas] = await Promise.all([
           buscarClientesNuvem(),
           buscarMotoristasNuvem(),
         ])
-        if (!ativo) return
-        aplicarPerfisNuvem(clientes)
-        aplicarMotoristasNuvem(motoristas)
+        if (!ativoRef.current) return
+        store().aplicarPerfisNuvem(clientes)
+        store().aplicarMotoristasNuvem(motoristas)
         return
       }
 
@@ -82,48 +80,66 @@ export function SincronizarNuvem() {
           buscarMotoristasNuvem(empresa ? { empresaId: empresa.id } : undefined),
           buscarPerfisNuvem(idsCliente),
         ])
-        if (!ativo) return
-        aplicarMotoristasNuvem(motoristas)
-        aplicarPerfisNuvem(clientes)
+        if (!ativoRef.current) return
+        store().aplicarMotoristasNuvem(motoristas)
+        store().aplicarPerfisNuvem(clientes)
         return
       }
 
       if (sessao.tipo === 'motorista') {
-        const meuMotorista = useDemoStore.getState().obterMotoristaDoUsuario(sessao.id)
+        const meuMotorista = store().obterMotoristaDoUsuario(sessao.id)
         const [motoristas, clientes] = await Promise.all([
           buscarMotoristasNuvem({
             ids: [...new Set([...(meuMotorista ? [meuMotorista.id] : []), ...idsMotorista])],
           }),
           buscarPerfisNuvem(idsCliente),
         ])
-        if (!ativo) return
-        aplicarMotoristasNuvem(motoristas)
-        aplicarPerfisNuvem(clientes)
+        if (!ativoRef.current) return
+        store().aplicarMotoristasNuvem(motoristas)
+        store().aplicarPerfisNuvem(clientes)
         return
       }
 
       if (sessao.tipo === 'cliente' && idsMotorista.length > 0) {
         const motoristas = await buscarMotoristasNuvem({ ids: idsMotorista })
-        if (!ativo) return
-        aplicarMotoristasNuvem(motoristas)
+        if (!ativoRef.current) return
+        store().aplicarMotoristasNuvem(motoristas)
       }
     }
 
-    async function puxarCorridasAoVivo(comPerfis = false) {
-      const [viagensAgora, ofertasAgora] = await Promise.all([
-        listarViagensNuvem(),
-        listarOfertasNuvem(),
-      ])
-      if (!ativo) return
-      for (const viagem of viagensAgora) aplicarViagemNuvem(viagem, false)
-      for (const oferta of ofertasAgora) aplicarOfertaNuvem(oferta, true)
-      if (comPerfis) await puxarPerfisEFotos(viagensAgora)
+    async function puxarCorridasAoVivo(opcoes: {
+      comPerfis?: boolean
+      completo?: boolean
+    } = {}) {
+      if (!ativoRef.current) return
+      if (document.visibilityState !== 'visible') return
+      if (puxandoRef.current) return
+      puxandoRef.current = true
+      try {
+        const desde =
+          !opcoes.completo && ultimaViagemSyncRef.current
+            ? ultimaViagemSyncRef.current
+            : undefined
+        const [viagensAgora, ofertasAgora] = await Promise.all([
+          listarViagensNuvem(desde ? { atualizadoDesde: desde } : undefined),
+          // Ofertas: lista completa (tabela pequena via RLS); evita perder mudança de status.
+          listarOfertasNuvem(),
+        ])
+        if (!ativoRef.current) return
+        for (const viagem of viagensAgora) store().aplicarViagemNuvem(viagem, true)
+        for (const oferta of ofertasAgora) store().aplicarOfertaNuvem(oferta, true)
+        // Margem de 2s evita perder update entre o fetch e o marcador.
+        ultimaViagemSyncRef.current = new Date(Date.now() - 2000).toISOString()
+        if (opcoes.comPerfis) await puxarPerfisEFotos(viagensAgora)
+      } finally {
+        puxandoRef.current = false
+      }
     }
 
     void (async () => {
-      const senha = useDemoStore.getState().senhas[sessao.email]
+      const senha = store().senhas[sessao.email]
       const entrou = await entrarNuvem(sessao.email, senha ?? '')
-      if (!entrou || !ativo) return
+      if (!entrou || !ativoRef.current) return
       const [viagens, ofertas, mensagens, turnos, agendamentos, historicos] = await Promise.all([
         listarViagensNuvem(),
         listarOfertasNuvem(),
@@ -132,63 +148,66 @@ export function SincronizarNuvem() {
         listarAgendamentosNuvem(),
         listarHistoricosNuvem(),
       ])
-      if (!ativo) return
-      for (const viagem of viagens) aplicarViagemNuvem(viagem, true)
-      for (const oferta of ofertas) aplicarOfertaNuvem(oferta, true)
-      for (const mensagem of mensagens) aplicarMensagemNuvem(mensagem, true)
-      for (const turno of turnos) aplicarTurnoNuvem(turno)
-      for (const item of agendamentos) aplicarAgendamentoNuvem(item, true)
-      for (const item of historicos) aplicarHistoricoNuvem(item)
-      limparDuplicatasNuvem()
-      useDemoStore.getState().retomarCorridasPagas()
+      if (!ativoRef.current) return
+      for (const viagem of viagens) store().aplicarViagemNuvem(viagem, true)
+      for (const oferta of ofertas) store().aplicarOfertaNuvem(oferta, true)
+      for (const mensagem of mensagens) store().aplicarMensagemNuvem(mensagem, true)
+      for (const turno of turnos) store().aplicarTurnoNuvem(turno)
+      for (const item of agendamentos) store().aplicarAgendamentoNuvem(item, true)
+      for (const item of historicos) store().aplicarHistoricoNuvem(item)
+      store().limparDuplicatasNuvem()
+      store().retomarCorridasPagas()
+      ultimaViagemSyncRef.current = new Date().toISOString()
       await puxarPerfisEFotos(viagens)
       if (sessao.tipo === 'cliente') {
-        const locais = useDemoStore.getState().viagens.filter((v) => v.cliente_id === sessao.id)
+        const locais = store().viagens.filter((v) => v.cliente_id === sessao.id)
         const porId = new Map(viagens.map((item) => [item.id, item]))
         const paraSubir = locais.flatMap((local) => {
-          const atual = useDemoStore.getState().viagens.find((v) => v.id === local.id) ?? local
+          const atual = store().viagens.find((v) => v.id === local.id) ?? local
           const remota = porId.get(local.id)
           return !remota || nuvemEstaAtrasada(atual, remota) ? [atual] : []
         })
         if (paraSubir.length > 0) await gravarViagensNuvem(paraSubir)
-        useDemoStore.getState().garantirOfertasAbertas()
-        limparDuplicatasNuvem()
+        store().garantirOfertasAbertas()
+        store().limparDuplicatasNuvem()
         const idsLocais = new Set(locais.map((item) => item.id))
         await gravarOfertasNuvem(
-          useDemoStore
-            .getState()
-            .atribuicoes.filter(
-              (oferta) => idsLocais.has(oferta.viagem_id) && ofertaLocalPodeSubir(oferta, ofertas),
-            ),
+          store().atribuicoes.filter(
+            (oferta) => idsLocais.has(oferta.viagem_id) && ofertaLocalPodeSubir(oferta, ofertas),
+          ),
         )
       }
 
+      if (!ativoRef.current) return
       canalCorrida = assinarNuvem(
-        (viagem) => aplicarViagemNuvem(viagem, false),
-        (oferta) => aplicarOfertaNuvem(oferta, false),
+        (viagem) => store().aplicarViagemNuvem(viagem, false),
+        (oferta) => store().aplicarOfertaNuvem(oferta, false),
+        sessao.id,
       )
       canalOperacao = assinarOperacao(
-        (mensagem) => aplicarMensagemNuvem(mensagem, false),
-        aplicarTurnoNuvem,
-        (item) => aplicarAgendamentoNuvem(item, false),
-        removerAgendamentoNuvem,
+        (mensagem) => store().aplicarMensagemNuvem(mensagem, false),
+        (turno) => store().aplicarTurnoNuvem(turno),
+        (item) => store().aplicarAgendamentoNuvem(item, false),
+        (id) => store().removerAgendamentoNuvem(id),
         (item) => {
-          aplicarHistoricoNuvem(item)
+          store().aplicarHistoricoNuvem(item)
           void buscarViagemNuvem(item.viagem_id).then((viagem) => {
-            if (ativo && viagem) aplicarViagemNuvem(viagem, false)
+            if (ativoRef.current && viagem) store().aplicarViagemNuvem(viagem, false)
           })
         },
       )
-      if (!ativo) return
+
       aoVoltar = () => {
-        if (document.visibilityState === 'visible') void puxarCorridasAoVivo(true)
+        if (document.visibilityState === 'visible') {
+          void puxarCorridasAoVivo({ comPerfis: true, completo: true })
+        }
       }
       document.addEventListener('visibilitychange', aoVoltar)
       relogio = window.setInterval(() => {
-        if (document.visibilityState === 'visible') void puxarCorridasAoVivo(false)
-      }, 4000)
+        void puxarCorridasAoVivo({ completo: false })
+      }, INTERVALO_SEGURANCA_NUVEM_MS)
 
-      const depois = useDemoStore.getState()
+      const depois = store()
       const motorista = depois.motoristas.find((m) => m.usuario_id === sessao.id)
       const empresa = depois.obterEmpresaDoUsuario(sessao.id)
       const daEmpresa = (empresaId: string) => {
@@ -243,26 +262,14 @@ export function SincronizarNuvem() {
     })()
 
     return () => {
-      ativo = false
+      ativoRef.current = false
+      puxandoRef.current = false
       window.clearInterval(relogio)
       if (aoVoltar) document.removeEventListener('visibilitychange', aoVoltar)
       void canalCorrida?.unsubscribe()
       void canalOperacao?.unsubscribe()
     }
-  }, [
-    usuario?.id,
-    usuario?.email,
-    aplicarViagemNuvem,
-    aplicarOfertaNuvem,
-    aplicarMensagemNuvem,
-    aplicarTurnoNuvem,
-    aplicarAgendamentoNuvem,
-    removerAgendamentoNuvem,
-    aplicarHistoricoNuvem,
-    limparDuplicatasNuvem,
-    aplicarPerfisNuvem,
-    aplicarMotoristasNuvem,
-  ])
+  }, [usuario?.id, usuario?.email])
 
   return null
 }

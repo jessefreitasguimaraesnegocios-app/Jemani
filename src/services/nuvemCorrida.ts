@@ -388,18 +388,61 @@ export async function gravarOfertasNuvem(ofertas: AtribuicaoViagem[]) {
   if (error) console.warn('Falha ao gravar ofertas na nuvem', error.message)
 }
 
-export async function listarViagensNuvem() {
+/** Poll de segurança quando Realtime está ativo (20–30s). */
+export const INTERVALO_SEGURANCA_NUVEM_MS = 25_000
+
+/** Colunas usadas pelo app — evita select('*') genérico. */
+export const COLUNAS_VIAGEM =
+  'id,codigo,cliente_id,empresa_id,motorista_id,categoria_id,origem,destino,origem_lat,origem_lng,destino_lat,destino_lng,origem_place_id,destino_place_id,data_viagem,horario,passageiros,malas,numero_voo,nome_passageiro,observacoes,distancia_km,preco_base,taxas,preco_total,comissao_percentual,valor_plataforma,valor_empresa,status,payment_status,motorista_lat,motorista_lng,finalizado_em,finalizado_por,version,created_at,updated_at'
+
+export const COLUNAS_OFERTA =
+  'id,viagem_id,empresa_id,status,distancia_km,motivo,respondido_em,created_at'
+
+/** Payload do Realtime está completo o bastante para montar a viagem sem REST. */
+export function linhaViagemUsavel(linha: Partial<LinhaViagem> | null | undefined): linha is LinhaViagem {
+  return Boolean(
+    linha &&
+      typeof linha.id === 'string' &&
+      typeof linha.codigo === 'string' &&
+      typeof linha.cliente_id === 'string' &&
+      typeof linha.categoria_id === 'string' &&
+      typeof linha.origem === 'string' &&
+      typeof linha.destino === 'string' &&
+      typeof linha.status === 'string' &&
+      typeof linha.version === 'number',
+  )
+}
+
+export function linhaOfertaUsavel(linha: Partial<LinhaOferta> | null | undefined): linha is LinhaOferta {
+  return Boolean(
+    linha &&
+      typeof linha.id === 'string' &&
+      typeof linha.viagem_id === 'string' &&
+      typeof linha.empresa_id === 'string' &&
+      typeof linha.status === 'string',
+  )
+}
+
+export async function listarViagensNuvem(opcoes?: { atualizadoDesde?: string }) {
   const db = cliente()
   if (!db) return []
-  const { data, error } = await db.from('trips').select('*')
+  let consulta = db.from('trips').select(COLUNAS_VIAGEM)
+  if (opcoes?.atualizadoDesde) {
+    consulta = consulta.gte('updated_at', opcoes.atualizadoDesde)
+  }
+  const { data, error } = await consulta
   if (error || !data) return []
   return (data as LinhaViagem[]).map(viagemDaLinha)
 }
 
-export async function listarOfertasNuvem() {
+export async function listarOfertasNuvem(opcoes?: { criadoDesde?: string }) {
   const db = cliente()
   if (!db) return []
-  const { data, error } = await db.from('trip_assignments').select('*')
+  let consulta = db.from('trip_assignments').select(COLUNAS_OFERTA)
+  if (opcoes?.criadoDesde) {
+    consulta = consulta.gte('created_at', opcoes.criadoDesde)
+  }
+  const { data, error } = await consulta
   if (error || !data) return []
   return (data as LinhaOferta[]).map(ofertaDaLinha)
 }
@@ -407,7 +450,11 @@ export async function listarOfertasNuvem() {
 export async function buscarViagemNuvem(id: string) {
   const db = cliente()
   if (!db) return null
-  const { data, error } = await db.from('trips').select('*').eq('id', id).maybeSingle()
+  const { data, error } = await db
+    .from('trips')
+    .select(COLUNAS_VIAGEM)
+    .eq('id', id)
+    .maybeSingle()
   if (error || !data) return null
   return viagemDaLinha(data as LinhaViagem)
 }
@@ -415,25 +462,31 @@ export async function buscarViagemNuvem(id: string) {
 export function assinarNuvem(
   aoViagem: (viagem: Viagem) => void,
   aoOferta: (oferta: AtribuicaoViagem) => void,
+  canalId?: string,
 ) {
   const db = cliente()
   if (!db) return null
+  const nomeCanal = canalId ? `corridas-jemani-${canalId}` : `corridas-jemani-${Date.now()}`
   const canal: RealtimeChannel = db
-    .channel('corridas-jemani')
+    .channel(nomeCanal)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' }, (payload) => {
-      const linha = payload.new as { id?: string } | null
+      if (payload.eventType === 'DELETE') return
+      const linha = payload.new as Partial<LinhaViagem> | null
       if (!linha?.id) return
+      if (linhaViagemUsavel(linha)) {
+        aoViagem(viagemDaLinha(linha))
+        return
+      }
       void buscarViagemNuvem(linha.id).then((viagem) => {
         if (viagem) aoViagem(viagem)
       })
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'trip_assignments' }, (payload) => {
-      const linha = payload.new as LinhaOferta
-      if (!linha?.id) return
-      void buscarViagemNuvem(linha.viagem_id).then((viagem) => {
-        if (viagem) aoViagem(viagem)
-        aoOferta(ofertaDaLinha(linha))
-      })
+      if (payload.eventType === 'DELETE') return
+      const linha = payload.new as Partial<LinhaOferta> | null
+      if (!linhaOfertaUsavel(linha)) return
+      // Oferta vem completa no payload; a viagem chega pelo canal de trips ou no poll de segurança.
+      aoOferta(ofertaDaLinha(linha))
     })
     .subscribe()
   return canal
