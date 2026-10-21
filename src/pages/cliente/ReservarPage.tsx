@@ -63,6 +63,7 @@ export function ReservarPage() {
   const [malas, setMalas] = useState(2)
   const [numeroVoo, setNumeroVoo] = useState('')
   const [terminal, setTerminal] = useState('')
+  const [naoVouEmbarcar, setNaoVouEmbarcar] = useState(false)
   const [nomePassageiro, setNomePassageiro] = useState(usuario?.nome ?? '')
   const [telefoneContato, setTelefoneContato] = useState(usuario?.telefone ?? '')
   const [observacoes, setObservacoes] = useState('')
@@ -88,13 +89,22 @@ export function ReservarPage() {
   }, [categorias, categoriaId])
 
   const trechoComAeroporto = embarqueAeroporto || destinoAeroporto
+  const pedirDadosVoo = trechoComAeroporto && !naoVouEmbarcar
 
   useEffect(() => {
     if (!trechoComAeroporto) {
       setNumeroVoo('')
       setTerminal('')
+      setNaoVouEmbarcar(false)
     }
   }, [trechoComAeroporto])
+
+  useEffect(() => {
+    if (naoVouEmbarcar) {
+      setNumeroVoo('')
+      setTerminal('')
+    }
+  }, [naoVouEmbarcar])
 
   useEffect(() => {
     const id = window.setInterval(() => setAgoraTick(Date.now()), 60_000)
@@ -171,7 +181,10 @@ export function ReservarPage() {
   function montarObservacoes(): string | undefined {
     const partes: string[] = []
     if (telefoneContato.trim()) partes.push(`Contato: ${telefoneContato.trim()}`)
-    if (trechoComAeroporto && terminal.trim()) {
+    if (trechoComAeroporto && naoVouEmbarcar) {
+      partes.push('Cliente marcou: não vou embarcar (sem dados de voo).')
+    }
+    if (pedirDadosVoo && terminal.trim()) {
       partes.push(`Portão: ${terminal.trim()}`)
     }
     if (observacoes.trim()) partes.push(observacoes.trim())
@@ -215,6 +228,14 @@ export function ReservarPage() {
         )
         return
       }
+      if (pedirDadosVoo && !numeroVoo.trim()) {
+        setErro(
+          embarqueAeroporto
+            ? 'Embarque no aeroporto: informe o número do voo para o motorista acompanhar o pouso.'
+            : 'Destino no aeroporto: informe o número do voo para o motorista acompanhar a partida.',
+        )
+        return
+      }
     }
     if (etapa === 2) {
       if (!categoriaId || !categoria) {
@@ -245,14 +266,6 @@ export function ReservarPage() {
       }
       if (!nomePassageiro.trim()) {
         setErro('Informe o nome do passageiro principal.')
-        return
-      }
-      if (trechoComAeroporto && !numeroVoo.trim()) {
-        setErro(
-          embarqueAeroporto
-            ? 'Embarque no aeroporto: informe o número do voo para o motorista acompanhar o pouso.'
-            : 'Destino no aeroporto: informe o número do voo para o motorista acompanhar a partida.',
-        )
         return
       }
       if (malas < 0 || malas > MAX_MALAS) {
@@ -291,7 +304,7 @@ export function ReservarPage() {
         passageiros,
         categoria_id: categoriaId,
         malas,
-        numero_voo: trechoComAeroporto && numeroVoo.trim() ? numeroVoo.trim().toUpperCase() : undefined,
+        numero_voo: pedirDadosVoo && numeroVoo.trim() ? numeroVoo.trim().toUpperCase() : undefined,
         nome_passageiro: nomePassageiro.trim(),
         observacoes: montarObservacoes(),
         distancia_km: rota.distanciaKm,
@@ -337,7 +350,7 @@ export function ReservarPage() {
             {embarqueAeroporto && (
               <p className="text-xs text-[var(--color-success)]">
                 Embarque no aeroporto: o carro busca no nível de desembarque (chegadas) do terminal.
-                O número do voo entra nos detalhes.
+                Os dados do voo entram na próxima etapa.
               </p>
             )}
             <CampoEndereco
@@ -424,6 +437,70 @@ export function ReservarPage() {
             {!validacaoHorario.valido && horario && (
               <p className="text-sm text-[var(--color-danger)]">{validacaoHorario.mensagem}</p>
             )}
+
+            {trechoComAeroporto && (
+              <div className="reserva-bloco-voo">
+                <p className="reserva-bloco-voo-titulo">
+                  {embarqueAeroporto
+                    ? 'Dados do voo (embarque no aeroporto)'
+                    : 'Dados do voo (destino no aeroporto)'}
+                </p>
+                <label className="reserva-check-nao-embarcar">
+                  <input
+                    type="checkbox"
+                    checked={naoVouEmbarcar}
+                    onChange={(e) => setNaoVouEmbarcar(e.target.checked)}
+                  />
+                  <span>Não vou embarcar</span>
+                </label>
+                {!naoVouEmbarcar && (
+                  <>
+                    <p className="reserva-bloco-voo-dica">
+                      Obrigatório. O motorista acompanha a previsão de{' '}
+                      {embarqueAeroporto ? 'pouso' : 'decolagem'} pelo número do voo.
+                    </p>
+                    <div>
+                      <label className="rotulo" htmlFor="numero-voo">
+                        Número do voo *
+                      </label>
+                      <input
+                        id="numero-voo"
+                        className="campo"
+                        value={numeroVoo}
+                        onChange={(e) => setNumeroVoo(e.target.value.toUpperCase())}
+                        placeholder="Ex.: AA1234, UA892"
+                        autoComplete="off"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="rotulo" htmlFor="terminal">
+                        Portão (opcional)
+                      </label>
+                      <input
+                        id="terminal"
+                        className="campo"
+                        value={terminal}
+                        onChange={(e) => setTerminal(e.target.value)}
+                        placeholder="Ex.: 42B"
+                      />
+                    </div>
+                    <div>
+                      <label className="rotulo" htmlFor="observacoes-voo">
+                        Observações (opcional)
+                      </label>
+                      <textarea
+                        id="observacoes-voo"
+                        className="campo min-h-24"
+                        value={observacoes}
+                        onChange={(e) => setObservacoes(e.target.value)}
+                        placeholder="Ex.: placa com nome, cadeira infantil, atraso previsto..."
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </>
         )}
 
@@ -448,11 +525,6 @@ export function ReservarPage() {
               <p className="mt-1 text-[var(--color-slate)]">
                 {origemEndereco?.formatted ?? '—'} → {destinoEndereco?.formatted ?? '—'}
               </p>
-              {embarqueAeroporto && (
-                <p className="mt-2 text-xs text-[var(--color-gold-deep)]">
-                  Transfer de aeroporto: número do voo obrigatório para o motorista.
-                </p>
-              )}
             </div>
 
             <div>
@@ -517,62 +589,20 @@ export function ReservarPage() {
               </p>
             </div>
 
-            {trechoComAeroporto && (
-              <div className="space-y-4 rounded-2xl border border-[var(--color-line)] p-3">
-                <p className="text-sm font-medium">
-                  {embarqueAeroporto
-                    ? 'Dados do voo (embarque no aeroporto)'
-                    : 'Dados do voo (destino no aeroporto)'}
-                </p>
-                <p className="text-xs text-[var(--color-slate)]">
-                  Obrigatório. O motorista acompanha a previsão de{' '}
-                  {embarqueAeroporto ? 'pouso' : 'decolagem'} pelo número do voo.
-                </p>
-                <div>
-                  <label className="rotulo" htmlFor="numero-voo">
-                    Número do voo *
-                  </label>
-                  <input
-                    id="numero-voo"
-                    className="campo"
-                    value={numeroVoo}
-                    onChange={(e) => setNumeroVoo(e.target.value.toUpperCase())}
-                    placeholder="Ex.: AA1234, UA892"
-                    autoComplete="off"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="rotulo" htmlFor="terminal">
-                    Portão (opcional)
-                  </label>
-                  <input
-                    id="terminal"
-                    className="campo"
-                    value={terminal}
-                    onChange={(e) => setTerminal(e.target.value)}
-                    placeholder="Ex.: 42B"
-                  />
-                </div>
+            {!trechoComAeroporto && (
+              <div>
+                <label className="rotulo" htmlFor="observacoes">
+                  Observações (opcional)
+                </label>
+                <textarea
+                  id="observacoes"
+                  className="campo min-h-24"
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                  placeholder="Ex.: portaria, código do prédio, preferências..."
+                />
               </div>
             )}
-
-            <div>
-              <label className="rotulo" htmlFor="observacoes">
-                Observações (opcional)
-              </label>
-              <textarea
-                id="observacoes"
-                className="campo min-h-24"
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                placeholder={
-                  embarqueAeroporto
-                    ? 'Ex.: placa com nome, cadeira infantil, atraso previsto...'
-                    : 'Ex.: portaria, código do prédio, preferências...'
-                }
-              />
-            </div>
           </>
         )}
 
@@ -585,10 +615,13 @@ export function ReservarPage() {
             <Linha label="Passageiros" valor={String(passageiros)} />
             <Linha label="Malas" valor={String(malas)} />
             <Linha label="Passageiro" valor={nomePassageiro.trim() || '—'} />
-            {trechoComAeroporto && numeroVoo.trim() && (
+            {trechoComAeroporto && naoVouEmbarcar && (
+              <Linha label="Voo" valor="Não vou embarcar" />
+            )}
+            {pedirDadosVoo && numeroVoo.trim() && (
               <Linha label="Voo" valor={numeroVoo.trim().toUpperCase()} />
             )}
-            {trechoComAeroporto && terminal.trim() && (
+            {pedirDadosVoo && terminal.trim() && (
               <Linha label="Portão" valor={terminal.trim()} />
             )}
             <Linha label="Categoria" valor={categoria?.nome ?? '—'} />

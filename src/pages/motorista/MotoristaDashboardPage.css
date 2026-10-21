@@ -6,6 +6,9 @@
   min-height: 0;
   margin: 0;
   padding: 0.35rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: #070707;
   color: #f6f1e8;
 }
@@ -13,6 +16,18 @@
 .corrida-tela--chat {
   gap: 0.55rem;
   padding-bottom: calc(0.45rem + env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+
+/* Mapa e blocos de cima não encolhem quando o voo abre — o resto desce e a página rola */
+.corrida-tela > .corrida-topo,
+.corrida-tela > .clima-corrida,
+.corrida-tela > .mapa-corrida,
+.corrida-tela > .painel-voo,
+.corrida-tela > .obs-corrida,
+.corrida-tela > .corrida-endereco,
+.corrida-tela > .corrida-contato {
+  flex-shrink: 0;
 }
 
 .corrida-topo {
@@ -87,7 +102,8 @@
 
 .corrida-acao {
   width: 100%;
-  margin-top: auto;
+  flex-shrink: 0;
+  margin-top: 0.35rem;
   border: 0;
   border-radius: 999px;
   padding: 1.05rem 1rem;

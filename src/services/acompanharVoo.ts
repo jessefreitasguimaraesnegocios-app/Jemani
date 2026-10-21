@@ -12,6 +12,25 @@ export type StatusAcompanhamentoVoo = {
   horarioPrevisto: string
   minutosParaEvento: number | null
   atrasado: boolean
+  origemCodigo: string
+  origemNome: string
+  destinoCodigo: string
+  destinoNome: string
+  decolagemIso: string | null
+  pousoIso: string | null
+  progresso: number
+  minutosDecorridos: number | null
+  minutosRestantes: number | null
+  duracaoTotalMin: number | null
+}
+
+type BlocoHorarioApi = {
+  airport?: string | null
+  iata?: string | null
+  estimated?: string | null
+  scheduled?: string | null
+  actual?: string | null
+  delay?: number | null
 }
 
 function textoPareceAeroporto(texto?: string) {
@@ -19,7 +38,9 @@ function textoPareceAeroporto(texto?: string) {
   return /\b(LAX|BUR|LGB|SNA|ONT|airport|aeroporto|terminal)\b/i.test(texto)
 }
 
-export function papelVooDaViagem(viagem: Pick<Viagem, 'origem' | 'destino' | 'origem_endereco' | 'destino_endereco'>): PapelVoo | null {
+export function papelVooDaViagem(
+  viagem: Pick<Viagem, 'origem' | 'destino' | 'origem_endereco' | 'destino_endereco'>,
+): PapelVoo | null {
   if (enderecoEhAeroporto(viagem.origem_endereco) || textoPareceAeroporto(viagem.origem)) {
     return 'chegada'
   }
@@ -51,10 +72,126 @@ function formatarCountdown(minutos: number) {
   return `${h} h ${m.toString().padStart(2, '0')} min`
 }
 
+function lerDataIso(valor?: string | null) {
+  if (!valor) return null
+  const data = new Date(valor)
+  return Number.isNaN(data.getTime()) ? null : data
+}
+
+function codigoAeroportoDoTexto(texto?: string) {
+  if (!texto) return ''
+  const match = texto
+    .toUpperCase()
+    .match(/\b(LAX|BUR|LGB|SNA|ONT|SFO|JFK|EWR|ORD|IAH|DFW|ATL|MIA|LAS|SEA|PHX)\b/)
+  return match?.[1] ?? ''
+}
+
+/** Progresso 0–1 entre decolagem e pouso (ou agora). */
+export function calcularProgressoVoo(
+  decolagem: Date | null,
+  pouso: Date | null,
+  agora = new Date(),
+): {
+  progresso: number
+  minutosDecorridos: number | null
+  minutosRestantes: number | null
+  duracaoTotalMin: number | null
+} {
+  if (!decolagem || !pouso) {
+    return {
+      progresso: 0,
+      minutosDecorridos: null,
+      minutosRestantes: null,
+      duracaoTotalMin: null,
+    }
+  }
+  const totalMs = pouso.getTime() - decolagem.getTime()
+  if (totalMs <= 0) {
+    return {
+      progresso: 1,
+      minutosDecorridos: 0,
+      minutosRestantes: 0,
+      duracaoTotalMin: 0,
+    }
+  }
+  const andadoMs = agora.getTime() - decolagem.getTime()
+  const progresso = Math.min(1, Math.max(0, andadoMs / totalMs))
+  const minutosDecorridos = Math.max(0, Math.round(andadoMs / 60_000))
+  const minutosRestantes = Math.max(0, Math.round((pouso.getTime() - agora.getTime()) / 60_000))
+  return {
+    progresso,
+    minutosDecorridos,
+    minutosRestantes,
+    duracaoTotalMin: Math.round(totalMs / 60_000),
+  }
+}
+
+export function atualizarProgressoStatus(
+  status: StatusAcompanhamentoVoo,
+  agora = new Date(),
+): StatusAcompanhamentoVoo {
+  const decolagem = lerDataIso(status.decolagemIso)
+  const pouso = lerDataIso(status.pousoIso)
+  const calc = calcularProgressoVoo(decolagem, pouso, agora)
+  const minutosParaEvento =
+    status.papel === 'chegada'
+      ? pouso
+        ? Math.round((pouso.getTime() - agora.getTime()) / 60_000)
+        : status.minutosParaEvento
+      : decolagem
+        ? Math.round((decolagem.getTime() - agora.getTime()) / 60_000)
+        : status.minutosParaEvento
+
+  return {
+    ...status,
+    ...calc,
+    minutosParaEvento,
+    detalhe: detalhePeloProgresso(status.papel, minutosParaEvento, calc),
+    status: rotuloStatusProgresso(status.status, status.papel, calc.progresso, minutosParaEvento),
+  }
+}
+
+function detalhePeloProgresso(
+  papel: PapelVoo,
+  minutosParaEvento: number | null,
+  calc: ReturnType<typeof calcularProgressoVoo>,
+) {
+  if (papel === 'chegada') {
+    if (calc.progresso >= 1 || (minutosParaEvento != null && minutosParaEvento <= 0)) {
+      return 'Pouso concluído ou janela de desembarque'
+    }
+    if (minutosParaEvento != null) {
+      return `Pouso em cerca de ${formatarCountdown(minutosParaEvento)}`
+    }
+  } else if (minutosParaEvento != null) {
+    if (minutosParaEvento <= 0) return 'Janela de decolagem / já partiu'
+    return `Decolagem em cerca de ${formatarCountdown(minutosParaEvento)}`
+  }
+  if (calc.minutosRestantes != null) {
+    return `Restam ${formatarCountdown(calc.minutosRestantes)}`
+  }
+  return 'Acompanhando voo'
+}
+
+function rotuloStatusProgresso(
+  statusAtual: string,
+  papel: PapelVoo,
+  progresso: number,
+  minutos: number | null,
+) {
+  if (statusAtual === 'Voo cancelado' || statusAtual === 'Atrasado') return statusAtual
+  if (progresso >= 1 || (minutos != null && minutos <= 0 && papel === 'chegada')) {
+    return 'Pouso concluído'
+  }
+  if (progresso > 0.05 && progresso < 1) {
+    return papel === 'chegada' ? 'Em voo — a caminho do aeroporto' : 'Em voo'
+  }
+  return statusAtual
+}
+
 /**
  * Acompanhamento do voo para o motorista.
- * Usa o horário da corrida como referência do pouso (chegada) ou da decolagem (partida).
- * Se VITE_AVIATIONSTACK_KEY existir, tenta enriquecer com dados ao vivo.
+ * Usa o horário da corrida como referência; com VITE_AVIATIONSTACK_KEY enriquece ao vivo.
  */
 export async function acompanharVoo(viagem: Viagem): Promise<StatusAcompanhamentoVoo | null> {
   const codigo = viagem.numero_voo?.trim().toUpperCase()
@@ -68,14 +205,14 @@ export async function acompanharVoo(viagem: Viagem): Promise<StatusAcompanhament
   const chave = (import.meta.env.VITE_AVIATIONSTACK_KEY as string | undefined)?.trim()
   if (chave) {
     try {
-      const aoVivo = await buscarAviationStack(codigo, viagem.data_viagem, chave, papel)
+      const aoVivo = await buscarAviationStack(codigo, viagem.data_viagem, chave, papel, viagem)
       if (aoVivo) return aoVivo
     } catch {
       /* cai no estimado local */
     }
   }
 
-  return estimarPeloHorario(codigo, papel, previsto)
+  return estimarPeloHorario(codigo, papel, previsto, viagem)
 }
 
 async function buscarAviationStack(
@@ -83,6 +220,7 @@ async function buscarAviationStack(
   data: string,
   chave: string,
   papel: PapelVoo,
+  viagem: Viagem,
 ): Promise<StatusAcompanhamentoVoo | null> {
   const url = new URL('https://api.aviationstack.com/v1/flights')
   url.searchParams.set('access_key', chave)
@@ -93,37 +231,77 @@ async function buscarAviationStack(
   const json = (await res.json()) as {
     data?: Array<{
       flight_status?: string
-      departure?: { estimated?: string; scheduled?: string; delay?: number }
-      arrival?: { estimated?: string; scheduled?: string; delay?: number }
+      departure?: BlocoHorarioApi
+      arrival?: BlocoHorarioApi
     }>
   }
   const voo = json.data?.[0]
   if (!voo) return null
-  const bloco = papel === 'chegada' ? voo.arrival : voo.departure
-  const iso = bloco?.estimated || bloco?.scheduled
-  const quando = iso ? new Date(iso) : null
-  if (!quando || Number.isNaN(quando.getTime())) return null
-  const minutos = Math.round((quando.getTime() - Date.now()) / 60_000)
-  const atrasado = Number(bloco?.delay ?? 0) > 5
-  return {
+
+  const partida = voo.departure
+  const chegada = voo.arrival
+  const blocoEvento = papel === 'chegada' ? chegada : partida
+  const pouso =
+    lerDataIso(chegada?.actual) ||
+    lerDataIso(chegada?.estimated) ||
+    lerDataIso(chegada?.scheduled) ||
+    (papel === 'chegada' ? instanteDaViagem(viagem.data_viagem, viagem.horario) : null)
+  const decolagem =
+    lerDataIso(partida?.actual) ||
+    lerDataIso(partida?.estimated) ||
+    lerDataIso(partida?.scheduled) ||
+    (pouso ? new Date(pouso.getTime() - 3 * 60 * 60 * 1000) : null)
+
+  const quandoEvento =
+    lerDataIso(blocoEvento?.estimated) ||
+    lerDataIso(blocoEvento?.actual) ||
+    lerDataIso(blocoEvento?.scheduled) ||
+    (papel === 'chegada' ? pouso : decolagem)
+  if (!quandoEvento) return null
+
+  const minutos = Math.round((quandoEvento.getTime() - Date.now()) / 60_000)
+  const atrasado = Number(blocoEvento?.delay ?? 0) > 5
+  const calc = calcularProgressoVoo(decolagem, pouso)
+  const origemCodigo =
+    (partida?.iata ?? '').toUpperCase() ||
+    codigoAeroportoDoTexto(viagem.origem) ||
+    'ORIG'
+  const destinoCodigo =
+    (chegada?.iata ?? '').toUpperCase() ||
+    codigoAeroportoDoTexto(viagem.destino) ||
+    codigoAeroportoDoTexto(viagem.origem) ||
+    'DEST'
+
+  const base: StatusAcompanhamentoVoo = {
     codigo,
     papel,
     titulo: papel === 'chegada' ? 'Chegada do voo' : 'Partida do voo',
-    status: rotuloStatusApi(voo.flight_status, papel, minutos),
+    status: rotuloStatusApi(voo.flight_status, papel, minutos, calc.progresso),
     detalhe: atrasado
-      ? `Atraso informado: cerca de ${bloco?.delay} min`
-      : minutos >= 0
-        ? `Faltam ${formatarCountdown(minutos)}`
-        : `Há ${formatarCountdown(minutos)}`,
-    horarioPrevisto: formatarHorario(quando),
+      ? `Atraso informado: cerca de ${blocoEvento?.delay} min`
+      : detalhePeloProgresso(papel, minutos, calc),
+    horarioPrevisto: formatarHorario(quandoEvento),
     minutosParaEvento: minutos,
     atrasado,
+    origemCodigo,
+    origemNome: partida?.airport?.trim() || origemCodigo,
+    destinoCodigo,
+    destinoNome: chegada?.airport?.trim() || destinoCodigo,
+    decolagemIso: decolagem?.toISOString() ?? null,
+    pousoIso: pouso?.toISOString() ?? null,
+    ...calc,
   }
+  return base
 }
 
-function rotuloStatusApi(status: string | undefined, papel: PapelVoo, minutos: number) {
+function rotuloStatusApi(
+  status: string | undefined,
+  papel: PapelVoo,
+  minutos: number,
+  progresso: number,
+) {
   const s = (status ?? '').toLowerCase()
-  if (s === 'landed') return 'Pouso concluído'
+  if (s === 'landed' || progresso >= 1) return 'Pouso concluído'
   if (s === 'active' && papel === 'chegada') return 'Em voo — a caminho do aeroporto'
   if (s === 'active' && papel === 'partida') return 'Em voo'
   if (s === 'cancelled') return 'Voo cancelado'
@@ -137,6 +315,7 @@ function estimarPeloHorario(
   codigo: string,
   papel: PapelVoo,
   previsto: Date,
+  viagem: Viagem,
 ): StatusAcompanhamentoVoo {
   const minutos = Math.round((previsto.getTime() - Date.now()) / 60_000)
   let status = ''
@@ -176,6 +355,20 @@ function estimarPeloHorario(
     detalhe = `Há ${formatarCountdown(minutos)}`
   }
 
+  const pouso = papel === 'chegada' ? previsto : new Date(previsto.getTime() + 3 * 60 * 60 * 1000)
+  const decolagem =
+    papel === 'chegada' ? new Date(previsto.getTime() - 3 * 60 * 60 * 1000) : previsto
+  const calc = calcularProgressoVoo(decolagem, pouso)
+
+  const origemCodigo =
+    papel === 'chegada'
+      ? 'ORIG'
+      : codigoAeroportoDoTexto(viagem.origem) || 'ORIG'
+  const destinoCodigo =
+    papel === 'chegada'
+      ? codigoAeroportoDoTexto(viagem.origem) || 'LAX'
+      : codigoAeroportoDoTexto(viagem.destino) || 'DEST'
+
   return {
     codigo,
     papel,
@@ -185,6 +378,13 @@ function estimarPeloHorario(
     horarioPrevisto: formatarHorario(previsto),
     minutosParaEvento: minutos,
     atrasado: false,
+    origemCodigo,
+    origemNome: origemCodigo === 'ORIG' ? 'Origem' : origemCodigo,
+    destinoCodigo,
+    destinoNome: destinoCodigo,
+    decolagemIso: decolagem.toISOString(),
+    pousoIso: pouso.toISOString(),
+    ...calc,
   }
 }
 
@@ -198,7 +398,8 @@ export function textoObservacaoCliente(observacoes?: string) {
       (linha) =>
         linha &&
         !/^contato\s*:/i.test(linha) &&
-        !/^port[aã]o\s*:/i.test(linha),
+        !/^port[aã]o\s*:/i.test(linha) &&
+        !/^cliente marcou:/i.test(linha),
     )
     .join('\n')
     .trim()
