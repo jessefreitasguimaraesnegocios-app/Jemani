@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { SLUG_SHIELD } from '@/data/seed'
-import type { CategoriaVeiculo } from '@/types'
+import { veiculoDestaqueDaCategoria } from '@/services/frotaCliente'
+import type { CategoriaVeiculo, Empresa, Veiculo } from '@/types'
 import { fotoDaFrota, rotuloCurtoFrota } from './fotosFrota'
 import './SeletorCategoria3D.css'
 
@@ -8,6 +9,8 @@ type Props = {
   categorias: CategoriaVeiculo[]
   categoriaId: string
   passageiros: number
+  veiculos?: Veiculo[]
+  empresas?: Empresa[]
   aoSelecionar: (id: string) => void
   formatarAdicional: (valor: number) => string
 }
@@ -18,6 +21,8 @@ export function SeletorCategoria3D({
   categorias,
   categoriaId,
   passageiros,
+  veiculos = [],
+  empresas = [],
   aoSelecionar,
   formatarAdicional,
 }: Props) {
@@ -38,6 +43,17 @@ export function SeletorCategoria3D({
       })),
     [categorias, passageiros],
   )
+
+  function fotoCategoria(categoria: CategoriaVeiculo) {
+    const destaque = veiculoDestaqueDaCategoria(categoria.id, veiculos, empresas)
+    return destaque?.fotos[0] ?? fotoDaFrota(categoria.slug)
+  }
+
+  function rotuloCategoria(categoria: CategoriaVeiculo) {
+    const destaque = veiculoDestaqueDaCategoria(categoria.id, veiculos, empresas)
+    if (destaque) return `${destaque.marca} ${destaque.modelo}`.trim()
+    return rotuloCurtoFrota(categoria.slug, categoria.nome)
+  }
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -84,7 +100,8 @@ export function SeletorCategoria3D({
   if (!selecionada) return null
 
   const elite = selecionada.slug === SLUG_SHIELD
-  const foto = fotoDaFrota(selecionada.slug)
+  const veiculoSelecionado = veiculoDestaqueDaCategoria(selecionada.id, veiculos, empresas)
+  const foto = fotoCategoria(selecionada)
   const copias = movimento ? [0, 1] : [0]
 
   function escolher(id: string, serve: boolean) {
@@ -108,8 +125,8 @@ export function SeletorCategoria3D({
         }`}
         onClick={() => escolher(c.id, c.serve)}
       >
-        <img src={fotoDaFrota(c.slug)} alt="" loading="lazy" decoding="async" />
-        <span>{rotuloCurtoFrota(c.slug, c.nome)}</span>
+        <img src={fotoCategoria(c)} alt="" loading="lazy" decoding="async" />
+        <span>{rotuloCategoria(c)}</span>
       </button>
     )
   }
@@ -121,6 +138,11 @@ export function SeletorCategoria3D({
         <p className="showroom-kicker">Frota de luxo</p>
         {elite && <span className="showroom-selo">Top 1 · Proteção de elite</span>}
         <h3 className="showroom-nome">{selecionada.nome}</h3>
+        {veiculoSelecionado && (
+          <p className="showroom-modelo">
+            {veiculoSelecionado.marca} {veiculoSelecionado.modelo} · {veiculoSelecionado.ano}
+          </p>
+        )}
         <p className="showroom-desc">{selecionada.descricao}</p>
       </header>
 

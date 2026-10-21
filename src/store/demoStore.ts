@@ -34,6 +34,7 @@ import {
   gravarViagemNuvem,
   gravarViagensNuvem,
 } from '@/services/nuvemCorrida'
+import { apagarVeiculoNuvem, gravarVeiculoNuvem } from '@/services/nuvemVeiculos'
 import {
   apagarAgendamentoNuvem,
   gravarAgendamentoNuvem,
@@ -176,6 +177,7 @@ interface EstadoDemo {
   substituirCatalogoFotosVeiculo: (fotos: FotoCatalogoVeiculo[]) => void
   adicionarFotoCatalogoVeiculo: (foto: FotoCatalogoVeiculo) => void
   removerFotoCatalogoVeiculoLocal: (id: string) => void
+  aplicarVeiculosNuvem: (veiculos: Veiculo[]) => void
   solicitarFinalizacao: (viagemId: string) => { ok: boolean; mensagem: string }
   confirmarFinalizacao: (viagemId: string, usuarioId: string, confirmado: boolean) => Viagem
   cancelarViagem: (viagemId: string, usuarioId: string, motivo: string) => Viagem
@@ -1825,6 +1827,7 @@ export const useDemoStore = create<EstadoDemo>()(
           set((s) => ({
             veiculos: s.veiculos.map((v) => (v.id === dados.id ? atualizada : v)),
           }))
+          void gravarVeiculoNuvem(atualizada).catch(() => undefined)
           return atualizada
         }
         const novo: Veiculo = {
@@ -1844,6 +1847,7 @@ export const useDemoStore = create<EstadoDemo>()(
           updated_at: agora,
         }
         set((s) => ({ veiculos: [...s.veiculos, novo] }))
+        void gravarVeiculoNuvem(novo).catch(() => undefined)
         return novo
       },
 
@@ -1866,6 +1870,7 @@ export const useDemoStore = create<EstadoDemo>()(
             ? state.veiculosExcluidos
             : [...state.veiculosExcluidos, id],
         })
+        void apagarVeiculoNuvem(id).catch(() => undefined)
       },
 
       atualizarAvatarCliente: (usuarioId, avatarUrl) => {
@@ -2352,6 +2357,22 @@ export const useDemoStore = create<EstadoDemo>()(
         set((state) => ({
           fotosCatalogoVeiculo: state.fotosCatalogoVeiculo.filter((item) => item.id !== id),
         }))
+      },
+
+      aplicarVeiculosNuvem: (remotos) => {
+        if (!remotos.length) return
+        set((state) => {
+          const excluidos = new Set(state.veiculosExcluidos)
+          const mapa = new Map(
+            state.veiculos.filter((item) => !excluidos.has(item.id)).map((item) => [item.id, item]),
+          )
+          for (const remoto of remotos) {
+            if (excluidos.has(remoto.id)) continue
+            const local = mapa.get(remoto.id)
+            mapa.set(remoto.id, local ? { ...local, ...remoto } : remoto)
+          }
+          return { veiculos: [...mapa.values()] }
+        })
       },
     }),
     {

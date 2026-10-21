@@ -95,3 +95,22 @@ export function fundirCatalogoComFrota(fotos: FotoCatalogoVeiculo[] = []): FotoC
   if (!faltando.length) return fotos
   return [...faltando, ...fotos]
 }
+
+/** Foto oficial da frota por marca/modelo (seed e fallback). */
+export function urlFotoFrotaPorModelo(marca: string, modelo: string): string | undefined {
+  const chave = `${marca} ${modelo}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+  const mapa: Array<{ teste: RegExp; url: string }> = [
+    { teste: /expedition/, url: '/frota/expedition.jpg' },
+    { teste: /xc90|volvo/, url: '/frota/volvo.jpg' },
+    { teste: /classe s|s-class|e-class/, url: '/frota/classe-s.jpg' },
+    { teste: /lucid/, url: '/frota/lucid.jpg' },
+    { teste: /escalade/, url: '/frota/escalade.jpg' },
+    { teste: /sprinter/, url: '/frota/sprinter.jpg' },
+    { teste: /shuttle|limousine|stretch/, url: '/frota/shuttle.jpg' },
+    { teste: /prevost|h3-45|charter/, url: '/frota/charter.jpg' },
+  ]
+  return mapa.find((item) => item.teste.test(chave))?.url
+}

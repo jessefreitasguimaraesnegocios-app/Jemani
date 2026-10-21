@@ -51,6 +51,14 @@
   letter-spacing: -0.02em;
 }
 
+.showroom-modelo {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(184, 149, 108, 0.95);
+}
+
 .showroom-desc {
   margin: 0.45rem 0 0;
   max-width: 22rem;

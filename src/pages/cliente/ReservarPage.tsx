@@ -15,6 +15,7 @@ import { useDemoStore } from '@/store/demoStore'
 import type { EnderecoLocal } from '@/types'
 import { enderecoEhAeroporto, enderecoProntoParaReserva } from '@/utils/endereco'
 import { SLUG_SHIELD } from '@/data/seed'
+import { categoriasComFrotaDisponivel } from '@/services/frotaCliente'
 import { formatarMoeda } from '@/utils/format'
 import './ReservarPage.css'
 
@@ -35,16 +36,16 @@ export function ReservarPage() {
   const { usuario } = useAuth()
   const navigate = useNavigate()
   const todasCategorias = useDemoStore((s) => s.categorias)
+  const veiculos = useDemoStore((s) => s.veiculos)
+  const empresas = useDemoStore((s) => s.empresas)
   const categorias = useMemo(
     () =>
-      todasCategorias
-        .filter((c) => c.ativo)
-        .sort((a, b) => {
-          if (a.slug === SLUG_SHIELD) return -1
-          if (b.slug === SLUG_SHIELD) return 1
-          return a.ordem - b.ordem
-        }),
-    [todasCategorias],
+      categoriasComFrotaDisponivel(todasCategorias, veiculos, empresas).sort((a, b) => {
+        if (a.slug === SLUG_SHIELD) return -1
+        if (b.slug === SLUG_SHIELD) return 1
+        return a.ordem - b.ordem
+      }),
+    [todasCategorias, veiculos, empresas],
   )
   const calcularPreco = useDemoStore((s) => s.calcularPreco)
   const criarViagem = useDemoStore((s) => s.criarViagem)
@@ -432,6 +433,8 @@ export function ReservarPage() {
               categorias={categorias}
               categoriaId={categoriaId}
               passageiros={passageiros}
+              veiculos={veiculos}
+              empresas={empresas}
               aoSelecionar={setCategoriaId}
               formatarAdicional={(valor) => formatarMoeda(valor, locale)}
             />

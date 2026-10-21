@@ -1,3 +1,4 @@
+import { urlFotoFrotaPorModelo } from '@/data/catalogoFotosFrota'
 import type {
   AgendamentoVeiculo,
   Avaliacao,
@@ -20,6 +21,11 @@ import type {
   Viagem,
 } from '@/types'
 import { amanhaIso, agoraIso } from '@/utils/format'
+
+function fotosDoModelo(marca: string, modelo: string): string[] {
+  const url = urlFotoFrotaPorModelo(marca, modelo)
+  return url ? [url] : []
+}
 
 const agora = agoraIso()
 const amanha = amanhaIso()
@@ -234,7 +240,7 @@ export function criarVeiculoShield(agora = agoraIso()): Veiculo {
     capacidade: 3,
     ar_condicionado: true,
     bagageiro: true,
-    fotos: [],
+    fotos: ['/frota/escalade.jpg'],
     placa: '7JEM016',
     status: 'disponivel',
     created_at: agora,
@@ -366,7 +372,7 @@ export function completarCatalogo<
           capacidade: item.capacidade,
           ar_condicionado: true,
           bagageiro: true,
-          fotos: [],
+          fotos: fotosDoModelo(item.marca, item.modelo),
           placa: `${item.placa}${empresa.id.slice(-2)}`,
           status: 'disponivel',
           created_at: agora,
@@ -683,7 +689,7 @@ export function criarDadosIniciais(): {
     comissao_percentual: percentuaisSeed[indice] ?? 10,
   }))
 
-  const veiculos: Veiculo[] = [
+  const veiculosBrutos = [
     {
       id: '99999999-9999-9999-9999-999999999901',
       empresa_id: IDS.empresaLa,
@@ -861,7 +867,13 @@ export function criarDadosIniciais(): {
       updated_at: agora,
     },
     criarVeiculoShield(agora),
-  ]
+  ] as Veiculo[]
+
+  const veiculos: Veiculo[] = veiculosBrutos.map((veiculo) =>
+    veiculo.fotos.length
+      ? veiculo
+      : { ...veiculo, fotos: fotosDoModelo(veiculo.marca, veiculo.modelo) },
+  )
 
   const motoristas: Motorista[] = [
     {

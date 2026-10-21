@@ -34,6 +34,7 @@ import {
   buscarPerfisNuvem,
   refrescarMeuPerfilNuvem,
 } from '@/services/nuvemPerfis'
+import { gravarVeiculosNuvem, listarVeiculosNuvem } from '@/services/nuvemVeiculos'
 import { useDemoStore } from '@/store/demoStore'
 import type { TurnoMotorista, Viagem } from '@/types'
 import { gerarId } from '@/utils/format'
@@ -69,28 +70,32 @@ export function SincronizarNuvem() {
       const empresa = store().obterEmpresaDoUsuario(sessao.id)
 
       if (sessao.tipo === 'admin') {
-        const [clientes, motoristas, catalogo] = await Promise.all([
+        const [clientes, motoristas, catalogo, frotaAdmin] = await Promise.all([
           buscarClientesNuvem(),
           buscarMotoristasNuvem(),
           garantirFotosFrotaNoCatalogo(),
+          listarVeiculosNuvem(),
         ])
         if (!ativoRef.current) return
         store().substituirClientesNuvem(clientes)
         store().aplicarMotoristasNuvem(motoristas)
         store().substituirCatalogoFotosVeiculo(catalogo)
+        store().aplicarVeiculosNuvem(frotaAdmin)
         return
       }
 
       if (sessao.tipo === 'empresa') {
-        const [motoristas, clientes, catalogo] = await Promise.all([
+        const [motoristas, clientes, catalogo, frotaEmpresa] = await Promise.all([
           buscarMotoristasNuvem(empresa ? { empresaId: empresa.id } : undefined),
           buscarPerfisNuvem(idsCliente),
           listarCatalogoFotosVeiculo(),
+          listarVeiculosNuvem(),
         ])
         if (!ativoRef.current) return
         store().aplicarMotoristasNuvem(motoristas)
         store().aplicarPerfisNuvem(clientes)
         store().substituirCatalogoFotosVeiculo(catalogo)
+        store().aplicarVeiculosNuvem(frotaEmpresa)
         return
       }
 
@@ -108,10 +113,16 @@ export function SincronizarNuvem() {
         return
       }
 
-      if (sessao.tipo === 'cliente' && idsMotorista.length > 0) {
-        const motoristas = await buscarMotoristasNuvem({ ids: idsMotorista })
+      if (sessao.tipo === 'cliente') {
+        const [motoristas, frota] = await Promise.all([
+          idsMotorista.length > 0
+            ? buscarMotoristasNuvem({ ids: idsMotorista })
+            : Promise.resolve([]),
+          listarVeiculosNuvem(),
+        ])
         if (!ativoRef.current) return
-        store().aplicarMotoristasNuvem(motoristas)
+        if (motoristas.length) store().aplicarMotoristasNuvem(motoristas)
+        store().aplicarVeiculosNuvem(frota)
       }
     }
 
@@ -148,14 +159,16 @@ export function SincronizarNuvem() {
       const senha = store().senhas[sessao.email]
       const entrou = await entrarNuvem(sessao.email, senha ?? '')
       if (!entrou || !ativoRef.current) return
-      const [viagens, ofertas, mensagens, turnos, agendamentos, historicos] = await Promise.all([
-        listarViagensNuvem(),
-        listarOfertasNuvem(),
-        listarMensagensNuvem(),
-        listarTurnosNuvem(),
-        listarAgendamentosNuvem(),
-        listarHistoricosNuvem(),
-      ])
+      const [viagens, ofertas, mensagens, turnos, agendamentos, historicos, frota] =
+        await Promise.all([
+          listarViagensNuvem(),
+          listarOfertasNuvem(),
+          listarMensagensNuvem(),
+          listarTurnosNuvem(),
+          listarAgendamentosNuvem(),
+          listarHistoricosNuvem(),
+          listarVeiculosNuvem(),
+        ])
       if (!ativoRef.current) return
       for (const viagem of viagens) store().aplicarViagemNuvem(viagem, true)
       for (const oferta of ofertas) store().aplicarOfertaNuvem(oferta, true)
@@ -163,10 +176,22 @@ export function SincronizarNuvem() {
       for (const turno of turnos) store().aplicarTurnoNuvem(turno)
       for (const item of agendamentos) store().aplicarAgendamentoNuvem(item, true)
       for (const item of historicos) store().aplicarHistoricoNuvem(item)
+      store().aplicarVeiculosNuvem(frota)
       store().limparDuplicatasNuvem()
       store().retomarCorridasPagas()
       ultimaViagemSyncRef.current = new Date().toISOString()
       await puxarPerfisEFotos(viagens)
+      if (sessao.tipo === 'empresa') {
+        const empresa = store().obterEmpresaDoUsuario(sessao.id)
+        if (empresa) {
+          const daEmpresa = store().veiculos.filter(
+            (veiculo) =>
+              veiculo.empresa_id === empresa.id &&
+              !store().veiculosExcluidos.includes(veiculo.id),
+          )
+          if (daEmpresa.length) await gravarVeiculosNuvem(daEmpresa).catch(() => undefined)
+        }
+      }
       if (sessao.tipo === 'cliente') {
         const locais = store().viagens.filter((v) => v.cliente_id === sessao.id)
         const porId = new Map(viagens.map((item) => [item.id, item]))
