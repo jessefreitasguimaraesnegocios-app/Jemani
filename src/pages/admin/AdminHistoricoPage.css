@@ -62,3 +62,65 @@
   font-size: 0.875rem;
   color: var(--color-slate);
 }
+
+.admin-historico-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.admin-historico-erro {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-danger);
+}
+
+.admin-historico-ok {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-gold-deep);
+}
+
+.admin-historico-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(12, 14, 18, 0.55);
+}
+
+.admin-historico-popup-painel {
+  width: min(100%, 26rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 0.75rem;
+  background: var(--color-surface, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.admin-historico-popup-painel p {
+  margin: 0;
+  font-size: 0.925rem;
+  color: var(--color-slate);
+  line-height: 1.45;
+}
+
+.admin-historico-popup-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+html[data-tema='escuro'] .admin-historico-popup-painel {
+  background: #1a1a1a;
+  color: #f6f1e8;
+  border-color: rgba(255, 255, 255, 0.08);
+}

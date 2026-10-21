@@ -112,7 +112,12 @@ export function MotoristaDashboardPage() {
           setAvisoGps(falha.code === 1 ? t('motorista.gps.negado') : t('motorista.gps.falha'))
         }
       },
-      { enableHighAccuracy: true, maximumAge: 8000 },
+      {
+        // Alta precisão só em corrida; ocioso economiza bateria e ticks.
+        enableHighAccuracy: seguirCorrida,
+        maximumAge: seguirCorrida ? 12_000 : 30_000,
+        timeout: 20_000,
+      },
     )
     return () => navigator.geolocation.clearWatch(id)
   }, [

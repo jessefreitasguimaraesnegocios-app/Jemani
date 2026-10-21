@@ -181,6 +181,13 @@ const pt = {
   'admin.clientes.corridas': '{n} corridas',
   'admin.clientes.resumo': '{realizadas} realizadas · {canceladas} canceladas',
   'admin.clientes.semTel': 'sem telefone',
+  'admin.clientes.excluir': 'Excluir usuário',
+  'admin.clientes.excluirTitulo': 'Excluir este cliente?',
+  'admin.clientes.excluirAviso':
+    'Isso apaga a conta, o login e todas as corridas ligadas a {email}. Não dá para desfazer.',
+  'admin.clientes.excluindo': 'Excluindo…',
+  'admin.clientes.excluido': 'Cliente excluído.',
+  'admin.clientes.erroExcluir': 'Não foi possível excluir o cliente.',
 
   'admin.empresas.titulo': 'Empresas',
   'admin.empresas.sub': 'Ofertas por proximidade do embarque + gestão de status das parceiras.',
@@ -602,6 +609,13 @@ const en: Record<ChaveTraducao, string> = {
   'admin.clientes.corridas': '{n} trips',
   'admin.clientes.resumo': '{realizadas} completed · {canceladas} canceled',
   'admin.clientes.semTel': 'no phone',
+  'admin.clientes.excluir': 'Delete user',
+  'admin.clientes.excluirTitulo': 'Delete this client?',
+  'admin.clientes.excluirAviso':
+    'This removes the account, login, and all trips linked to {email}. This cannot be undone.',
+  'admin.clientes.excluindo': 'Deleting…',
+  'admin.clientes.excluido': 'Client deleted.',
+  'admin.clientes.erroExcluir': 'Could not delete the client.',
 
   'admin.empresas.titulo': 'Companies',
   'admin.empresas.sub': 'Offers by pickup proximity + partner status management.',
@@ -1019,6 +1033,13 @@ const es: Record<ChaveTraducao, string> = {
   'admin.clientes.corridas': '{n} viajes',
   'admin.clientes.resumo': '{realizadas} finalizados · {canceladas} cancelados',
   'admin.clientes.semTel': 'sin teléfono',
+  'admin.clientes.excluir': 'Eliminar usuario',
+  'admin.clientes.excluirTitulo': '¿Eliminar este cliente?',
+  'admin.clientes.excluirAviso':
+    'Esto borra la cuenta, el acceso y todos los viajes de {email}. No se puede deshacer.',
+  'admin.clientes.excluindo': 'Eliminando…',
+  'admin.clientes.excluido': 'Cliente eliminado.',
+  'admin.clientes.erroExcluir': 'No se pudo eliminar el cliente.',
 
   'admin.empresas.titulo': 'Empresas',
   'admin.empresas.sub': 'Ofertas por proximidad del embarque + gestión de estado de socias.',

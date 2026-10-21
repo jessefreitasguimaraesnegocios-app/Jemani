@@ -16,6 +16,15 @@ import { calcularDistanciaKm } from '@/services/mapasService'
 import { transferirParaEmpresa } from '@/lib/stripeApi'
 import { emitirAvisoSistema } from '@/utils/avisoSistema'
 import {
+  deveGravarPosicaoTurnoNuvem,
+  deveGravarPosicaoViagemNuvem,
+  LIMIAR_LOCAL_GRAUS,
+  posicaoMudouBastante,
+  registrarEnvioPosicaoTurno,
+  registrarEnvioPosicaoViagem,
+  statusExigeGpsCorrida,
+} from '@/services/gpsMotorista'
+import {
   cadastrarClienteNuvem,
   entrarContaNuvem,
   gravarOfertasNuvem,
@@ -157,6 +166,7 @@ interface EstadoDemo {
   aplicarHistoricoNuvem: (item: HistoricoStatus) => void
   limparDuplicatasNuvem: () => void
   aplicarPerfisNuvem: (perfis: Perfil[]) => void
+  removerUsuarioLocal: (usuarioId: string) => void
   aplicarMotoristasNuvem: (motoristas: Motorista[]) => void
   solicitarFinalizacao: (viagemId: string) => { ok: boolean; mensagem: string }
   confirmarFinalizacao: (viagemId: string, usuarioId: string, confirmado: boolean) => Viagem
@@ -1407,12 +1417,17 @@ export const useDemoStore = create<EstadoDemo>()(
       atualizarPosicaoMotorista: (viagemId, latitude, longitude) => {
         const viagem = get().viagens.find((v) => v.id === viagemId)
         if (!viagem) return
-        const parada =
-          typeof viagem.motorista_lat === 'number' &&
-          typeof viagem.motorista_lng === 'number' &&
-          Math.abs(viagem.motorista_lat - latitude) < 0.00015 &&
-          Math.abs(viagem.motorista_lng - longitude) < 0.00015
-        if (!parada) {
+        const mudouLocal =
+          typeof viagem.motorista_lat !== 'number' ||
+          typeof viagem.motorista_lng !== 'number' ||
+          posicaoMudouBastante(
+            viagem.motorista_lat,
+            viagem.motorista_lng,
+            latitude,
+            longitude,
+            LIMIAR_LOCAL_GRAUS,
+          )
+        if (mudouLocal) {
           set({
             viagens: get().viagens.map((v) =>
               v.id === viagemId
@@ -1420,7 +1435,10 @@ export const useDemoStore = create<EstadoDemo>()(
                 : v,
             ),
           })
+        }
+        if (deveGravarPosicaoViagemNuvem(viagemId, latitude, longitude)) {
           void gravarPosicaoNuvem(viagemId, latitude, longitude)
+          registrarEnvioPosicaoViagem(viagemId, latitude, longitude)
         }
         let atual = get().viagens.find((v) => v.id === viagemId)
         if (!atual) return
@@ -2010,20 +2028,38 @@ export const useDemoStore = create<EstadoDemo>()(
       atualizarPosicaoTurno: (motoristaId, latitude, longitude) => {
         const turno = get().turnos.find((t) => t.motorista_id === motoristaId && t.online)
         if (!turno) return
-        if (
-          typeof turno.latitude === 'number' &&
-          Math.abs(turno.latitude - latitude) < 0.00015 &&
-          Math.abs((turno.longitude ?? 0) - longitude) < 0.00015
-        ) {
-          return
-        }
+        const mudouLocal =
+          typeof turno.latitude !== 'number' ||
+          typeof turno.longitude !== 'number' ||
+          posicaoMudouBastante(
+            turno.latitude,
+            turno.longitude,
+            latitude,
+            longitude,
+            LIMIAR_LOCAL_GRAUS,
+          )
+        const emCorrida = get().viagens.some(
+          (v) => v.motorista_id === motoristaId && statusExigeGpsCorrida(v.status),
+        )
+        const enviarNuvem = deveGravarPosicaoTurnoNuvem(
+          motoristaId,
+          latitude,
+          longitude,
+          emCorrida,
+        )
+        if (!mudouLocal && !enviarNuvem) return
         const atualizado = { ...turno, id: turno.id || gerarId(), latitude, longitude }
-        set({
-          turnos: get().turnos.map((t) =>
-            t.motorista_id === motoristaId && t.online ? atualizado : t,
-          ),
-        })
-        void gravarTurnoNuvem(atualizado)
+        if (mudouLocal || enviarNuvem) {
+          set({
+            turnos: get().turnos.map((t) =>
+              t.motorista_id === motoristaId && t.online ? atualizado : t,
+            ),
+          })
+        }
+        if (enviarNuvem) {
+          void gravarTurnoNuvem(atualizado)
+          registrarEnvioPosicaoTurno(motoristaId, latitude, longitude)
+        }
       },
 
       enviarMensagemEmpresa: ({ empresaId, motoristaId, autor, texto }) => {
@@ -2192,6 +2228,35 @@ export const useDemoStore = create<EstadoDemo>()(
             mapa.set(remoto.id, local ? { ...local, ...remoto } : remoto)
           }
           return { perfis: [...mapa.values()] }
+        })
+      },
+
+      removerUsuarioLocal: (usuarioId) => {
+        if (!usuarioId) return
+        set((state) => {
+          const idsViagem = new Set(
+            state.viagens.filter((v) => v.cliente_id === usuarioId).map((v) => v.id),
+          )
+          const empresasDoUsuario = new Set(
+            state.empresas.filter((e) => e.usuario_id === usuarioId).map((e) => e.id),
+          )
+          return {
+            perfis: state.perfis.filter((p) => p.id !== usuarioId),
+            viagens: state.viagens.filter((v) => v.cliente_id !== usuarioId),
+            historicos: state.historicos.filter((h) => !idsViagem.has(h.viagem_id)),
+            atribuicoes: state.atribuicoes.filter((a) => !idsViagem.has(a.viagem_id)),
+            pagamentos: state.pagamentos.filter((p) => !idsViagem.has(p.booking_id)),
+            comissoes: state.comissoes.filter((c) => !idsViagem.has(c.viagem_id)),
+            avaliacoes: state.avaliacoes.filter(
+              (a) => a.cliente_id !== usuarioId && !idsViagem.has(a.viagem_id),
+            ),
+            notificacoes: state.notificacoes.filter((n) => n.usuario_id !== usuarioId),
+            empresas: state.empresas.filter((e) => e.usuario_id !== usuarioId),
+            motoristas: state.motoristas.map((m) =>
+              m.usuario_id === usuarioId ? { ...m, usuario_id: undefined } : m,
+            ).filter((m) => !empresasDoUsuario.has(m.empresa_id)),
+            veiculos: state.veiculos.filter((v) => !empresasDoUsuario.has(v.empresa_id)),
+          }
         })
       },
 
