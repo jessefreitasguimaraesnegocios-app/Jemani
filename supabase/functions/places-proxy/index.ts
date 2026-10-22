@@ -21,8 +21,6 @@ type MapboxFeature = {
   context?: MapboxContext[]
 }
 
-const CENTRO_LOS_ANGELES = "-118.2437,34.0522"
-const CAIXA_LOS_ANGELES = "-118.95,33.65,-117.65,34.40"
 const limitePorIp = new Map<string, number[]>()
 
 function permitirConsulta(ip: string) {
@@ -113,9 +111,7 @@ async function geocodeMapbox(token: string, query: string, types = "address") {
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
   )
   url.searchParams.set("access_token", token)
-  url.searchParams.set("country", "us")
-  url.searchParams.set("proximity", CENTRO_LOS_ANGELES)
-  url.searchParams.set("bbox", CAIXA_LOS_ANGELES)
+  // Sem country/bbox: busca mundial (EUA e exterior).
   url.searchParams.set("types", types)
   url.searchParams.set("language", "en")
   url.searchParams.set("limit", "6")
@@ -221,7 +217,7 @@ Deno.serve(async (req: Request) => {
       return json({ valido: false, mensagem: "Número e rua são obrigatórios." })
     }
 
-    const query = [`${numero} ${rua}`, payload.cidade, payload.estado ?? "CA", payload.cep, "USA"]
+    const query = [`${numero} ${rua}`, payload.cidade, payload.estado, payload.cep]
       .filter(Boolean)
       .join(", ")
 

@@ -344,7 +344,7 @@ export function ReservarPage() {
               rotulo="Embarque (origem)"
               valor={origemEndereco}
               onChange={definirOrigem}
-              placeholder="Rua e número, ou LAX, BUR, SNA..."
+              placeholder="Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU..."
               papel="origem"
             />
             {embarqueAeroporto && (
@@ -357,7 +357,7 @@ export function ReservarPage() {
               rotulo="Destino"
               valor={destinoEndereco}
               onChange={definirDestino}
-              placeholder="Rua e número, ou LAX, BUR, SNA..."
+              placeholder="Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU..."
               papel="destino"
             />
             {destinoAeroporto && !embarqueAeroporto && (

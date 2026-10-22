@@ -44,7 +44,12 @@ describe('idioma', () => {
     expect(normalizarIdioma('xyz')).toBe('pt-BR')
   })
 })
-import { montarPontoAeroporto, sugerirAeroportos } from '@/services/aeroportos'
+import {
+  descricaoEhPontoFixoDeAeroporto,
+  montarAeroportoDeMapa,
+  montarPontoAeroporto,
+  sugerirAeroportos,
+} from '@/services/aeroportos'
 import { enderecoEhAeroporto, enderecoProntoParaReserva } from '@/utils/endereco'
 import { montarUrlGmailCompose } from '@/utils/gmailCompose'
 
@@ -165,11 +170,31 @@ describe('enderecoProntoParaReserva', () => {
 
   it('completa aeroporto enquanto digita e não confunde rua', () => {
     expect(sugerirAeroportos('lax').some((item) => item.place_id === 'aero:lax')).toBe(true)
+    expect(sugerirAeroportos('jfk').some((item) => item.place_id === 'aero:jfk')).toBe(true)
+    expect(sugerirAeroportos('heathrow').some((item) => item.place_id === 'aero:lhr')).toBe(true)
     expect(sugerirAeroportos('terminal 4').map((item) => item.place_id)).toEqual(
       expect.arrayContaining(['aero:lax:t4', 'aero:ont:t4']),
     )
     expect(sugerirAeroportos('aeros way')).toEqual([])
     expect(sugerirAeroportos('world way')[0]?.place_id).toBe('aero:lax')
+  })
+
+  it('reconhece aeroporto mundial e não confunde Airport Blvd', () => {
+    expect(descricaoEhPontoFixoDeAeroporto('John F. Kennedy International Airport')).toBe(true)
+    expect(descricaoEhPontoFixoDeAeroporto('Airport Blvd, Los Angeles')).toBe(false)
+    expect(montarPontoAeroporto('jfk', 'principal', 'desembarque')).not.toBeNull()
+    const poi = montarAeroportoDeMapa(
+      {
+        formatted: 'Narita International Airport, Japan',
+        latitude: 35.772,
+        longitude: 140.3929,
+        source: 'mapbox',
+      },
+      'origem',
+    )
+    expect(poi?.terminal_id).toBe('principal')
+    expect(poi?.nivel_aeroporto).toBe('desembarque')
+    expect(Number.isFinite(poi?.latitude)).toBe(true)
   })
 
   it('rejeita número ainda não confirmado', () => {

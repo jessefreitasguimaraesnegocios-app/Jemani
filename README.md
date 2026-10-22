@@ -1,6 +1,6 @@
 # Jemani
 
-Marketplace de transporte executivo em **Los Angeles** e região metropolitana (Santa Monica, Beverly Hills, Pasadena, Long Beach, Burbank, Malibu, Hollywood e mais).
+Marketplace de transporte executivo nos **Estados Unidos** e no **mundo** — endereços e aeroportos em qualquer cidade (com hub operacional forte em Los Angeles).
 
 A plataforma capta clientes, distribui solicitações para empresas parceiras e registra a comissão.
 
@@ -26,7 +26,7 @@ A plataforma capta clientes, distribui solicitações para empresas parceiras e 
 
 - Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens e **notificações**.
 - Corridas pagas caem nas **Solicitações** das empresas (ofertas em `trip_assignments`). Aplicar no Supabase a migration `empresas_para_distribuicao` se o SQL Editor ainda não tiver a RPC.
-- APK atual: **1.0.24** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
+- APK atual: **1.0.26** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
 
 Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -115,9 +115,9 @@ Veja `.env.example`. Migrations em `supabase/migrations/`.
 Deploy sugerido: **Vercel**.  
 Repositório: [github.com/jessefreitasguimaraesnegocios-app/Jemani](https://github.com/jessefreitasguimaraesnegocios-app/Jemani)
 
-## Região
+## Cobertura de reservas
 
-Los Angeles e cidades da região: LAX, Santa Monica, Beverly Hills, Pasadena, Long Beach, Burbank, Malibu, Century City, Hollywood.
+Busca de endereços via Mapbox **sem limite de cidade** (EUA e exterior). Aeroportos com terminal/meio-fio incluem LAX e hubs dos EUA (JFK, ORD, MIA…) e do mundo (LHR, CDG, GRU, NRT…); demais aeroportos do mapa entram como ponto principal.
 
 # Aplicativos móveis (Capacitor)
 

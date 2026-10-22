@@ -2,7 +2,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import {
   atualizarPontoAeroporto,
   criarSelecaoAeroporto,
+  descricaoEhPontoFixoDeAeroporto,
   listarTerminais,
+  montarAeroportoDeMapa,
   nivelSugerido,
   rotuloNivel,
   selecaoAeroporto,
@@ -150,7 +152,8 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
       }
 
       const base = await resolverPlaceId(placeId, description)
-      const convertido = selecaoAeroporto(placeId, `${description} ${base.formatted}`, papel)
+      const textoAero = `${description} ${base.formatted}`
+      const convertido = selecaoAeroporto(placeId, textoAero, papel)
       if (convertido) {
         aplicarAeroporto(
           convertido,
@@ -159,6 +162,14 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
             : 'Escolha o terminal e o nível abaixo. O aeroporto não usa um ponto único.',
         )
         return
+      }
+
+      if (descricaoEhPontoFixoDeAeroporto(textoAero)) {
+        const doMapa = montarAeroportoDeMapa(base, papel, complemento)
+        if (doMapa) {
+          aplicarAeroporto(doMapa)
+          return
+        }
       }
 
       const numeroDetectado =
@@ -306,7 +317,7 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
         id={id}
         className="campo"
         value={texto}
-        placeholder={placeholder ?? 'Ex.: 842 N Brand Blvd, Glendale'}
+        placeholder={placeholder ?? 'Ex.: 350 5th Ave, New York ou JFK, LHR, GRU...'}
         autoComplete="off"
         onChange={(e) => {
           setTexto(e.target.value)
@@ -318,7 +329,8 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
       />
       {!googleMapsConfigurado() && (
         <p className="campo-endereco-dica">
-          Modo DEV: sugestões locais de LA. Configure VITE_MAPBOX_ACCESS_TOKEN no .env para busca real.
+          Modo DEV: sugestões locais de exemplo. Configure VITE_MAPBOX_ACCESS_TOKEN no .env para
+          endereços e aeroportos no mundo todo.
         </p>
       )}
       {carregando && <p className="campo-endereco-dica">Buscando...</p>}

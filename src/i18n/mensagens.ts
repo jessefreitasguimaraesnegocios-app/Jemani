@@ -88,15 +88,15 @@ const pt = {
   'pag.reembolsado': 'Reembolsado',
   'pag.teste': 'Teste',
 
-  'landing.tagline': 'Transporte executivo em Los Angeles, simples e confiável.',
+  'landing.tagline': 'Transporte executivo nos EUA e no mundo, simples e confiável.',
   'landing.texto':
-    'Reserve com elegância em LA e cidades da região. Empresas parceiras executam. Você acompanha cada etapa.',
+    'Reserve com elegância em qualquer cidade. Empresas parceiras executam. Você acompanha cada etapa.',
   'landing.ctaReservar': 'Reservar uma viagem',
   'landing.ctaConta': 'Já tenho conta',
   'landing.card1Titulo': 'Experiência premium',
-  'landing.card1Texto': 'Categorias executivas para Los Angeles e região metropolitana.',
+  'landing.card1Texto': 'Categorias executivas para endereços e aeroportos em todo o mundo.',
   'landing.card2Titulo': 'Parceiros verificados',
-  'landing.card2Texto': 'Empresas ativas em LA, Santa Monica, Beverly Hills e mais.',
+  'landing.card2Texto': 'Empresas ativas perto de você — da costa oeste aos principais hubs globais.',
   'landing.card3Titulo': 'Acompanhamento claro',
   'landing.card3Texto': 'Status em tempo real do aceite até a chegada.',
 
@@ -548,15 +548,15 @@ const en: Record<ChaveTraducao, string> = {
   'pag.reembolsado': 'Refunded',
   'pag.teste': 'Test',
 
-  'landing.tagline': 'Executive transport in Los Angeles — simple and reliable.',
+  'landing.tagline': 'Executive transport across the US and the world — simple and reliable.',
   'landing.texto':
-    'Book elegantly across LA and nearby cities. Partner companies operate. You track every step.',
+    'Book elegantly in any city. Partner companies operate. You track every step.',
   'landing.ctaReservar': 'Book a trip',
   'landing.ctaConta': 'I already have an account',
   'landing.card1Titulo': 'Premium experience',
-  'landing.card1Texto': 'Executive categories for Los Angeles and the metro area.',
+  'landing.card1Texto': 'Executive categories for addresses and airports worldwide.',
   'landing.card2Titulo': 'Verified partners',
-  'landing.card2Texto': 'Active companies in LA, Santa Monica, Beverly Hills and more.',
+  'landing.card2Texto': 'Active companies near you — from the West Coast to global hubs.',
   'landing.card3Titulo': 'Clear tracking',
   'landing.card3Texto': 'Real-time status from acceptance to arrival.',
 
@@ -1003,15 +1003,15 @@ const es: Record<ChaveTraducao, string> = {
   'pag.reembolsado': 'Reembolsado',
   'pag.teste': 'Prueba',
 
-  'landing.tagline': 'Transporte ejecutivo en Los Ángeles, simple y confiable.',
+  'landing.tagline': 'Transporte ejecutivo en EE. UU. y el mundo, simple y confiable.',
   'landing.texto':
-    'Reserve con elegancia en LA y ciudades cercanas. Empresas socias ejecutan. Usted sigue cada etapa.',
+    'Reserve con elegancia en cualquier ciudad. Empresas socias ejecutan. Usted sigue cada etapa.',
   'landing.ctaReservar': 'Reservar un viaje',
   'landing.ctaConta': 'Ya tengo cuenta',
   'landing.card1Titulo': 'Experiencia premium',
-  'landing.card1Texto': 'Categorías ejecutivas para Los Ángeles y el área metropolitana.',
+  'landing.card1Texto': 'Categorías ejecutivas para direcciones y aeropuertos en todo el mundo.',
   'landing.card2Titulo': 'Socios verificados',
-  'landing.card2Texto': 'Empresas activas en LA, Santa Monica, Beverly Hills y más.',
+  'landing.card2Texto': 'Empresas activas cerca de usted — de la costa oeste a los grandes hubs.',
   'landing.card3Titulo': 'Seguimiento claro',
   'landing.card3Texto': 'Estado en tiempo real desde la aceptación hasta la llegada.',
 

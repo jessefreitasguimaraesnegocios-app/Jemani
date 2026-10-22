@@ -46,7 +46,7 @@ export interface EnderecoLocal {
   cep?: string
   /** true quando o número foi confirmado no geocode daquela rua */
   numero_confirmado?: boolean
-  /** Aeroporto da região, quando o ponto é um terminal */
+  /** Aeroporto (qualquer país), quando o ponto é um terminal / meio-fio */
   codigo_aeroporto?: string
   /** Terminal escolhido (ex.: t4, tbit, ta) */
   terminal_id?: string

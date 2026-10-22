@@ -141,9 +141,6 @@ function tokenMapbox(): string | undefined {
   return token?.trim() || undefined
 }
 
-const CENTRO_LOS_ANGELES = '-118.2437,34.0522'
-const CAIXA_LOS_ANGELES = '-118.95,33.65,-117.65,34.40'
-
 const cacheEnderecos = new Map<string, EnderecoLocal>()
 
 function guardarEndereco(placeId: string, endereco: EnderecoLocal) {
@@ -218,9 +215,7 @@ async function geocodeMapboxDireto(query: string, types = 'address,poi'): Promis
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
   )
   url.searchParams.set('access_token', token)
-  url.searchParams.set('country', 'us')
-  url.searchParams.set('proximity', CENTRO_LOS_ANGELES)
-  url.searchParams.set('bbox', CAIXA_LOS_ANGELES)
+  // Sem country/bbox: EUA e mundo inteiro (rua, POI, aeroporto).
   url.searchParams.set('types', types)
   url.searchParams.set('language', 'en')
   url.searchParams.set('limit', '8')
@@ -650,7 +645,7 @@ export async function validarNumeroNoEndereco(
 
   if (tokenMapbox()) {
     try {
-      const query = [`${num} ${nomeRua}`, base.cidade, base.estado ?? 'CA', base.cep, 'USA']
+      const query = [`${num} ${nomeRua}`, base.cidade, base.estado, base.cep]
         .filter(Boolean)
         .join(', ')
       const features = await geocodeMapboxDireto(query, 'address')
@@ -694,7 +689,7 @@ export async function validarNumeroNoEndereco(
       numero: num,
       rua: nomeRua,
       cidade: base.cidade,
-      estado: base.estado ?? 'CA',
+      estado: base.estado,
       cep: base.cep,
       complemento: complemento?.trim() || undefined,
     })

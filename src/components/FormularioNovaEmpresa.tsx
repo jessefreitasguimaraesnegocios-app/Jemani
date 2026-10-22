@@ -58,11 +58,13 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
         telefone: telefone.trim(),
         email: email.trim(),
         senha,
-        cidade: cidade.trim() || endereco.cidade || 'Los Angeles',
+        cidade: cidade.trim() || endereco.cidade || '',
         endereco_base: endereco.formatted,
         latitude: endereco.latitude,
         longitude: endereco.longitude,
-        regioes_atendidas: listaRegioes.length ? listaRegioes : [cidade.trim() || endereco.cidade || 'Los Angeles'],
+        regioes_atendidas: listaRegioes.length
+          ? listaRegioes
+          : [cidade.trim() || endereco.cidade].filter(Boolean) as string[],
         categorias_ids: categoriasIds,
         nome_gestor: `Gestor ${nomeComercial.trim()}`,
       })
@@ -167,7 +169,7 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
             className="campo"
             value={cidade}
             onChange={(e) => setCidade(e.target.value)}
-            placeholder="Los Angeles"
+            placeholder="Ex.: New York, Miami, São Paulo"
             required
           />
         </div>
@@ -180,7 +182,7 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
             className="campo"
             value={regioes}
             onChange={(e) => setRegioes(e.target.value)}
-            placeholder="Los Angeles, LAX, Beverly Hills"
+            placeholder="Ex.: Manhattan, JFK, Brooklyn"
           />
         </div>
       </div>
@@ -189,7 +191,7 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
         rotulo="Endereço-base (rua e número)"
         valor={endereco}
         onChange={setEndereco}
-        placeholder="Ex.: 200 N Spring St, Los Angeles"
+        placeholder="Ex.: 350 5th Ave, New York"
       />
 
       <div>
