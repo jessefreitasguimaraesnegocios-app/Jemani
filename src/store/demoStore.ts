@@ -29,6 +29,7 @@ import {
   cadastrarClienteNuvem,
   entrarContaNuvem,
   gravarOfertasNuvem,
+  listarEmpresasParaDistribuicaoNuvem,
   sairNuvem,
   gravarPosicaoNuvem,
   gravarViagemNuvem,
@@ -153,6 +154,7 @@ interface EstadoDemo {
     sessionId: string,
   ) => Promise<Viagem>
   iniciarDistribuicaoAposPagamento: (viagemId: string) => Viagem
+  completarOfertasComNuvem: (viagemId: string) => Promise<void>
   retomarCorridasPagas: () => void
   garantirOfertasAbertas: () => void
   enviarOfertaEmailEmpresa: (
@@ -674,7 +676,7 @@ export const useDemoStore = create<EstadoDemo>()(
         const viagem = state.viagens.find((v) => v.id === viagemId)
         if (!viagem) throw new Error('Viagem não encontrada')
         if (viagem.payment_status === 'paid') {
-          return viagem
+          return get().iniciarDistribuicaoAposPagamento(viagemId)
         }
         if (viagem.status !== 'pending_payment') {
           throw new Error('Viagem não está aguardando pagamento')
@@ -806,12 +808,13 @@ export const useDemoStore = create<EstadoDemo>()(
           })
           registrarHistorico(set, get, viagemId, viagem.status, 'aguardando_empresa')
           void gravarViagemNuvem(atualizada)
+          void get().completarOfertasComNuvem(viagemId)
           notificar(
             set,
             get,
             viagem.cliente_id,
-            'Nenhuma empresa disponível no momento',
-            `Pagamento ok, mas não há parceiros elegíveis próximos para ${viagem.codigo}.`,
+            'Buscando empresas parceiras',
+            `Pagamento ok. Estamos enviando ${viagem.codigo} às empresas elegíveis.`,
             'distribuicao',
             viagemId,
           )
@@ -878,7 +881,92 @@ export const useDemoStore = create<EstadoDemo>()(
           viagemId,
         )
 
+        void get().completarOfertasComNuvem(viagemId)
         return atualizada
+      },
+
+      completarOfertasComNuvem: async (viagemId) => {
+        const viagem = get().viagens.find((v) => v.id === viagemId)
+        if (!viagem || viagem.payment_status !== 'paid' || viagem.empresa_id) return
+        if (!['paid', 'aguardando_empresa', 'oferta_enviada'].includes(viagem.status)) return
+        if (typeof viagem.origem_lat !== 'number' || typeof viagem.origem_lng !== 'number') return
+
+        const daNuvem = await listarEmpresasParaDistribuicaoNuvem(viagem.categoria_id)
+        if (daNuvem.length === 0) return
+
+        const empresasMescladas = (() => {
+          const mapa = new Map(get().empresas.map((e) => [e.id, e]))
+          for (const empresa of daNuvem) mapa.set(empresa.id, empresa)
+          return [...mapa.values()]
+        })()
+        set({ empresas: empresasMescladas })
+
+        const jaOferecidas = new Set(
+          get()
+            .atribuicoes.filter((a) => a.viagem_id === viagemId && a.status === 'oferecida')
+            .map((a) => a.empresa_id),
+        )
+        const { ordenadas } = ordenarEmpresasPorProximidade(
+          daNuvem,
+          viagem.origem_lat,
+          viagem.origem_lng,
+          viagem.categoria_id,
+        )
+        const novas = ordenadas
+          .filter((o) => !jaOferecidas.has(o.empresa.id))
+          .map((o, idx) => ({
+            id: gerarId(),
+            viagem_id: viagemId,
+            empresa_id: o.empresa.id,
+            status: 'oferecida' as const,
+            distancia_km: o.distancia_km,
+            created_at: agoraIso(),
+            motivo: idx === 0 ? 'nuvem_primeira_por_proximidade' : `nuvem_ordem_${idx + 1}`,
+          }))
+
+        const atual = get().viagens.find((v) => v.id === viagemId) ?? viagem
+        const precisaStatus = ['paid', 'pending_payment'].includes(atual.status)
+        const atualizada: Viagem = precisaStatus
+          ? {
+              ...atual,
+              status: 'aguardando_empresa',
+              payment_status: 'paid',
+              version: atual.version + 1,
+              updated_at: agoraIso(),
+            }
+          : atual
+
+        if (novas.length > 0 || precisaStatus) {
+          set({
+            viagens: get().viagens.map((v) => (v.id === viagemId ? atualizada : v)),
+            atribuicoes:
+              novas.length > 0
+                ? deduplicarAtribuicoes([...novas, ...get().atribuicoes])
+                : get().atribuicoes,
+          })
+        }
+
+        const ofertas = get().atribuicoes.filter(
+          (a) => a.viagem_id === viagemId && a.status === 'oferecida',
+        )
+        if (ofertas.length === 0) return
+
+        void gravarViagemNuvem(atualizada).then((gravou) => {
+          if (gravou) void gravarOfertasNuvem(ofertas)
+        })
+
+        for (const o of ordenadas.filter((item) => !jaOferecidas.has(item.empresa.id))) {
+          notificar(
+            set,
+            get,
+            o.empresa.usuario_id,
+            'Nova solicitação recebida',
+            `Corrida ${viagem.codigo} (${o.distancia_km} km do embarque): ${viagem.origem} → ${viagem.destino}`,
+            'nova_solicitacao',
+            viagemId,
+            true,
+          )
+        }
       },
 
       retomarCorridasPagas: () => {
@@ -1021,6 +1109,12 @@ export const useDemoStore = create<EstadoDemo>()(
         void gravarViagensNuvem(atualizadas).then((gravou) => {
           if (gravou) void gravarOfertasNuvem(novasAtribuicoes)
         })
+        for (const viagem of state.viagens) {
+          if (viagem.cliente_id !== clienteId) continue
+          if (viagem.payment_status !== 'paid' || viagem.empresa_id) continue
+          if (!['aguardando_empresa', 'oferta_enviada', 'paid'].includes(viagem.status)) continue
+          void get().completarOfertasComNuvem(viagem.id)
+        }
       },
 
       enviarOfertaEmailEmpresa: (viagemId, empresaId, adminId) => {
@@ -1161,6 +1255,13 @@ export const useDemoStore = create<EstadoDemo>()(
           'nova_solicitacao',
           viagemId,
         )
+
+        const ofertaFinal = get().atribuicoes.find(
+          (a) => a.viagem_id === viagemId && a.empresa_id === empresaId,
+        )
+        void gravarViagemNuvem(atualizada).then((gravou) => {
+          if (gravou && ofertaFinal) void gravarOfertasNuvem([ofertaFinal])
+        })
 
         return { viagem: atualizada, urlAberta: true }
       },

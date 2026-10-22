@@ -189,6 +189,26 @@ export function SincronizarNuvem() {
       store().retomarCorridasPagas()
       ultimaViagemSyncRef.current = new Date().toISOString()
       await puxarPerfisEFotos(viagens)
+      if (sessao.tipo === 'admin' || sessao.tipo === 'cliente') {
+        for (const viagem of store().viagens) {
+          if (viagem.payment_status !== 'paid' || viagem.empresa_id) continue
+          if (!['paid', 'aguardando_empresa', 'oferta_enviada'].includes(viagem.status)) continue
+          const temOferta = store().atribuicoes.some(
+            (oferta) => oferta.viagem_id === viagem.id && oferta.status === 'oferecida',
+          )
+          if (!temOferta && sessao.tipo === 'admin') {
+            try {
+              store().iniciarDistribuicaoAposPagamento(viagem.id)
+            } catch (err) {
+              console.warn(
+                'Falha ao redistribuir corrida paga',
+                err instanceof Error ? err.message : err,
+              )
+            }
+          }
+          void store().completarOfertasComNuvem(viagem.id)
+        }
+      }
       await gravarNotificacoesNuvem(
         store().notificacoes.filter((item) => item.usuario_id === sessao.id),
       )

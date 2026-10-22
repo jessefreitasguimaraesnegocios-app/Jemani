@@ -373,12 +373,31 @@ async function idsEmpresasQuePodemReceber() {
   return idsDaResposta(data)
 }
 
+export async function listarEmpresasParaDistribuicaoNuvem(categoriaId: string) {
+  const db = cliente()
+  if (!db || !categoriaId) return [] as Empresa[]
+  const { data, error } = await db.rpc('empresas_para_distribuicao', {
+    p_categoria_id: categoriaId,
+  })
+  if (error) {
+    console.warn('Falha ao listar empresas para distribuição', error.message)
+    return [] as Empresa[]
+  }
+  return ((data ?? []) as Empresa[]).map(empresaDaLinha)
+}
+
 export async function gravarOfertasNuvem(ofertas: AtribuicaoViagem[]) {
   const db = cliente()
   if (!db || ofertas.length === 0) return
   const cadastradas = await idsEmpresasQuePodemReceber()
-  if (!cadastradas) return
-  const linhas = ofertasComEmpresaCadastrada(ofertas, cadastradas).map((o) => ({
+  const filtradas = cadastradas
+    ? ofertasComEmpresaCadastrada(ofertas, cadastradas)
+    : ofertas
+  if (filtradas.length === 0) {
+    console.warn('Nenhuma oferta com empresa cadastrada na nuvem para gravar')
+    return
+  }
+  const linhas = filtradas.map((o) => ({
     id: o.id,
     viagem_id: o.viagem_id,
     empresa_id: o.empresa_id,
@@ -388,7 +407,6 @@ export async function gravarOfertasNuvem(ofertas: AtribuicaoViagem[]) {
     respondido_em: o.respondido_em ?? null,
     created_at: o.created_at,
   }))
-  if (linhas.length === 0) return
   const { error } = await db.from('trip_assignments').upsert(linhas, { onConflict: 'viagem_id,empresa_id' })
   if (error) console.warn('Falha ao gravar ofertas na nuvem', error.message)
 }

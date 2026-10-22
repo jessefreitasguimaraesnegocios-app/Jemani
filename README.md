@@ -4,31 +4,39 @@ Marketplace de transporte executivo em **Los Angeles** e região metropolitana (
 
 A plataforma capta clientes, distribui solicitações para empresas parceiras e registra a comissão.
 
-## Novidades — 12/10/2026
-
-### Empresa
-
-- **Viagens ao vivo**: mapa com os carros e kanban dos status. Abas de motoristas online e chat com a empresa.
-- **Motoristas**: o nome abre o histórico (corridas do dia, da semana e do mês, horas, km, tempo inativo e tempo em corrida). O cadastro fica atrás do botão **Cadastrar motorista**.
-- **Veículos**: o cadastro fica atrás do botão **Cadastrar veículo**. O clique no carro abre mecânica e lava-jato.
+## Novidades — 21/10/2026
 
 ### Motorista
 
-- Aba **Carro** para agendar mecânica e lava-jato. A empresa vê a quantidade no histórico do motorista.
+- Barra de **progresso do voo** (origem → destino), minimizar/abrir e mapa que não encolhe ao expandir o card.
+- Prioriza a corrida **em andamento** na tela atual.
 
-### Entre aparelhos
+### Cliente
 
-- Chat, turno, GPS do motorista online e agendamentos de mecânica/lava-jato. A Agenda mostra esses serviços e a empresa é avisada quando o motorista agenda.
+- Dados do voo na **etapa 2** da reserva, com **Não vou embarcar**.
+- Alertas com **carta** (fechada/dourada → aberta/cinza) e **som** ao ler.
+- Frota das empresas na reserva, com fotos.
+
+### Admin / Empresa
+
+- Dashboards com datas no fuso de Los Angeles e contagens alinhadas à operação real.
+- Admin: abas Empresas/Veículos, catálogo de fotos e exclusão de empresa/usuário.
+
+### Entre aparelhos (site + APK)
+
+- Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens e **notificações**.
+- Corridas pagas caem nas **Solicitações** das empresas (ofertas em `trip_assignments`). Aplicar no Supabase a migration `empresas_para_distribuicao` se o SQL Editor ainda não tiver a RPC.
+- APK atual: **1.0.24** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
 
 Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
 
 ### Próximos passos
 
-Ainda não feitos. A ordem está no [`CHANGELOG.md`](CHANGELOG.md) (12/10/2026):
+A ordem está no [`CHANGELOG.md`](CHANGELOG.md) (21/10/2026):
 
 6. Stripe em produção só quando for pedido. Continua em teste.
 7. Políticas de acesso antes de ligar o RLS em `company_users` e `pickup_locations`.
-8. Conferir o deploy da Vercel depois desta etapa.
+8. Fechar sync restante (motorista/empresa na nuvem, avaliações/comissões) se ainda divergir entre aparelhos.
 
 ## Novidades — 01/10/2026
 

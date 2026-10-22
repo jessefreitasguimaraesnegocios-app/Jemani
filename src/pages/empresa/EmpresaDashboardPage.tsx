@@ -23,7 +23,8 @@ export function EmpresaDashboardPage() {
       if (a.empresa_id !== empresa.id || a.status !== 'oferecida') continue
       if (vistas.has(a.viagem_id)) continue
       const viagem = viagens.find((v) => v.id === a.viagem_id)
-      if (!viagem || !['aguardando_empresa', 'oferta_enviada'].includes(viagem.status)) continue
+      if (!viagem || !['aguardando_empresa', 'oferta_enviada', 'paid'].includes(viagem.status))
+        continue
       vistas.add(a.viagem_id)
       total += 1
     }

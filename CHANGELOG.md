@@ -2,6 +2,46 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-10-21] (noite)
+
+### Corrigido
+
+- Corridas pagas voltam a cair nas **Solicitações** das empresas: elegibilidade de frota não zera mais a lista quando a empresa ainda não tem veículos no store; oferta manual do admin grava na nuvem; pagamento já marcado como pago ainda dispara distribuição.
+- RPC `empresas_para_distribuicao` (migration `20261022012042`) para o cliente ranquear parceiras reais do Supabase (aplicar no projeto remoto).
+- Admin/cliente, ao sincronizar, redistribuem corridas pagas sem oferta.
+
+## [2026-10-21]
+
+### Adicionado
+
+- **Acompanhamento de voo no motorista**: barra de progresso (origem → destino, avião na trilha), minimizar/abrir no estilo das observações, card compacto que empurra o conteúdo para baixo sem encolher o mapa; a página da corrida rola.
+- **Reserva com aeroporto**: dados do voo na etapa 2; opção **Não vou embarcar** (sem número de voo); AviationStack enriquece progresso quando a chave está configurada.
+- **Alertas do cliente**: ícone de carta fechada (dourada) quando não lida e aberta (cinza) quando lida; som curto ao abrir a carta (respeita “Som de notificação” no perfil).
+- **Notificações na nuvem**: tabela `notifications` com pull, push, marcar como lida e Realtime — site e APK passam a compartilhar os alertas do mesmo usuário.
+- Admin: abas Empresas/Veículos, catálogo de fotos da frota e exclusão de empresa.
+- Cliente na reserva: frota das empresas com fotos; veículos sincronizados no Supabase.
+- Admin pode excluir usuários (RPC que limpa FKs).
+
+### Alterado
+
+- Dashboards admin e empresa: “hoje” e “próximas” no fuso da plataforma (`America/Los_Angeles`), não UTC; subtítulo da empresa deixa de mostrar amanhã; “novas solicitações” alinhadas à lista real; volume admin só conta viagens pagas.
+- Motorista: prioriza corrida em andamento na tela atual.
+- Agendamentos do cliente: instante da viagem no fuso LA (próxima viagem correta no Brasil).
+- Polling de corridas 25s com Realtime prioritário; sync de sessão Auth reforçada ao abrir a nuvem.
+- APK publicado **1.0.23** (`cea441c`) em `public/downloads/jemani-android.apk` + `versao-android.json`.
+
+### Observação
+
+Site e APK usam o **mesmo Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens, histórico e agora notificações. Preferências locais (som/vibração) e alguns totais só de demo ainda ficam no aparelho. Stripe continua em teste via Edge Functions.
+
+### Próximos passos
+
+Ainda não feitos. Retomar nesta ordem:
+
+6. **Stripe em produção**, só quando for pedido: chaves live, conta Connect real e tirar o modo teste. Até lá permanece em teste.
+7. **Segurança do banco:** `company_users` e `pickup_locations` ainda estão sem RLS. Não ligar o RLS sem as políticas de acesso. Investigar os `42501` de `trips` e `trip_assignments` sem abrir a política para qualquer usuário.
+8. **Cadastro de motorista/empresa na nuvem de ponta a ponta** e sync de avaliações/comissões registradas, se ainda houver divergência entre aparelhos nesses pontos.
+
 ## [2026-10-15]
 
 ### Adicionado

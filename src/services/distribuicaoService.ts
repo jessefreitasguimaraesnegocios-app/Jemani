@@ -18,13 +18,15 @@ export function empresaElegivel(
     return { ok: false, motivo: 'Categoria de veículo não atendida' }
   }
   if (veiculos) {
-    const temNaFrota = veiculos.some(
-      (veiculo) =>
-        veiculo.empresa_id === empresa.id &&
-        veiculo.categoria_id === categoriaId &&
-        veiculo.status !== 'inativo',
+    const frotaAtiva = veiculos.filter(
+      (veiculo) => veiculo.empresa_id === empresa.id && veiculo.status !== 'inativo',
     )
-    if (!temNaFrota) {
+    // Só exige o carro da categoria quando a empresa já tem frota no store.
+    // Sem veículos listados, vale o cadastro de categorias (evita zerar ofertas).
+    if (
+      frotaAtiva.length > 0 &&
+      !frotaAtiva.some((veiculo) => veiculo.categoria_id === categoriaId)
+    ) {
       return { ok: false, motivo: 'Sem veículo dessa categoria na frota' }
     }
   }
