@@ -145,14 +145,18 @@ export function SincronizarNuvem() {
           !opcoes.completo && ultimaViagemSyncRef.current
             ? ultimaViagemSyncRef.current
             : undefined
-        const [viagensAgora, ofertasAgora] = await Promise.all([
+        const puxarChat = sessao.tipo === 'motorista' || sessao.tipo === 'empresa'
+        const [viagensAgora, ofertasAgora, mensagensAgora] = await Promise.all([
           listarViagensNuvem(desde ? { atualizadoDesde: desde } : undefined),
           // Ofertas: lista completa (tabela pequena via RLS); evita perder mudança de status.
           listarOfertasNuvem(),
+          puxarChat ? listarMensagensNuvem() : Promise.resolve([]),
         ])
         if (!ativoRef.current) return
         for (const viagem of viagensAgora) store().aplicarViagemNuvem(viagem, true)
         for (const oferta of ofertasAgora) store().aplicarOfertaNuvem(oferta, true)
+        // Chat: sem silêncio — se o Realtime falhar, o motorista ainda recebe alerta de mensagem nova.
+        for (const mensagem of mensagensAgora) store().aplicarMensagemNuvem(mensagem, false)
         // Margem de 2s evita perder update entre o fetch e o marcador.
         ultimaViagemSyncRef.current = new Date(Date.now() - 2000).toISOString()
         if (opcoes.comPerfis) await puxarPerfisEFotos(viagensAgora)

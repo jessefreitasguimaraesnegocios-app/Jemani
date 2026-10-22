@@ -2239,20 +2239,7 @@ export const useDemoStore = create<EstadoDemo>()(
         }
         set({ mensagensEmpresa: [...get().mensagensEmpresa, mensagem] })
         void gravarMensagemNuvem(mensagem)
-        const motorista = get().motoristas.find((m) => m.id === motoristaId)
-        const empresa = get().empresas.find((e) => e.id === empresaId)
-        const destino =
-          autor === 'motorista' ? empresa?.usuario_id : motorista?.usuario_id
-        if (!destino) return
-        notificar(
-          set,
-          get,
-          destino,
-          autor === 'motorista' ? motorista?.nome ?? 'Motorista' : empresa?.nome_comercial ?? 'Empresa',
-          limpo,
-          'mensagem',
-          motoristaId,
-        )
+        // Destinatário recebe alerta no aparelho dele via realtime (aplicarMensagemNuvem).
       },
 
       agendarServicoVeiculo: ({ veiculoId, empresaId, tipo, data, horario, observacao, motoristaId }) => {
@@ -2304,18 +2291,30 @@ export const useDemoStore = create<EstadoDemo>()(
         if (get().mensagensEmpresa.some((item) => item.id === mensagem.id)) return
         set({ mensagensEmpresa: [...get().mensagensEmpresa, mensagem] })
         if (silencioso) return
+        const sessao = get().sessaoId
+        if (!sessao) return
         const motorista = get().motoristas.find((m) => m.id === mensagem.motorista_id)
         const empresa = get().empresas.find((e) => e.id === mensagem.empresa_id)
-        const destino = mensagem.autor === 'motorista' ? empresa?.usuario_id : motorista?.usuario_id
-        if (!destino) return
+        const souMotoristaDestino =
+          mensagem.autor === 'empresa' &&
+          get().obterMotoristaDoUsuario(sessao)?.id === mensagem.motorista_id
+        const souEmpresaDestino =
+          mensagem.autor === 'motorista' &&
+          get().obterEmpresaDoUsuario(sessao)?.id === mensagem.empresa_id
+        // Só alerta quem recebeu (empresa → motorista ou o contrário).
+        if (!souMotoristaDestino && !souEmpresaDestino) return
+        const remetente =
+          mensagem.autor === 'motorista'
+            ? motorista?.nome ?? 'Motorista'
+            : empresa?.nome_comercial ?? 'Empresa'
         notificar(
           set,
           get,
-          destino,
-          mensagem.autor === 'motorista' ? motorista?.nome ?? 'Motorista' : empresa?.nome_comercial ?? 'Empresa',
-          mensagem.texto,
+          sessao,
+          'Nova mensagem no chat',
+          `${remetente}: ${mensagem.texto}`,
           'mensagem',
-          mensagem.motorista_id,
+          mensagem.id,
         )
       },
 

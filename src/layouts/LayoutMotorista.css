@@ -25,6 +25,7 @@
 }
 
 .layout-motorista-tracinhos {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -44,6 +45,41 @@
   margin: 0 auto;
   border-radius: 999px;
   background: #f6f1e8;
+}
+
+.layout-motorista-ponto {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #c9a46c;
+  box-shadow: 0 0 0 2px #070707;
+}
+
+.layout-motorista-item-linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.layout-motorista-badge {
+  min-width: 1.35rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: #c9a46c;
+  color: #111;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.layout-motorista-item--ativo .layout-motorista-badge {
+  background: #111;
+  color: #c9a46c;
 }
 
 .layout-motorista-lista {

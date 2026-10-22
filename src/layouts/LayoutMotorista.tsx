@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -26,12 +26,22 @@ export function LayoutMotorista() {
   const navigate = useNavigate()
   const motorista = useDemoStore((s) => s.obterMotoristaDoUsuario(usuario?.id ?? ''))
   const turnos = useDemoStore((s) => s.turnos)
+  const notificacoes = useDemoStore((s) => s.notificacoes)
   const iniciarTurno = useDemoStore((s) => s.iniciarTurno)
   const encerrarTurno = useDemoStore((s) => s.encerrarTurno)
+  const marcarNotificacaoLida = useDemoStore((s) => s.marcarNotificacaoLida)
   const [aba, setAba] = useState<AbaMotorista>('corrida')
   const [menuAberto, setMenuAberto] = useState(false)
   const caixaRef = useRef<HTMLDivElement>(null)
   const online = motorista ? Boolean(turnoAberto(turnos, motorista.id)) : false
+  const alertasChat = useMemo(
+    () =>
+      notificacoes.filter(
+        (n) => n.usuario_id === usuario?.id && n.tipo === 'mensagem' && !n.lida,
+      ),
+    [notificacoes, usuario?.id],
+  )
+  const qtdChat = alertasChat.length
 
   useEffect(() => {
     if (!menuAberto) return
@@ -49,9 +59,22 @@ export function LayoutMotorista() {
     }
   }, [menuAberto])
 
+  useEffect(() => {
+    if (aba !== 'chat' || !usuario?.id || alertasChat.length === 0) return
+    for (const n of alertasChat) marcarNotificacaoLida(n.id)
+  }, [aba, alertasChat, marcarNotificacaoLida, usuario?.id])
+
   function escolherAba(proxima: AbaMotorista) {
     setAba(proxima)
     setMenuAberto(false)
+    if (proxima === 'chat') {
+      const pendentes = useDemoStore
+        .getState()
+        .notificacoes.filter(
+          (n) => n.usuario_id === usuario?.id && n.tipo === 'mensagem' && !n.lida,
+        )
+      for (const n of pendentes) marcarNotificacaoLida(n.id)
+    }
   }
 
   async function aoSair() {
@@ -74,7 +97,7 @@ export function LayoutMotorista() {
         <div className="layout-motorista-menu" ref={caixaRef}>
           <button
             type="button"
-            className="layout-motorista-tracinhos"
+            className={`layout-motorista-tracinhos ${qtdChat > 0 ? 'layout-motorista-tracinhos--alerta' : ''}`}
             aria-label={t('motorista.menu')}
             aria-expanded={menuAberto}
             onClick={() => setMenuAberto((aberto) => !aberto)}
@@ -82,6 +105,7 @@ export function LayoutMotorista() {
             <span />
             <span />
             <span />
+            {qtdChat > 0 && <i className="layout-motorista-ponto" aria-hidden />}
           </button>
           {menuAberto && (
             <div className="layout-motorista-lista">
@@ -97,7 +121,12 @@ export function LayoutMotorista() {
                 className={`layout-motorista-item ${aba === 'chat' ? 'layout-motorista-item--ativo' : ''}`}
                 onClick={() => escolherAba('chat')}
               >
-                {t('motorista.chat')}
+                <span className="layout-motorista-item-linha">
+                  {t('motorista.chat')}
+                  {qtdChat > 0 && (
+                    <span className="layout-motorista-badge">{qtdChat > 9 ? '9+' : qtdChat}</span>
+                  )}
+                </span>
               </button>
               <button
                 type="button"
