@@ -268,10 +268,13 @@ describe('distribuicao por proximidade', () => {
     expect(ordenadas.map((item) => item.empresa.id)).toEqual(['van'])
   })
 
-  it('empresa sem coords é inelegível', () => {
+  it('empresa sem coords continua elegível (distância alta)', () => {
     const e = empresaBase({ id: 'x', latitude: 1, longitude: 1 })
     delete (e as { latitude?: number }).latitude
-    expect(empresaElegivel(e, 'cat1').ok).toBe(false)
+    expect(empresaElegivel(e, 'cat1').ok).toBe(true)
+    const { ordenadas } = ordenarEmpresasPorProximidade([e], origemLat, origemLng, 'cat1')
+    expect(ordenadas).toHaveLength(1)
+    expect(ordenadas[0].distancia_km).toBe(9999)
   })
 })
 

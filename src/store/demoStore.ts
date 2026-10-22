@@ -768,9 +768,14 @@ export const useDemoStore = create<EstadoDemo>()(
               viagens: state.viagens.map((v) => (v.id === viagemId ? atualizada : v)),
               atribuicoes: deduplicarAtribuicoes(state.atribuicoes),
             })
-            void gravarViagemNuvem(atualizada)
+            void gravarViagemNuvem(atualizada).then((gravou) => {
+              if (gravou) void gravarOfertasNuvem(ofertasDaViagem)
+            })
+            // Ofertas locais (IDs demo) podem não existir na nuvem — completa com parceiras reais.
+            void get().completarOfertasComNuvem(viagemId)
             return atualizada
           }
+          void get().completarOfertasComNuvem(viagemId)
           return viagem
         }
 

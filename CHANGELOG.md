@@ -9,6 +9,7 @@ Registro das mudanças do Jemani.
 - Corridas pagas voltam a cair nas **Solicitações** das empresas: elegibilidade de frota não zera mais a lista quando a empresa ainda não tem veículos no store; oferta manual do admin grava na nuvem; pagamento já marcado como pago ainda dispara distribuição.
 - RPC `empresas_para_distribuicao` (migration `20261022012042`) para o cliente ranquear parceiras reais do Supabase (aplicar no projeto remoto).
 - Admin/cliente, ao sincronizar, redistribuem corridas pagas sem oferta.
+- **Travamento “Aguardando empresa” sem aparecer na LA Premier:** ofertas usavam ID demo da seed e eram filtradas na nuvem; migration `20261022015241` redistribui corridas pagas às empresas reais, preenche `categorias_ids` vazias e afrouxa a RPC (sem exigir lat/lng).
 
 ## [2026-10-21]
 

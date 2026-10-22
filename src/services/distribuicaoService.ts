@@ -14,7 +14,10 @@ export function empresaElegivel(
 ): { ok: boolean; motivo?: string } {
   if (empresa.status !== 'ativa') return { ok: false, motivo: 'Empresa inativa' }
   if (!empresa.habilitada_receber) return { ok: false, motivo: 'Não habilitada a receber corridas' }
-  if (!empresa.categorias_ids.includes(categoriaId)) {
+  if (
+    empresa.categorias_ids.length > 0 &&
+    !empresa.categorias_ids.includes(categoriaId)
+  ) {
     return { ok: false, motivo: 'Categoria de veículo não atendida' }
   }
   if (veiculos) {
@@ -29,14 +32,6 @@ export function empresaElegivel(
     ) {
       return { ok: false, motivo: 'Sem veículo dessa categoria na frota' }
     }
-  }
-  if (
-    typeof empresa.latitude !== 'number' ||
-    typeof empresa.longitude !== 'number' ||
-    !Number.isFinite(empresa.latitude) ||
-    !Number.isFinite(empresa.longitude)
-  ) {
-    return { ok: false, motivo: 'Empresa sem coordenadas cadastradas' }
   }
   return { ok: true }
 }
@@ -70,12 +65,14 @@ export function ordenarEmpresasPorProximidade(
       continue
     }
 
-    const distancia_km = calcularDistanciaKm(
-      origemLat,
-      origemLng,
-      empresa.latitude!,
-      empresa.longitude!,
-    )
+    const temCoords =
+      typeof empresa.latitude === 'number' &&
+      typeof empresa.longitude === 'number' &&
+      Number.isFinite(empresa.latitude) &&
+      Number.isFinite(empresa.longitude)
+    const distancia_km = temCoords
+      ? calcularDistanciaKm(origemLat, origemLng, empresa.latitude!, empresa.longitude!)
+      : 9999
     elegiveis.push({ empresa, distancia_km })
   }
 
