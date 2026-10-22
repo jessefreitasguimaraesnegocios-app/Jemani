@@ -105,7 +105,11 @@ export function LayoutMotorista() {
             <span />
             <span />
             <span />
-            {qtdChat > 0 && <i className="layout-motorista-ponto" aria-hidden />}
+            {qtdChat > 0 && (
+              <i className="layout-motorista-alerta" aria-hidden>
+                !
+              </i>
+            )}
           </button>
           {menuAberto && (
             <div className="layout-motorista-lista">

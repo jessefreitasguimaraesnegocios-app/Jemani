@@ -47,15 +47,37 @@
   background: #f6f1e8;
 }
 
-.layout-motorista-ponto {
+.layout-motorista-alerta {
   position: absolute;
-  top: 0.35rem;
-  right: 0.35rem;
-  width: 0.55rem;
-  height: 0.55rem;
+  top: 0.1rem;
+  right: 0.1rem;
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
   border-radius: 999px;
   background: #c9a46c;
+  color: #111;
+  font-style: normal;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
   box-shadow: 0 0 0 2px #070707;
+  animation: layout-motorista-pulso 1.1s ease-in-out infinite;
+}
+
+@keyframes layout-motorista-pulso {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 2px #070707, 0 0 0 0 rgba(201, 164, 108, 0.55);
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.92;
+    box-shadow: 0 0 0 2px #070707, 0 0 0 6px rgba(201, 164, 108, 0);
+  }
 }
 
 .layout-motorista-item-linha {
