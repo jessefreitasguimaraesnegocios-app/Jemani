@@ -1,3 +1,4 @@
+import { montarDataViagem } from '@/services/reservaValidacao'
 import type { StatusViagem, Viagem } from '@/types'
 
 const STATUS_HISTORICO: StatusViagem[] = ['viagem_finalizada', 'cancelada', 'expired']
@@ -18,9 +19,12 @@ export function viagemEmAndamento(viagem: Viagem): boolean {
 }
 
 export function instanteDaViagem(viagem: Viagem): number {
-  const hora = (viagem.horario || '00:00').slice(0, 5)
-  const valor = Date.parse(`${viagem.data_viagem}T${hora}:00`)
-  return Number.isNaN(valor) ? 0 : valor
+  try {
+    const hora = (viagem.horario || '00:00').slice(0, 5)
+    return montarDataViagem(viagem.data_viagem, hora).getTime()
+  } catch {
+    return 0
+  }
 }
 
 export function separarAgendamentos(viagens: Viagem[]) {

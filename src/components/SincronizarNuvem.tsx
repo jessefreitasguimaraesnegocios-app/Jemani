@@ -29,6 +29,11 @@ import {
   listarCatalogoFotosVeiculo,
 } from '@/services/catalogoFotosVeiculo'
 import {
+  assinarNotificacoesNuvem,
+  gravarNotificacoesNuvem,
+  listarNotificacoesNuvem,
+} from '@/services/nuvemNotificacoes'
+import {
   buscarClientesNuvem,
   buscarMotoristasNuvem,
   buscarPerfisNuvem,
@@ -55,6 +60,7 @@ export function SincronizarNuvem() {
     let aoVoltar: (() => void) | null = null
     let canalCorrida: RealtimeChannel | null = null
     let canalOperacao: RealtimeChannel | null = null
+    let canalNotificacoes: RealtimeChannel | null = null
 
     const store = () => useDemoStore.getState()
 
@@ -159,7 +165,7 @@ export function SincronizarNuvem() {
       const senha = store().senhas[sessao.email]
       const entrou = await entrarNuvem(sessao.email, senha ?? '')
       if (!entrou || !ativoRef.current) return
-      const [viagens, ofertas, mensagens, turnos, agendamentos, historicos, frota] =
+      const [viagens, ofertas, mensagens, turnos, agendamentos, historicos, frota, alertas] =
         await Promise.all([
           listarViagensNuvem(),
           listarOfertasNuvem(),
@@ -168,6 +174,7 @@ export function SincronizarNuvem() {
           listarAgendamentosNuvem(),
           listarHistoricosNuvem(),
           listarVeiculosNuvem(),
+          listarNotificacoesNuvem(),
         ])
       if (!ativoRef.current) return
       for (const viagem of viagens) store().aplicarViagemNuvem(viagem, true)
@@ -176,11 +183,15 @@ export function SincronizarNuvem() {
       for (const turno of turnos) store().aplicarTurnoNuvem(turno)
       for (const item of agendamentos) store().aplicarAgendamentoNuvem(item, true)
       for (const item of historicos) store().aplicarHistoricoNuvem(item)
+      for (const alerta of alertas) store().aplicarNotificacaoNuvem(alerta)
       store().aplicarVeiculosNuvem(frota)
       store().limparDuplicatasNuvem()
       store().retomarCorridasPagas()
       ultimaViagemSyncRef.current = new Date().toISOString()
       await puxarPerfisEFotos(viagens)
+      await gravarNotificacoesNuvem(
+        store().notificacoes.filter((item) => item.usuario_id === sessao.id),
+      )
       if (sessao.tipo === 'empresa') {
         const empresa = store().obterEmpresaDoUsuario(sessao.id)
         if (empresa) {
@@ -229,6 +240,9 @@ export function SincronizarNuvem() {
           })
         },
       )
+      canalNotificacoes = assinarNotificacoesNuvem((alerta) => {
+        if (alerta.usuario_id === sessao.id) store().aplicarNotificacaoNuvem(alerta)
+      })
 
       aoVoltar = () => {
         if (document.visibilityState === 'visible') {
@@ -301,6 +315,7 @@ export function SincronizarNuvem() {
       if (aoVoltar) document.removeEventListener('visibilitychange', aoVoltar)
       void canalCorrida?.unsubscribe()
       void canalOperacao?.unsubscribe()
+      void canalNotificacoes?.unsubscribe()
     }
   }, [usuario?.id, usuario?.email])
 

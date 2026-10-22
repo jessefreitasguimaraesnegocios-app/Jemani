@@ -1,6 +1,7 @@
 import { usarIdioma } from '@/i18n/usarIdioma'
+import { dataIsoNoTimezone } from '@/services/reservaValidacao'
 import { useDemoStore } from '@/store/demoStore'
-import { formatarMoeda } from '@/utils/format'
+import { formatarData, formatarMoeda } from '@/utils/format'
 
 export function AdminDashboardPage() {
   const { t, locale } = usarIdioma()
@@ -8,17 +9,22 @@ export function AdminDashboardPage() {
   const empresas = useDemoStore((s) => s.empresas)
   const viagens = useDemoStore((s) => s.viagens)
   const comissoes = useDemoStore((s) => s.comissoes)
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = dataIsoNoTimezone()
 
   const clientes = perfis.filter((p) => p.tipo === 'cliente').length
   const parceiras = empresas.filter((e) => e.status === 'ativa').length
-  const viagensHoje = viagens.filter((v) => v.data_viagem === hoje).length
+  const viagensHoje = viagens.filter(
+    (v) => v.data_viagem === hoje && !['cancelada', 'expired'].includes(v.status),
+  ).length
   const futuras = viagens.filter(
-    (v) => v.data_viagem >= hoje && !['cancelada', 'viagem_finalizada'].includes(v.status),
+    (v) =>
+      v.data_viagem > hoje && !['cancelada', 'viagem_finalizada', 'expired'].includes(v.status),
   ).length
   const concluidas = viagens.filter((v) => v.status === 'viagem_finalizada').length
   const canceladas = viagens.filter((v) => v.status === 'cancelada').length
-  const valorTotal = viagens.reduce((a, v) => a + v.preco_total, 0)
+  const valorTotal = viagens
+    .filter((v) => v.payment_status === 'paid' && v.status !== 'cancelada')
+    .reduce((a, v) => a + v.preco_total, 0)
   const comissao = comissoes.reduce((a, c) => a + c.valor_plataforma, 0)
   const empresasValor = comissoes.reduce((a, c) => a + c.valor_empresa, 0)
 
@@ -36,7 +42,10 @@ export function AdminDashboardPage() {
 
   return (
     <div className="animar-entrada space-y-6">
-      <h1 className="fonte-display text-3xl">{t('admin.dashboard.titulo')}</h1>
+      <div>
+        <h1 className="fonte-display text-3xl">{t('admin.dashboard.titulo')}</h1>
+        <p className="text-sm text-[var(--color-slate)]">{formatarData(hoje, locale)}</p>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <div key={c.label} className="cartao">

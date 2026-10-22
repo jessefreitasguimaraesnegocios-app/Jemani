@@ -1,28 +1,42 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { usarIdioma } from '@/i18n/usarIdioma'
+import { dataIsoNoTimezone } from '@/services/reservaValidacao'
 import { useDemoStore } from '@/store/demoStore'
-import { formatarMoeda } from '@/utils/format'
-import { amanhaIso } from '@/utils/format'
+import { formatarData, formatarMoeda } from '@/utils/format'
 
 export function EmpresaDashboardPage() {
   const { usuario } = useAuth()
+  const { locale } = usarIdioma()
   const empresa = useDemoStore((s) => s.obterEmpresaDoUsuario(usuario?.id ?? ''))
   const atribuicoes = useDemoStore((s) => s.atribuicoes)
   const viagens = useDemoStore((s) => s.viagens)
   const comissoes = useDemoStore((s) => s.comissoes)
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = dataIsoNoTimezone()
 
   if (!empresa) return <div className="cartao">Empresa não vinculada ao usuário.</div>
 
-  const novas = new Set(
-    atribuicoes
-      .filter((a) => a.empresa_id === empresa.id && a.status === 'oferecida')
-      .map((a) => a.viagem_id),
-  ).size
+  const novas = (() => {
+    const vistas = new Set<string>()
+    let total = 0
+    for (const a of atribuicoes) {
+      if (a.empresa_id !== empresa.id || a.status !== 'oferecida') continue
+      if (vistas.has(a.viagem_id)) continue
+      const viagem = viagens.find((v) => v.id === a.viagem_id)
+      if (!viagem || !['aguardando_empresa', 'oferta_enviada'].includes(viagem.status)) continue
+      vistas.add(a.viagem_id)
+      total += 1
+    }
+    return total
+  })()
+
   const minhas = viagens.filter((v) => v.empresa_id === empresa.id)
-  const hojeLista = minhas.filter((v) => v.data_viagem === hoje)
+  const hojeLista = minhas.filter(
+    (v) => v.data_viagem === hoje && !['cancelada', 'expired', 'viagem_finalizada'].includes(v.status),
+  )
   const proximas = minhas.filter(
-    (v) => v.data_viagem >= hoje && !['viagem_finalizada', 'cancelada'].includes(v.status),
+    (v) =>
+      v.data_viagem > hoje && !['viagem_finalizada', 'cancelada', 'expired'].includes(v.status),
   )
   const concluidas = minhas.filter((v) => v.status === 'viagem_finalizada')
   const comissoesEmp = comissoes.filter((c) => c.empresa_id === empresa.id)
@@ -34,15 +48,15 @@ export function EmpresaDashboardPage() {
     { label: 'Viagens hoje', valor: String(hojeLista.length) },
     { label: 'Próximas viagens', valor: String(proximas.length) },
     { label: 'Concluídas', valor: String(concluidas.length) },
-    { label: 'Valor a receber', valor: formatarMoeda(aReceber) },
-    { label: 'Comissão plataforma', valor: formatarMoeda(comissaoPlat) },
+    { label: 'Valor a receber', valor: formatarMoeda(aReceber, locale) },
+    { label: 'Comissão plataforma', valor: formatarMoeda(comissaoPlat, locale) },
   ]
 
   return (
     <div className="animar-entrada space-y-6">
       <div>
         <h1 className="fonte-display text-3xl">{empresa.nome_comercial}</h1>
-        <p className="text-sm text-[var(--color-slate)]">Dashboard · {amanhaIso()}</p>
+        <p className="text-sm text-[var(--color-slate)]">Dashboard · {formatarData(hoje, locale)}</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) =>

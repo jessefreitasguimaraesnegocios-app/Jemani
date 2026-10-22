@@ -1,3 +1,5 @@
+import { dataIsoNoTimezone } from '@/services/reservaValidacao'
+
 export function gerarId(): string {
   return crypto.randomUUID()
 }
@@ -42,9 +44,13 @@ export function formatarDuracao(ms: number | null): string {
 }
 
 export function amanhaIso(): string {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
+  const hoje = dataIsoNoTimezone()
+  const [ano, mes, dia] = hoje.split('-').map(Number)
+  const amanha = new Date(Date.UTC(ano, mes - 1, dia + 1))
+  const y = amanha.getUTCFullYear()
+  const m = String(amanha.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(amanha.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 export function cn(...classes: Array<string | false | null | undefined>): string {

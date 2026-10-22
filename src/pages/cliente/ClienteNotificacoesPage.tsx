@@ -1,12 +1,16 @@
 import { useMemo } from 'react'
+import { Mail, MailOpen } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { useDemoStore } from '@/store/demoStore'
+import { dispararFeedbackAbrirCarta } from '@/utils/feedbackAlerta'
+import './ClienteNotificacoesPage.css'
 
 export function ClienteNotificacoesPage() {
   const { usuario } = useAuth()
   const { t, locale } = usarIdioma()
   const todas = useDemoStore((s) => s.notificacoes)
+  const configuracoes = useDemoStore((s) => s.configuracoes)
   const notificacoes = useMemo(() => {
     const mapa = new Map<string, (typeof todas)[number]>()
     for (const n of todas) {
@@ -19,6 +23,11 @@ export function ClienteNotificacoesPage() {
   }, [todas, usuario?.id])
   const marcar = useDemoStore((s) => s.marcarNotificacaoLida)
 
+  function abrirCarta(id: string, jaLida: boolean) {
+    if (!jaLida) dispararFeedbackAbrirCarta(configuracoes)
+    marcar(id)
+  }
+
   return (
     <div className="animar-entrada space-y-4">
       <h1 className="fonte-display text-3xl">{t('cliente.alertas.titulo')}</h1>
@@ -29,14 +38,20 @@ export function ClienteNotificacoesPage() {
         <button
           key={n.id}
           type="button"
-          className={`cartao w-full text-left ${n.lida ? 'opacity-70' : ''}`}
-          onClick={() => marcar(n.id)}
+          className={`cartao alerta-item w-full text-left ${n.lida ? 'alerta-item--lida opacity-70' : ''}`}
+          onClick={() => abrirCarta(n.id, n.lida)}
+          aria-label={n.lida ? 'Alerta lido' : 'Alerta não lido'}
         >
-          <p className="font-medium">{n.titulo}</p>
-          <p className="mt-1 text-sm text-[var(--color-slate)]">{n.mensagem}</p>
-          <p className="mt-2 text-xs text-[var(--color-slate)]">
-            {new Date(n.created_at).toLocaleString(locale)}
-          </p>
+          <span className="alerta-item-icone" aria-hidden="true">
+            {n.lida ? <MailOpen size={22} strokeWidth={2} /> : <Mail size={22} strokeWidth={2.25} />}
+          </span>
+          <span className="alerta-item-corpo">
+            <p className="font-medium">{n.titulo}</p>
+            <p className="mt-1 text-sm text-[var(--color-slate)]">{n.mensagem}</p>
+            <p className="mt-2 text-xs text-[var(--color-slate)]">
+              {new Date(n.created_at).toLocaleString(locale)}
+            </p>
+          </span>
         </button>
       ))}
     </div>

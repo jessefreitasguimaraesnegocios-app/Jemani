@@ -1,0 +1,21 @@
+.alerta-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+}
+
+.alerta-item-icone {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: var(--color-gold-deep, #c9a46c);
+}
+
+.alerta-item--lida .alerta-item-icone {
+  color: rgba(90, 90, 90, 0.55);
+}
+
+.alerta-item-corpo {
+  min-width: 0;
+  flex: 1;
+}

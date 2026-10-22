@@ -36,6 +36,10 @@ import {
 } from '@/services/nuvemCorrida'
 import { apagarVeiculoNuvem, gravarVeiculoNuvem } from '@/services/nuvemVeiculos'
 import {
+  gravarNotificacaoNuvem,
+  marcarNotificacaoLidaNuvem,
+} from '@/services/nuvemNotificacoes'
+import {
   apagarAgendamentoNuvem,
   gravarAgendamentoNuvem,
   gravarHistoricoNuvem,
@@ -168,6 +172,7 @@ interface EstadoDemo {
   aplicarAgendamentoNuvem: (item: AgendamentoVeiculo, silencioso?: boolean) => void
   removerAgendamentoNuvem: (id: string) => void
   aplicarHistoricoNuvem: (item: HistoricoStatus) => void
+  aplicarNotificacaoNuvem: (item: Notificacao) => void
   limparDuplicatasNuvem: () => void
   aplicarPerfisNuvem: (perfis: Perfil[]) => void
   substituirClientesNuvem: (clientes: Perfil[]) => void
@@ -297,6 +302,7 @@ function notificar(
   mensagem: string,
   tipo: string,
   referenciaId?: string,
+  silencioso = false,
 ) {
   const chave = chaveNotificacao({
     usuario_id: usuarioId,
@@ -316,8 +322,13 @@ function notificar(
     created_at: agoraIso(),
   }
   set(() => ({ notificacoes: [n, ...get().notificacoes] }))
-  if (get().sessaoId === usuarioId) dispararFeedbackAlerta(get().configuracoes, tipo)
-  emitirAvisoSistema(titulo, mensagem)
+  if (get().sessaoId === usuarioId) {
+    if (!silencioso) {
+      dispararFeedbackAlerta(get().configuracoes, tipo)
+      emitirAvisoSistema(titulo, mensagem)
+    }
+    void gravarNotificacaoNuvem(n)
+  }
 }
 
 function registrarHistorico(
@@ -1623,6 +1634,28 @@ export const useDemoStore = create<EstadoDemo>()(
         set((s) => ({
           notificacoes: s.notificacoes.map((n) => (n.id === id ? { ...n, lida: true } : n)),
         }))
+        void marcarNotificacaoLidaNuvem(id)
+      },
+
+      aplicarNotificacaoNuvem: (item) => {
+        const lista = get().notificacoes
+        const chave = chaveNotificacao(item)
+        const indice = lista.findIndex(
+          (n) => n.id === item.id || chaveNotificacao(n) === chave,
+        )
+        if (indice >= 0) {
+          const atual = lista[indice]
+          const mesclada: Notificacao = {
+            ...atual,
+            ...item,
+            lida: atual.lida || item.lida,
+          }
+          set({
+            notificacoes: lista.map((n, i) => (i === indice ? mesclada : n)),
+          })
+          return
+        }
+        set({ notificacoes: deduplicarNotificacoes([item, ...lista]) })
       },
 
       registrarAudit: (acao, usuarioId, entidadeTipo, entidadeId, metadados) => {
@@ -1902,7 +1935,7 @@ export const useDemoStore = create<EstadoDemo>()(
             : [fundida, ...get().viagens],
         })
 
-        if (silencioso || !statusMudou || !atual) return
+        if (!statusMudou || !atual) return
         const sessao = get().sessaoId
         if (!sessao) return
 
@@ -1918,7 +1951,16 @@ export const useDemoStore = create<EstadoDemo>()(
         }
         const titulo = avisos[fundida.status]
         if (titulo && sessao === fundida.cliente_id) {
-          notificar(set, get, sessao, titulo, `Atualização da viagem ${fundida.codigo}.`, 'status', fundida.id)
+          notificar(
+            set,
+            get,
+            sessao,
+            titulo,
+            `Atualização da viagem ${fundida.codigo}.`,
+            'status',
+            fundida.id,
+            silencioso,
+          )
         }
 
         const motorista = get().motoristas.find((m) => m.id === fundida.motorista_id)
@@ -1931,6 +1973,7 @@ export const useDemoStore = create<EstadoDemo>()(
             `${viagem.codigo}: ${viagem.origem} → ${viagem.destino}`,
             'atribuicao',
             viagem.id,
+            silencioso,
           )
         }
       },
@@ -1953,7 +1996,7 @@ export const useDemoStore = create<EstadoDemo>()(
         set({
           atribuicoes: deduplicarAtribuicoes([mesclada, ...semDuplicata]),
         })
-        if (silencioso || jaExistia) return
+        if (jaExistia) return
         const empresa = get().empresas.find((e) => e.id === oferta.empresa_id)
         const sessao = get().sessaoId
         if (!empresa || empresa.usuario_id !== sessao || oferta.status !== 'oferecida') return
@@ -1968,6 +2011,7 @@ export const useDemoStore = create<EstadoDemo>()(
             : 'Uma nova corrida foi oferecida à sua empresa.',
           'nova_solicitacao',
           oferta.viagem_id,
+          silencioso,
         )
       },
 

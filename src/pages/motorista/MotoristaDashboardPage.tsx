@@ -53,19 +53,26 @@ export function MotoristaDashboardPage() {
   const todasViagens = useDemoStore((s) => s.viagens)
   const turnos = useDemoStore((s) => s.turnos)
   const atualizarPosicaoTurno = useDemoStore((s) => s.atualizarPosicaoTurno)
-  const viagens = useMemo(
-    () =>
-      todasViagens
-        .filter(
-          (v) =>
-            v.motorista_id === motorista?.id &&
-            NA_TELA_DO_MOTORISTA.includes(v.status),
-        )
-        .sort((a, b) =>
-          `${a.data_viagem}${a.horario}`.localeCompare(`${b.data_viagem}${b.horario}`),
-        ),
-    [todasViagens, motorista?.id],
-  )
+  const viagens = useMemo(() => {
+    const prioridadeStatus: Partial<Record<StatusViagem, number>> = {
+      viagem_em_andamento: 0,
+      passageiro_embarcou: 1,
+      motorista_chegou: 2,
+      motorista_a_caminho: 3,
+      motorista_atribuido: 4,
+    }
+    return todasViagens
+      .filter(
+        (v) =>
+          v.motorista_id === motorista?.id && NA_TELA_DO_MOTORISTA.includes(v.status),
+      )
+      .sort((a, b) => {
+        const pa = prioridadeStatus[a.status] ?? 99
+        const pb = prioridadeStatus[b.status] ?? 99
+        if (pa !== pb) return pa - pb
+        return `${a.data_viagem}${a.horario}`.localeCompare(`${b.data_viagem}${b.horario}`)
+      })
+  }, [todasViagens, motorista?.id])
   const perfis = useDemoStore((s) => s.perfis)
   const empresas = useDemoStore((s) => s.empresas)
   const atualizarStatus = useDemoStore((s) => s.atualizarStatus)

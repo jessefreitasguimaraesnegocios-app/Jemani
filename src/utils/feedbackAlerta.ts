@@ -52,6 +52,61 @@ function tocarSom() {
   else iniciar()
 }
 
+function tocarSomAbrirCarta() {
+  const ctx = obterContexto()
+  if (!ctx) return
+  const iniciar = () => {
+    const agora = ctx.currentTime
+    const amostras = Math.floor(ctx.sampleRate * 0.12)
+    const buffer = ctx.createBuffer(1, amostras, ctx.sampleRate)
+    const canal = buffer.getChannelData(0)
+    for (let i = 0; i < amostras; i++) {
+      canal[i] = (Math.random() * 2 - 1) * (1 - i / amostras)
+    }
+    const ruido = ctx.createBufferSource()
+    ruido.buffer = buffer
+    const filtro = ctx.createBiquadFilter()
+    filtro.type = 'bandpass'
+    filtro.frequency.value = 1800
+    filtro.Q.value = 0.85
+    const ganhoRuido = ctx.createGain()
+    ganhoRuido.gain.setValueAtTime(0.0001, agora)
+    ganhoRuido.gain.exponentialRampToValueAtTime(0.07, agora + 0.018)
+    ganhoRuido.gain.exponentialRampToValueAtTime(0.0001, agora + 0.13)
+    ruido.connect(filtro)
+    filtro.connect(ganhoRuido)
+    ganhoRuido.connect(ctx.destination)
+    ruido.start(agora)
+    ruido.stop(agora + 0.14)
+
+    const osc = ctx.createOscillator()
+    const ganho = ctx.createGain()
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(880, agora + 0.04)
+    osc.frequency.exponentialRampToValueAtTime(640, agora + 0.26)
+    ganho.gain.setValueAtTime(0.0001, agora + 0.04)
+    ganho.gain.exponentialRampToValueAtTime(0.055, agora + 0.07)
+    ganho.gain.exponentialRampToValueAtTime(0.0001, agora + 0.3)
+    osc.connect(ganho)
+    ganho.connect(ctx.destination)
+    osc.start(agora + 0.04)
+    osc.stop(agora + 0.32)
+  }
+  if (ctx.state === 'suspended') void ctx.resume().then(iniciar)
+  else iniciar()
+}
+
+export function dispararFeedbackAbrirCarta(configs: ConfigLike[]) {
+  if (typeof window === 'undefined') return
+  if (ler(configs, 'som_notificacao') !== 'true') return
+  prepararFeedback()
+  try {
+    tocarSomAbrirCarta()
+  } catch {
+    /* o aparelho bloqueou o áudio */
+  }
+}
+
 function padraoVibracao(tipo: string) {
   if (tipo === 'mensagem') return [90, 50, 90]
   if (tipo === 'atribuicao' || tipo === 'nova_solicitacao' || tipo === 'status' || tipo === 'pagamento') {

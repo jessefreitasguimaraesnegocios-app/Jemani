@@ -101,8 +101,13 @@ export async function cadastrarClienteNuvem(dados: {
 export async function entrarNuvem(email: string, senha: string) {
   const db = cliente()
   if (!db || !email) return false
+  const emailLimpo = email.toLowerCase()
   const atual = await db.auth.getSession()
-  if (atual.data.session?.user.email?.toLowerCase() === email.toLowerCase()) return true
+  if (atual.data.session?.user.email?.toLowerCase() === emailLimpo) {
+    const refrescou = await db.auth.refreshSession()
+    if (!refrescou.error && refrescou.data.session) return true
+    return true
+  }
   if (!senha) return false
   const { error } = await db.auth.signInWithPassword({ email, password: senha })
   return !error
