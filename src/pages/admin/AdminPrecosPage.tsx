@@ -12,19 +12,33 @@ export function AdminPrecosPage() {
     preco_minimo: regra?.preco_minimo ?? 150,
     adicional_horario_noturno: regra?.adicional_horario_noturno ?? 40,
     distancia_padrao_km: regra?.distancia_padrao_km ?? 40,
+    preco_por_hora: regra?.preco_por_hora ?? 0,
+    franquia_milhas_por_hora: regra?.franquia_milhas_por_hora ?? 20,
+    preco_por_milha_excedente: regra?.preco_por_milha_excedente ?? 0,
+    duracao_minima_minutos: regra?.duracao_minima_minutos ?? 120,
+    duracao_maxima_minutos: regra?.duracao_maxima_minutos ?? 720,
+    regra_extensao: regra?.regra_extensao ?? '',
+    regra_cancelamento: regra?.regra_cancelamento ?? '',
+    cobrancas_adicionais: regra?.cobrancas_adicionais ?? '',
   })
 
   if (!regra) return <div className="cartao">Nenhuma regra de preço.</div>
 
   function salvar(e: FormEvent) {
     e.preventDefault()
-    atualizarRegraPreco(regra!.id, form)
+    atualizarRegraPreco(regra!.id, {
+      ...form,
+      pacotes_minutos: regra!.pacotes_minutos?.length
+        ? regra!.pacotes_minutos
+        : [120, 180, 240, 300, 360, 480],
+    })
   }
 
   return (
     <div className="animar-entrada space-y-4">
       <h1 className="fonte-display text-3xl">{t('admin.precos.titulo')}</h1>
       <form className="cartao grid gap-3 sm:grid-cols-2" onSubmit={salvar}>
+        <p className="sm:col-span-2 text-sm font-medium">ONE-WAY RIDE</p>
         {(
           [
             ['preco_base', 'Preço base (USD)'],
@@ -45,13 +59,52 @@ export function AdminPrecosPage() {
             />
           </div>
         ))}
+
+        <p className="sm:col-span-2 mt-2 text-sm font-medium">HOURLY CHAUFFEUR</p>
+        <p className="sm:col-span-2 text-xs text-[var(--color-slate)]">
+          Deixe preço por hora em 0 para manter hourly desabilitado. Não invente tarifas — use o
+          valor comercial real.
+        </p>
+        {(
+          [
+            ['preco_por_hora', 'Preço por hora (USD) — 0 = off'],
+            ['franquia_milhas_por_hora', 'Franquia de milhas / hora'],
+            ['preco_por_milha_excedente', 'USD por milha excedente'],
+            ['duracao_minima_minutos', 'Duração mínima (min)'],
+            ['duracao_maxima_minutos', 'Duração máxima (min)'],
+          ] as const
+        ).map(([key, label]) => (
+          <div key={key}>
+            <label className="rotulo">{label}</label>
+            <input
+              className="campo"
+              type="number"
+              step="0.01"
+              value={form[key]}
+              onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) })}
+            />
+          </div>
+        ))}
+        {(
+          [
+            ['regra_extensao', 'Regra de extensão'],
+            ['regra_cancelamento', 'Regra de cancelamento'],
+            ['cobrancas_adicionais', 'Cobranças adicionais'],
+          ] as const
+        ).map(([key, label]) => (
+          <div key={key} className="sm:col-span-2">
+            <label className="rotulo">{label}</label>
+            <textarea
+              className="campo min-h-20"
+              value={form[key]}
+              onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+            />
+          </div>
+        ))}
         <button type="submit" className="btn-primario sm:col-span-2">
           Salvar regra de preço
         </button>
       </form>
-      <p className="text-sm text-[var(--color-slate)]">
-        Sem API de mapas, o MVP usa a distância padrão configurável para calcular o preço.
-      </p>
     </div>
   )
 }

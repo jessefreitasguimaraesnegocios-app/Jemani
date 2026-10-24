@@ -53,6 +53,19 @@ import {
   permitirSimulacaoPagamentoDev,
   simularPagamentoDev,
 } from '@/services/pagamentoService'
+import {
+  calcularPrecoExtensao,
+  calcularPrecoHourly,
+  DESTINO_HOURLY,
+  ehHourly,
+  formatarExtensaoConfirmada,
+  hourlyConfigurado,
+  montarJanelaHourly,
+  motoristaTemConflito,
+  OPCOES_EXTENSAO_MINUTOS,
+  avisoPendente,
+  rotuloDuracao,
+} from '@/services/hourlyChauffeur'
 import { calcularPrecoViagem } from '@/services/precoService'
 import {
   enderecoTemCoordenadas,
@@ -63,15 +76,18 @@ import type {
   AtribuicaoViagem,
   AgendamentoVeiculo,
   AuditLog,
+  AvisoHourly,
   CategoriaVeiculo,
   Comissao,
   ConfiguracaoPlataforma,
   Empresa,
   EnderecoLocal,
+  ExtensaoViagem,
   FotoCatalogoVeiculo,
   HistoricoDistribuicao,
   HistoricoStatus,
   MensagemEmpresa,
+  ModalidadeViagem,
   Motorista,
   Notificacao,
   Pagamento,
@@ -91,12 +107,14 @@ import { agoraIso, gerarCodigoViagem, gerarId } from '@/utils/format'
 import { abrirGmailCompose, corpoOfertaCorrida } from '@/utils/gmailCompose'
 
 export interface DadosReserva {
+  modalidade?: ModalidadeViagem
   origemEndereco: EnderecoLocal
-  destinoEndereco: EnderecoLocal
+  destinoEndereco?: EnderecoLocal | null
   data_viagem: string
   horario: string
   passageiros: number
   categoria_id: string
+  duracao_minutos?: number
   malas?: number
   numero_voo?: string
   nome_passageiro?: string
@@ -126,6 +144,8 @@ interface EstadoDemo {
   turnos: TurnoMotorista[]
   mensagensEmpresa: MensagemEmpresa[]
   agendamentosVeiculo: AgendamentoVeiculo[]
+  extensoesViagem: ExtensaoViagem[]
+  avisosHourly: AvisoHourly[]
   veiculosExcluidos: string[]
   fotosCatalogoVeiculo: FotoCatalogoVeiculo[]
 
@@ -146,7 +166,25 @@ interface EstadoDemo {
     horario: string,
     distanciaKm?: number,
   ) => ReturnType<typeof calcularPrecoViagem>
+  calcularPrecoHourlyReserva: (
+    categoriaId: string,
+    horario: string,
+    duracaoMinutos: number,
+  ) => ReturnType<typeof calcularPrecoHourly>
   criarViagem: (clienteId: string, dados: DadosReserva) => Viagem
+  solicitarExtensaoHourly: (
+    viagemId: string,
+    minutos: number,
+    clienteId: string,
+    idempotencyKey?: string,
+  ) => ExtensaoViagem
+  confirmarExtensaoHourlyPaga: (
+    extensaoId: string,
+    usuarioId: string,
+    opcoes?: { provider?: Pagamento['provider'] },
+  ) => Promise<ExtensaoViagem>
+  aplicarExtensaoNuvem: (ext: ExtensaoViagem) => void
+  verificarAvisosHourly: (agora?: Date) => void
   simularPagamentoEDistribuir: (viagemId: string, usuarioId: string) => Promise<Viagem>
   confirmarPagamentoStripe: (
     viagemId: string,
@@ -233,6 +271,13 @@ interface EstadoDemo {
   removerAgendamentoVeiculo: (id: string) => void
 }
 
+function normalizarViagem(v: Viagem): Viagem {
+  return {
+    ...v,
+    modalidade: v.modalidade === 'hourly' ? 'hourly' : 'one_way',
+  }
+}
+
 function estadoInicial() {
   const dados = criarDadosIniciais()
   return {
@@ -240,6 +285,9 @@ function estadoInicial() {
     veiculosExcluidos: [] as string[],
     fotosCatalogoVeiculo: fundirCatalogoComFrota([]),
     ...dados,
+    viagens: (dados.viagens ?? []).map(normalizarViagem),
+    extensoesViagem: dados.extensoesViagem ?? [],
+    avisosHourly: dados.avisosHourly ?? [],
   }
 }
 
@@ -487,20 +535,39 @@ export const useDemoStore = create<EstadoDemo>()(
         })
       },
 
+      calcularPrecoHourlyReserva: (categoriaId, horario, duracaoMinutos) => {
+        const state = get()
+        const categoria = state.categorias.find((c) => c.id === categoriaId)
+        const regra = state.regrasPreco.find((r) => r.ativo)
+        if (!categoria || !regra) throw new Error('Configuração de preço indisponível')
+        return calcularPrecoHourly({
+          categoria,
+          horario,
+          regra,
+          configuracoes: state.configuracoes,
+          duracaoMinutos,
+        })
+      },
+
       criarViagem: (clienteId, dados) => {
+        const modalidade: ModalidadeViagem = dados.modalidade === 'hourly' ? 'hourly' : 'one_way'
         const checkOrigem = enderecoProntoParaReserva(dados.origemEndereco)
         if (!checkOrigem.ok) {
           throw new Error(`Embarque: ${checkOrigem.mensagem}`)
         }
-        const checkDestino = enderecoProntoParaReserva(dados.destinoEndereco)
-        if (!checkDestino.ok) {
-          throw new Error(`Destino: ${checkDestino.mensagem}`)
-        }
         if (!enderecoTemCoordenadas(dados.origemEndereco)) {
           throw new Error('Selecione um endereço de origem válido com coordenadas.')
         }
-        if (!enderecoTemCoordenadas(dados.destinoEndereco)) {
-          throw new Error('Selecione um endereço de destino válido com coordenadas.')
+
+        if (modalidade === 'one_way') {
+          if (!dados.destinoEndereco) throw new Error('Informe o destino.')
+          const checkDestino = enderecoProntoParaReserva(dados.destinoEndereco)
+          if (!checkDestino.ok) {
+            throw new Error(`Destino: ${checkDestino.mensagem}`)
+          }
+          if (!enderecoTemCoordenadas(dados.destinoEndereco)) {
+            throw new Error('Selecione um endereço de destino válido com coordenadas.')
+          }
         }
 
         const validacao = validarAntecedenciaMinima(dados.data_viagem, dados.horario)
@@ -509,46 +576,83 @@ export const useDemoStore = create<EstadoDemo>()(
         }
 
         const state = get()
-        const distancia =
-          dados.distancia_km ??
-          calcularDistanciaKm(
-            dados.origemEndereco.latitude,
-            dados.origemEndereco.longitude,
-            dados.destinoEndereco.latitude,
-            dados.destinoEndereco.longitude,
-          )
-
-        const preco = get().calcularPreco(dados.categoria_id, dados.horario, distancia)
         const agora = agoraIso()
+        let precoTotal: ReturnType<typeof calcularPrecoViagem> & {
+          franquia_milhas?: number
+        }
+        let janela: { inicioIso: string; fimIso: string } | undefined
+        let destinoTexto: string
+        let destinoEndereco: EnderecoLocal | undefined
+        let destinoLat: number | undefined
+        let destinoLng: number | undefined
+        let destinoPlaceId: string | undefined
+        let duracaoMinutos: number | undefined
+        let franquiaMilhas: number | undefined
+
+        if (modalidade === 'hourly') {
+          duracaoMinutos = dados.duracao_minutos
+          if (!duracaoMinutos) throw new Error('Selecione a duração contratada.')
+          const calc = get().calcularPrecoHourlyReserva(
+            dados.categoria_id,
+            dados.horario,
+            duracaoMinutos,
+          )
+          precoTotal = calc
+          franquiaMilhas = calc.franquia_milhas
+          janela = montarJanelaHourly(dados.data_viagem, dados.horario, duracaoMinutos)
+          destinoTexto = DESTINO_HOURLY
+        } else {
+          const destino = dados.destinoEndereco!
+          const distancia =
+            dados.distancia_km ??
+            calcularDistanciaKm(
+              dados.origemEndereco.latitude,
+              dados.origemEndereco.longitude,
+              destino.latitude,
+              destino.longitude,
+            )
+          precoTotal = get().calcularPreco(dados.categoria_id, dados.horario, distancia)
+          destinoTexto = destino.formatted
+          destinoEndereco = destino
+          destinoLat = destino.latitude
+          destinoLng = destino.longitude
+          destinoPlaceId = destino.place_id
+        }
+
         const viagem: Viagem = {
           id: gerarId(),
           codigo: gerarCodigoViagem(),
           cliente_id: clienteId,
           categoria_id: dados.categoria_id,
+          modalidade,
           origem: dados.origemEndereco.formatted,
-          destino: dados.destinoEndereco.formatted,
+          destino: destinoTexto,
           origem_endereco: dados.origemEndereco,
-          destino_endereco: dados.destinoEndereco,
+          destino_endereco: destinoEndereco,
           origem_lat: dados.origemEndereco.latitude,
           origem_lng: dados.origemEndereco.longitude,
-          destino_lat: dados.destinoEndereco.latitude,
-          destino_lng: dados.destinoEndereco.longitude,
+          destino_lat: destinoLat,
+          destino_lng: destinoLng,
           origem_place_id: dados.origemEndereco.place_id,
-          destino_place_id: dados.destinoEndereco.place_id,
+          destino_place_id: destinoPlaceId,
           data_viagem: dados.data_viagem,
           horario: dados.horario,
+          duracao_contratada_minutos: duracaoMinutos,
+          inicio_agendado: janela?.inicioIso,
+          fim_agendado: janela?.fimIso,
+          franquia_milhas: franquiaMilhas,
           passageiros: dados.passageiros,
           malas: dados.malas,
           numero_voo: dados.numero_voo,
           nome_passageiro: dados.nome_passageiro,
           observacoes: dados.observacoes,
-          distancia_km: preco.distancia_km,
-          preco_base: preco.preco_base,
-          taxas: preco.taxas,
-          preco_total: preco.total,
-          comissao_percentual: preco.comissao_percentual,
-          valor_plataforma: preco.valor_plataforma,
-          valor_empresa: preco.valor_empresa,
+          distancia_km: precoTotal.distancia_km,
+          preco_base: precoTotal.preco_base,
+          taxas: precoTotal.taxas,
+          preco_total: precoTotal.total,
+          comissao_percentual: precoTotal.comissao_percentual,
+          valor_plataforma: precoTotal.valor_plataforma,
+          valor_empresa: precoTotal.valor_empresa,
           status: 'pending_payment',
           payment_status: 'pending_payment',
           version: 1,
@@ -607,6 +711,289 @@ export const useDemoStore = create<EstadoDemo>()(
         })
 
         return viagem
+      },
+
+      solicitarExtensaoHourly: (viagemId, minutos, clienteId, idempotencyKey) => {
+        const state = get()
+        const viagem = state.viagens.find((v) => v.id === viagemId)
+        if (!viagem || !ehHourly(viagem)) throw new Error('Reserva hourly não encontrada.')
+        if (viagem.cliente_id !== clienteId) throw new Error('Sem permissão para esta reserva.')
+        if (!['viagem_em_andamento', 'passageiro_embarcou', 'motorista_chegou', 'motorista_a_caminho', 'motorista_atribuido', 'empresa_confirmada'].includes(viagem.status)) {
+          throw new Error('Extensão disponível apenas com a reserva em operação.')
+        }
+        if (!(OPCOES_EXTENSAO_MINUTOS as readonly number[]).includes(minutos)) {
+          throw new Error('Opção de extensão inválida.')
+        }
+        const chave = idempotencyKey?.trim() || `ext-${viagemId}-${minutos}-${Date.now()}`
+        const existente = state.extensoesViagem.find(
+          (e) => e.viagem_id === viagemId && e.idempotency_key === chave,
+        )
+        if (existente) return existente
+        if (state.extensoesViagem.some((e) => e.viagem_id === viagemId && e.status === 'pendente')) {
+          throw new Error('Já existe uma extensão aguardando pagamento.')
+        }
+
+        const categoria = state.categorias.find((c) => c.id === viagem.categoria_id)
+        const regra = state.regrasPreco.find((r) => r.ativo)
+        if (!categoria || !regra || !hourlyConfigurado(regra)) {
+          throw new Error('Preço por hora não configurado.')
+        }
+        const preco = calcularPrecoExtensao({
+          categoria,
+          regra,
+          configuracoes: state.configuracoes,
+          minutos,
+        })
+        const fimBase = viagem.fim_agendado ?? agoraIso()
+        const fimNovo = new Date(new Date(fimBase).getTime() + minutos * 60_000).toISOString()
+        if (
+          viagem.motorista_id &&
+          motoristaTemConflito({
+            viagens: state.viagens,
+            motoristaId: viagem.motorista_id,
+            viagemId: viagem.id,
+            fimAtual: fimBase,
+            novoFimIso: fimNovo,
+          })
+        ) {
+          throw new Error('Motorista indisponível para esta extensão (conflito de agenda).')
+        }
+
+        const ext: ExtensaoViagem = {
+          id: gerarId(),
+          viagem_id: viagemId,
+          minutos,
+          preco_adicional: preco.total,
+          valor_plataforma: preco.valor_plataforma,
+          valor_empresa: preco.valor_empresa,
+          status: 'pendente',
+          idempotency_key: chave,
+          fim_anterior: fimBase,
+          fim_novo: fimNovo,
+          solicitado_por: clienteId,
+          created_at: agoraIso(),
+        }
+        set({ extensoesViagem: [ext, ...state.extensoesViagem] })
+        return ext
+      },
+
+      confirmarExtensaoHourlyPaga: async (extensaoId, usuarioId, opcoes) => {
+        const state = get()
+        const ext = state.extensoesViagem.find((e) => e.id === extensaoId)
+        if (!ext) throw new Error('Extensão não encontrada.')
+        if (ext.status === 'pago') return ext
+        if (ext.status !== 'pendente') throw new Error('Extensão não está pendente.')
+        const viagem = state.viagens.find((v) => v.id === ext.viagem_id)
+        if (!viagem || viagem.cliente_id !== usuarioId) throw new Error('Sem permissão.')
+        if (
+          viagem.motorista_id &&
+          motoristaTemConflito({
+            viagens: state.viagens,
+            motoristaId: viagem.motorista_id,
+            viagemId: viagem.id,
+            fimAtual: ext.fim_anterior ?? viagem.fim_agendado,
+            novoFimIso: ext.fim_novo ?? agoraIso(),
+          })
+        ) {
+          set({
+            extensoesViagem: state.extensoesViagem.map((e) =>
+              e.id === extensaoId
+                ? { ...e, status: 'cancelado', motivo_recusa: 'conflito_agenda_motorista' }
+                : e,
+            ),
+          })
+          throw new Error('Motorista indisponível para a extensão.')
+        }
+
+        const agora = agoraIso()
+        const pagamento: Pagamento = {
+          id: gerarId(),
+          booking_id: viagem.id,
+          payment_id: `ext_${ext.id.slice(0, 8)}`,
+          amount: ext.preco_adicional,
+          platform_fee: ext.valor_plataforma,
+          company_amount: ext.valor_empresa,
+          status: 'pago',
+          payment_method: opcoes?.provider === 'stripe' ? 'stripe' : 'teste',
+          provider: opcoes?.provider ?? 'teste',
+          created_at: agora,
+          updated_at: agora,
+        }
+
+        const confirmada: ExtensaoViagem = {
+          ...ext,
+          status: 'pago',
+          payment_id: pagamento.id,
+          confirmed_at: agora,
+        }
+        const atualizada: Viagem = {
+          ...viagem,
+          duracao_contratada_minutos:
+            (viagem.duracao_contratada_minutos ?? 0) + ext.minutos,
+          fim_agendado: ext.fim_novo,
+          preco_total: viagem.preco_total + ext.preco_adicional,
+          valor_plataforma: viagem.valor_plataforma + ext.valor_plataforma,
+          valor_empresa: viagem.valor_empresa + ext.valor_empresa,
+          franquia_milhas:
+            (viagem.franquia_milhas ?? 0) +
+            (ext.minutos / 60) *
+              Number(state.regrasPreco.find((r) => r.ativo)?.franquia_milhas_por_hora ?? 0),
+          updated_at: agora,
+          version: viagem.version + 1,
+        }
+
+        set({
+          pagamentos: [pagamento, ...state.pagamentos],
+          extensoesViagem: state.extensoesViagem.map((e) =>
+            e.id === extensaoId ? confirmada : e,
+          ),
+          viagens: state.viagens.map((v) => (v.id === viagem.id ? atualizada : v)),
+        })
+        void gravarViagemNuvem(atualizada)
+
+        const texto = formatarExtensaoConfirmada(confirmada)
+        notificar(set, get, viagem.cliente_id, 'RESERVATION EXTENDED', texto, 'status', confirmada.id)
+        if (viagem.motorista_id) {
+          const motorista = get().motoristas.find((m) => m.id === viagem.motorista_id)
+          if (motorista?.usuario_id) {
+            notificar(
+              set,
+              get,
+              motorista.usuario_id,
+              'RESERVATION EXTENDED',
+              texto,
+              'status',
+              confirmada.id,
+            )
+          }
+        }
+        const empresa = get().empresas.find((e) => e.id === viagem.empresa_id)
+        if (empresa?.usuario_id) {
+          notificar(set, get, empresa.usuario_id, 'RESERVATION EXTENDED', texto, 'status', confirmada.id)
+        }
+        for (const admin of get().perfis.filter((p) => p.tipo === 'admin' && p.ativo)) {
+          notificar(set, get, admin.id, 'Extensão hourly confirmada', texto, 'sistema', confirmada.id)
+        }
+        return confirmada
+      },
+
+      aplicarExtensaoNuvem: (ext) => {
+        const lista = get().extensoesViagem
+        if (lista.some((e) => e.id === ext.id)) {
+          set({
+            extensoesViagem: lista.map((e) => (e.id === ext.id ? { ...e, ...ext } : e)),
+          })
+          return
+        }
+        set({ extensoesViagem: [ext, ...lista] })
+        if (ext.status === 'pago' && get().sessaoId) {
+          const sessao = get().sessaoId!
+          const viagem = get().viagens.find((v) => v.id === ext.viagem_id)
+          const motorista = viagem?.motorista_id
+            ? get().motoristas.find((m) => m.id === viagem.motorista_id)
+            : undefined
+          if (
+            viagem &&
+            (viagem.cliente_id === sessao ||
+              motorista?.usuario_id === sessao ||
+              get().empresas.find((e) => e.id === viagem.empresa_id)?.usuario_id === sessao)
+          ) {
+            notificar(
+              set,
+              get,
+              sessao,
+              'RESERVATION EXTENDED',
+              formatarExtensaoConfirmada(ext),
+              'status',
+              ext.id,
+            )
+          }
+        }
+      },
+
+      verificarAvisosHourly: (agora = new Date()) => {
+        const state = get()
+        for (const viagem of state.viagens) {
+          if (!ehHourly(viagem) || !viagem.fim_agendado) continue
+          const marca = avisoPendente(viagem, state.avisosHourly, agora)
+          if (!marca) {
+            const restam = Math.ceil(
+              (new Date(viagem.fim_agendado).getTime() - agora.getTime()) / 60_000,
+            )
+            if (
+              restam <= 0 &&
+              !viagem.horario_vencido_em &&
+              !['viagem_finalizada', 'cancelada', 'expired'].includes(viagem.status)
+            ) {
+              const atualizada = {
+                ...viagem,
+                horario_vencido_em: agora.toISOString(),
+                updated_at: agoraIso(),
+                version: viagem.version + 1,
+              }
+              set({
+                viagens: get().viagens.map((v) => (v.id === viagem.id ? atualizada : v)),
+              })
+              notificar(
+                set,
+                get,
+                viagem.cliente_id,
+                'Período contratado encerrado',
+                `A reserva ${viagem.codigo} atingiu o horário oficial de término. Oriente a conclusão segura do atendimento.`,
+                'status',
+                `${viagem.id}|vencido|${viagem.fim_agendado}`,
+              )
+              if (viagem.motorista_id) {
+                const m = get().motoristas.find((x) => x.id === viagem.motorista_id)
+                if (m?.usuario_id) {
+                  notificar(
+                    set,
+                    get,
+                    m.usuario_id,
+                    'Período contratado encerrado',
+                    `Reserva ${viagem.codigo}: horário oficial vencido. Conclua com segurança — não abandone o passageiro.`,
+                    'status',
+                    `${viagem.id}|vencido-mot|${viagem.fim_agendado}`,
+                  )
+                }
+              }
+            }
+            continue
+          }
+          const aviso: AvisoHourly = {
+            id: gerarId(),
+            viagem_id: viagem.id,
+            minutos_restantes: marca,
+            fim_agendado_ref: viagem.fim_agendado,
+            created_at: agoraIso(),
+          }
+          set({ avisosHourly: [aviso, ...get().avisosHourly] })
+          const titulo = `${marca} minutos restantes`
+          const msg = `Sua reserva hourly ${viagem.codigo} termina em cerca de ${marca} minutos (${rotuloDuracao(viagem.duracao_contratada_minutos ?? 0)} contratados).`
+          notificar(
+            set,
+            get,
+            viagem.cliente_id,
+            titulo,
+            msg,
+            'status',
+            `${viagem.id}|aviso|${marca}|${viagem.fim_agendado}`,
+          )
+          if (viagem.motorista_id) {
+            const m = get().motoristas.find((x) => x.id === viagem.motorista_id)
+            if (m?.usuario_id) {
+              notificar(
+                set,
+                get,
+                m.usuario_id,
+                titulo,
+                `Hourly ${viagem.codigo}: ${marca} min restantes.`,
+                'status',
+                `${viagem.id}|aviso-mot|${marca}|${viagem.fim_agendado}`,
+              )
+            }
+          }
+        }
       },
 
       simularPagamentoEDistribuir: async (viagemId, usuarioId) => {
@@ -2553,6 +2940,26 @@ export const useDemoStore = create<EstadoDemo>()(
           atribuicoes: deduplicarAtribuicoes(base.atribuicoes ?? []),
           historicos: deduplicarHistoricos(base.historicos ?? []),
           notificacoes: deduplicarNotificacoes(base.notificacoes ?? []),
+          viagens: (base.viagens ?? []).map(normalizarViagem),
+          extensoesViagem: Array.isArray(
+            (persistido as { extensoesViagem?: ExtensaoViagem[] }).extensoesViagem,
+          )
+            ? (persistido as { extensoesViagem: ExtensaoViagem[] }).extensoesViagem
+            : [],
+          avisosHourly: Array.isArray((persistido as { avisosHourly?: AvisoHourly[] }).avisosHourly)
+            ? (persistido as { avisosHourly: AvisoHourly[] }).avisosHourly
+            : [],
+          regrasPreco: (base.regrasPreco ?? []).map((r) => ({
+            ...r,
+            preco_por_hora: Number(r.preco_por_hora ?? 0),
+            franquia_milhas_por_hora: Number(r.franquia_milhas_por_hora ?? 0),
+            preco_por_milha_excedente: Number(r.preco_por_milha_excedente ?? 0),
+            duracao_minima_minutos: Number(r.duracao_minima_minutos ?? 120),
+            duracao_maxima_minutos: Number(r.duracao_maxima_minutos ?? 720),
+            pacotes_minutos: Array.isArray(r.pacotes_minutos)
+              ? r.pacotes_minutos
+              : [120, 180, 240, 300, 360, 480],
+          })),
         }
       },
       merge: (persistido, atual) => {
@@ -2566,6 +2973,10 @@ export const useDemoStore = create<EstadoDemo>()(
           atribuicoes?: AtribuicaoViagem[]
           historicos?: HistoricoStatus[]
           notificacoes?: Notificacao[]
+          extensoesViagem?: ExtensaoViagem[]
+          avisosHourly?: AvisoHourly[]
+          viagens?: Viagem[]
+          regrasPreco?: RegraPreco[]
         }
         const { senhas: _senhas, ...semSenha } = bruto ?? {}
         const base = completarCatalogo({
@@ -2579,6 +2990,8 @@ export const useDemoStore = create<EstadoDemo>()(
           turnos: Array.isArray(bruto?.turnos) ? bruto.turnos : [],
           mensagensEmpresa: Array.isArray(bruto?.mensagensEmpresa) ? bruto.mensagensEmpresa : [],
           agendamentosVeiculo: Array.isArray(bruto?.agendamentosVeiculo) ? bruto.agendamentosVeiculo : [],
+          extensoesViagem: Array.isArray(bruto?.extensoesViagem) ? bruto.extensoesViagem : [],
+          avisosHourly: Array.isArray(bruto?.avisosHourly) ? bruto.avisosHourly : [],
           fotosCatalogoVeiculo: fundirCatalogoComFrota(
             Array.isArray(bruto?.fotosCatalogoVeiculo)
               ? bruto.fotosCatalogoVeiculo
@@ -2587,6 +3000,18 @@ export const useDemoStore = create<EstadoDemo>()(
           atribuicoes: deduplicarAtribuicoes(base.atribuicoes ?? []),
           historicos: deduplicarHistoricos(base.historicos ?? []),
           notificacoes: deduplicarNotificacoes(base.notificacoes ?? []),
+          viagens: (base.viagens ?? []).map(normalizarViagem),
+          regrasPreco: (base.regrasPreco ?? []).map((r) => ({
+            ...r,
+            preco_por_hora: Number(r.preco_por_hora ?? 0),
+            franquia_milhas_por_hora: Number(r.franquia_milhas_por_hora ?? 0),
+            preco_por_milha_excedente: Number(r.preco_por_milha_excedente ?? 0),
+            duracao_minima_minutos: Number(r.duracao_minima_minutos ?? 120),
+            duracao_maxima_minutos: Number(r.duracao_maxima_minutos ?? 720),
+            pacotes_minutos: Array.isArray(r.pacotes_minutos)
+              ? r.pacotes_minutos
+              : [120, 180, 240, 300, 360, 480],
+          })),
         }
       },
     },

@@ -1,0 +1,76 @@
+.hourly-resumo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.95rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(201, 164, 108, 0.35);
+  background: rgba(201, 164, 108, 0.08);
+}
+
+.hourly-resumo-selo {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #c9a46c;
+}
+
+.hourly-resumo-grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem 0.75rem;
+}
+
+.hourly-resumo-grade p {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.hourly-resumo-grade span {
+  font-size: 0.7rem;
+  color: var(--color-slate, #8a847a);
+}
+
+.hourly-resumo-grade strong {
+  font-size: 0.92rem;
+}
+
+.hourly-resumo-urgente {
+  color: #c45b3a;
+}
+
+.hourly-resumo-hist-titulo {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.hourly-resumo-hist-item {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.hourly-resumo-ext-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.hourly-resumo-dica,
+.hourly-resumo-msg,
+.hourly-resumo-vencido {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-slate, #8a847a);
+}
+
+.hourly-resumo-vencido {
+  color: #c45b3a;
+  font-weight: 600;
+}

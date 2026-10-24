@@ -4,35 +4,29 @@ Marketplace de transporte executivo nos **Estados Unidos** e no **mundo** — en
 
 A plataforma capta clientes, distribui solicitações para empresas parceiras e registra a comissão.
 
-## Novidades — 21/10/2026
+## Novidades — 23/10/2026
 
-### Motorista
+### Hourly Chauffeur
 
-- Barra de **progresso do voo** (origem → destino), minimizar/abrir e mapa que não encolhe ao expandir o card.
-- Prioriza a corrida **em andamento** na tela atual.
+- Modalidade **por hora** na reserva (além do transfer one-way): duração contratada, franquia de milhas e extensão com pagamento.
+- Admin configura preço/hora e regras em **Preços** (`0` = hourly desligado).
+- Migration: `supabase/migrations/20261023220000_hourly_chauffeur.sql` (aplicar no SQL Editor do Supabase Jemani).
 
-### Cliente
+### Cobertura e chat
 
-- Dados do voo na **etapa 2** da reserva, com **Não vou embarcar**.
-- Alertas com **carta** (fechada/dourada → aberta/cinza) e **som** ao ler.
-- Frota das empresas na reserva, com fotos.
-
-### Admin / Empresa
-
-- Dashboards com datas no fuso de Los Angeles e contagens alinhadas à operação real.
-- Admin: abas Empresas/Veículos, catálogo de fotos e exclusão de empresa/usuário.
+- Endereços e aeroportos no **mundo todo** (Mapbox sem limite de LA).
+- Motorista recebe alerta quando a empresa manda mensagem no chat (**!** pulsando no menu).
 
 ### Entre aparelhos (site + APK)
 
-- Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens e **notificações**.
-- Corridas pagas caem nas **Solicitações** das empresas (ofertas em `trip_assignments`). Aplicar no Supabase a migration `empresas_para_distribuicao` se o SQL Editor ainda não tiver a RPC.
-- APK atual: **1.0.26** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
+- Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens e notificações.
+- APK atual: **1.0.30** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
 
 Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
 
 ### Próximos passos
 
-A ordem está no [`CHANGELOG.md`](CHANGELOG.md) (21/10/2026):
+A ordem está no [`CHANGELOG.md`](CHANGELOG.md):
 
 6. Stripe em produção só quando for pedido. Continua em teste.
 7. Políticas de acesso antes de ligar o RLS em `company_users` e `pickup_locations`.

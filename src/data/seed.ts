@@ -4,10 +4,12 @@ import type {
   Avaliacao,
   AtribuicaoViagem,
   AuditLog,
+  AvisoHourly,
   CategoriaVeiculo,
   Comissao,
   ConfiguracaoPlataforma,
   Empresa,
+  ExtensaoViagem,
   HistoricoDistribuicao,
   HistoricoStatus,
   Motorista,
@@ -438,6 +440,8 @@ export function criarDadosIniciais(): {
   turnos: TurnoMotorista[]
   mensagensEmpresa: MensagemEmpresa[]
   agendamentosVeiculo: AgendamentoVeiculo[]
+  extensoesViagem: ExtensaoViagem[]
+  avisosHourly: AvisoHourly[]
 } {
   const categorias = sincronizarFrota([], agora)
 
@@ -1035,6 +1039,19 @@ export function criarDadosIniciais(): {
       horario_noturno_inicio: '22:00',
       horario_noturno_fim: '06:00',
       distancia_padrao_km: 20,
+      // 0 = Hourly desabilitado até o admin configurar preço real
+      preco_por_hora: 0,
+      franquia_milhas_por_hora: 20,
+      preco_por_milha_excedente: 0,
+      duracao_minima_minutos: 120,
+      duracao_maxima_minutos: 720,
+      pacotes_minutos: [120, 180, 240, 300, 360, 480],
+      regra_extensao:
+        'Extensões de +30 min, +1h ou +2h sujeitas a disponibilidade do motorista e pagamento confirmado.',
+      regra_cancelamento:
+        'Cancelamento segue a política da plataforma. Após o início do serviço hourly, o valor contratado não é reembolsável.',
+      cobrancas_adicionais:
+        'Pedágios, estacionamento e milhas acima da franquia podem ser cobrados conforme a regra ativa.',
       ativo: true,
       created_at: agora,
       updated_at: agora,
@@ -1062,6 +1079,7 @@ export function criarDadosIniciais(): {
       motorista_id: v.motorista_id,
       veiculo_id: v.veiculo_id,
       categoria_id: v.categoria_id,
+      modalidade: v.modalidade ?? 'one_way',
       origem: v.origem,
       destino: v.destino,
       origem_lat: 33.9416,
@@ -1131,6 +1149,8 @@ export function criarDadosIniciais(): {
     turnos: [],
     mensagensEmpresa: [],
     agendamentosVeiculo: [],
+    extensoesViagem: [],
+    avisosHourly: [],
   })
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AgendamentoCarro } from '@/components/AgendamentoCarro'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { ChatEmpresa } from '@/components/ChatEmpresa'
+import { HourlyResumo } from '@/components/HourlyResumo'
 import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { linkMapa, MapaCorrida } from '@/components/MapaCorrida'
 import { ModalFinalizarViagem } from '@/components/ModalFinalizarViagem'
@@ -169,13 +170,17 @@ export function MotoristaDashboardPage() {
         <>
           <header className="corrida-topo">
             <div>
-              <p className="corrida-kicker">Corrida atual</p>
+              <p className="corrida-kicker">
+                {proxima.modalidade === 'hourly' ? 'HOURLY CHAUFFEUR' : 'Corrida atual'}
+              </p>
               <h1 className="corrida-codigo">{proxima.codigo}</h1>
             </div>
             <BadgeStatus status={proxima.status} />
           </header>
 
           <ClimaCorrida viagem={proxima} gpsLat={gpsLat} gpsLng={gpsLng} />
+
+          <HourlyResumo viagem={proxima} papel="motorista" />
 
           <MapaCorrida
             origemLat={proxima.origem_lat}
@@ -184,7 +189,11 @@ export function MotoristaDashboardPage() {
             destinoLng={proxima.destino_lng}
             motoristaLat={proxima.motorista_lat ?? gpsLat}
             motoristaLng={proxima.motorista_lng ?? gpsLng}
-            legenda={`${proxima.origem} até ${proxima.destino}`}
+            legenda={
+              proxima.modalidade === 'hourly'
+                ? `Pickup: ${proxima.origem}`
+                : `${proxima.origem} até ${proxima.destino}`
+            }
           />
 
           <PainelVoo viagem={proxima} />
@@ -198,15 +207,17 @@ export function MotoristaDashboardPage() {
             <span>Embarque</span>
             <strong>{proxima.origem}</strong>
           </a>
-          <a
-            className="corrida-endereco"
-            href={linkMapa(proxima.destino, proxima.destino_lat, proxima.destino_lng)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <span>Destino</span>
-            <strong>{proxima.destino}</strong>
-          </a>
+          {proxima.modalidade !== 'hourly' && (
+            <a
+              className="corrida-endereco"
+              href={linkMapa(proxima.destino, proxima.destino_lat, proxima.destino_lng)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span>Destino</span>
+              <strong>{proxima.destino}</strong>
+            </a>
+          )}
 
           <ObservacoesCorrida observacoes={proxima.observacoes} />
 

@@ -195,6 +195,8 @@ export interface ConfiguracaoPlataforma {
   updated_at: string
 }
 
+export type ModalidadeViagem = 'one_way' | 'hourly'
+
 export interface RegraPreco {
   id: string
   nome: string
@@ -205,9 +207,45 @@ export interface RegraPreco {
   horario_noturno_inicio: string
   horario_noturno_fim: string
   distancia_padrao_km: number
+  /** USD/hora — 0 = Hourly Chauffeur desabilitado */
+  preco_por_hora: number
+  franquia_milhas_por_hora: number
+  preco_por_milha_excedente: number
+  duracao_minima_minutos: number
+  duracao_maxima_minutos: number
+  pacotes_minutos: number[]
+  regra_extensao?: string
+  regra_cancelamento?: string
+  cobrancas_adicionais?: string
   ativo: boolean
   created_at: string
   updated_at: string
+}
+
+export interface ExtensaoViagem {
+  id: string
+  viagem_id: string
+  minutos: number
+  preco_adicional: number
+  valor_plataforma: number
+  valor_empresa: number
+  payment_id?: string
+  status: 'pendente' | 'pago' | 'falhou' | 'cancelado' | 'expirado'
+  idempotency_key: string
+  fim_anterior?: string
+  fim_novo?: string
+  solicitado_por?: string
+  motivo_recusa?: string
+  created_at: string
+  confirmed_at?: string
+}
+
+export interface AvisoHourly {
+  id: string
+  viagem_id: string
+  minutos_restantes: 20 | 15 | 10 | 5
+  fim_agendado_ref: string
+  created_at: string
 }
 
 export interface Viagem {
@@ -218,6 +256,8 @@ export interface Viagem {
   motorista_id?: string
   veiculo_id?: string
   categoria_id: string
+  /** one_way = transfer; hourly = chauffeur por período */
+  modalidade: ModalidadeViagem
   origem: string
   destino: string
   origem_endereco?: EnderecoLocal
@@ -232,6 +272,13 @@ export interface Viagem {
   destino_place_id?: string
   data_viagem: string
   horario: string
+  duracao_contratada_minutos?: number
+  inicio_agendado?: string
+  fim_agendado?: string
+  franquia_milhas?: number
+  milhas_percorridas?: number
+  horario_vencido_em?: string
+  conclusao_efetiva_em?: string
   passageiros: number
   malas?: number
   numero_voo?: string

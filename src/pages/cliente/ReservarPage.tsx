@@ -7,6 +7,13 @@ import type { ChaveTraducao } from '@/i18n/mensagens'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { obterRotaRua, type RotaRua } from '@/services/mapasService'
 import {
+  hourlyConfigurado,
+  listarPacotesMinutos,
+  montarJanelaHourly,
+  rotuloDuracao,
+  type ModalidadeReserva,
+} from '@/services/hourlyChauffeur'
+import {
   listarHorariosDisponiveis,
   primeiraDataDisponivel,
   validarAntecedenciaMinima,
@@ -48,11 +55,18 @@ export function ReservarPage() {
     [todasCategorias, veiculos, empresas],
   )
   const calcularPreco = useDemoStore((s) => s.calcularPreco)
+  const calcularPrecoHourlyReserva = useDemoStore((s) => s.calcularPrecoHourlyReserva)
   const criarViagem = useDemoStore((s) => s.criarViagem)
+  const regraPreco = useDemoStore((s) => s.regrasPreco.find((r) => r.ativo))
 
+  const [modalidade, setModalidade] = useState<ModalidadeReserva>('one_way')
+  const [duracaoMinutos, setDuracaoMinutos] = useState(120)
   const [etapa, setEtapa] = useState(0)
   const [origemEndereco, setOrigemEndereco] = useState<EnderecoLocal | null>(null)
   const [destinoEndereco, setDestinoEndereco] = useState<EnderecoLocal | null>(null)
+  const ehHourly = modalidade === 'hourly'
+  const hourlyOk = hourlyConfigurado(regraPreco)
+  const pacotesHourly = regraPreco ? listarPacotesMinutos(regraPreco) : [120]
   const [dataViagem, setDataViagem] = useState(dataInicial)
   const [horario, setHorario] = useState(horariosIniciais[0] ?? '18:00')
   const [agoraTick, setAgoraTick] = useState(() => Date.now())
@@ -80,9 +94,16 @@ export function ReservarPage() {
   }, [])
 
   const embarqueAeroporto = enderecoEhAeroporto(origemEndereco)
-  const destinoAeroporto = enderecoEhAeroporto(destinoEndereco)
+  const destinoAeroporto = !ehHourly && enderecoEhAeroporto(destinoEndereco)
   const origemPronta = enderecoProntoParaReserva(origemEndereco).ok
-  const destinoPronto = enderecoProntoParaReserva(destinoEndereco).ok
+  const destinoPronto = ehHourly ? true : enderecoProntoParaReserva(destinoEndereco).ok
+
+  useEffect(() => {
+    if (!ehHourly) return
+    if (!pacotesHourly.includes(duracaoMinutos)) {
+      setDuracaoMinutos(pacotesHourly[0] ?? 120)
+    }
+  }, [ehHourly, pacotesHourly, duracaoMinutos])
 
   useEffect(() => {
     if (!categoriaId && categorias[0]) setCategoriaId(categorias[0].id)
@@ -136,7 +157,7 @@ export function ReservarPage() {
   const [rota, setRota] = useState<RotaRua | null>(null)
 
   useEffect(() => {
-    if (!origemPronta || !destinoPronto || !origemEndereco || !destinoEndereco) {
+    if (ehHourly || !origemPronta || !destinoPronto || !origemEndereco || !destinoEndereco) {
       setRota(null)
       return
     }
@@ -149,6 +170,7 @@ export function ReservarPage() {
       ativo = false
     }
   }, [
+    ehHourly,
     origemPronta,
     destinoPronto,
     origemEndereco,
@@ -159,7 +181,7 @@ export function ReservarPage() {
     destinoEndereco?.longitude,
   ])
 
-  const aguardandoRota = Boolean(origemPronta && destinoPronto && !rota)
+  const aguardandoRota = Boolean(!ehHourly && origemPronta && destinoPronto && !rota)
 
   const validacaoHorario = useMemo(
     () => validarAntecedenciaMinima(dataViagem, horario, agora),
@@ -168,15 +190,39 @@ export function ReservarPage() {
 
   const categoria = categorias.find((c) => c.id === categoriaId)
 
+  const janelaHourly = useMemo(() => {
+    if (!ehHourly || !dataViagem || !horario || !duracaoMinutos) return null
+    try {
+      return montarJanelaHourly(dataViagem, horario, duracaoMinutos)
+    } catch {
+      return null
+    }
+  }, [ehHourly, dataViagem, horario, duracaoMinutos])
+
   const preco = useMemo(() => {
     if (!categoriaId || !horario) return null
-    if (origemEndereco && destinoEndereco && !rota) return null
     try {
+      if (ehHourly) {
+        if (!hourlyOk) return null
+        return calcularPrecoHourlyReserva(categoriaId, horario, duracaoMinutos)
+      }
+      if (origemEndereco && destinoEndereco && !rota) return null
       return calcularPreco(categoriaId, horario, rota?.distanciaKm)
     } catch {
       return null
     }
-  }, [calcularPreco, categoriaId, horario, origemEndereco, destinoEndereco, rota])
+  }, [
+    calcularPreco,
+    calcularPrecoHourlyReserva,
+    categoriaId,
+    horario,
+    origemEndereco,
+    destinoEndereco,
+    rota,
+    ehHourly,
+    hourlyOk,
+    duracaoMinutos,
+  ])
 
   function montarObservacoes(): string | undefined {
     const partes: string[] = []
@@ -194,27 +240,38 @@ export function ReservarPage() {
   function avancar() {
     setErro('')
     if (etapa === 0) {
+      if (ehHourly && !hourlyOk) {
+        setErro(
+          'Hourly Chauffeur ainda sem preço por hora. Peça ao admin para configurar em Preços.',
+        )
+        return
+      }
       const checkOrigem = enderecoProntoParaReserva(origemEndereco)
       if (!checkOrigem.ok) {
         setErro(`Embarque: ${checkOrigem.mensagem}`)
         return
       }
-      const checkDestino = enderecoProntoParaReserva(destinoEndereco)
-      if (!checkDestino.ok) {
-        setErro(`Destino: ${checkDestino.mensagem}`)
-        return
-      }
-      if (
-        origemEndereco!.latitude === destinoEndereco!.latitude &&
-        origemEndereco!.longitude === destinoEndereco!.longitude
-      ) {
-        setErro('Origem e destino precisam ser diferentes.')
+      if (!ehHourly) {
+        const checkDestino = enderecoProntoParaReserva(destinoEndereco)
+        if (!checkDestino.ok) {
+          setErro(`Destino: ${checkDestino.mensagem}`)
+          return
+        }
+        if (
+          origemEndereco!.latitude === destinoEndereco!.latitude &&
+          origemEndereco!.longitude === destinoEndereco!.longitude
+        ) {
+          setErro('Origem e destino precisam ser diferentes.')
+          return
+        }
+      } else if (!duracaoMinutos || !pacotesHourly.includes(duracaoMinutos)) {
+        setErro('Selecione a duração contratada (mínimo 2 horas).')
         return
       }
     }
     if (etapa === 1) {
       if (!dataViagem || !horario) {
-        setErro('Informe data e horário')
+        setErro(ehHourly ? 'Informe data e horário de início' : 'Informe data e horário')
         return
       }
       if (horariosDisponiveis.length === 0) {
@@ -268,7 +325,7 @@ export function ReservarPage() {
         setErro('Informe o nome do passageiro principal.')
         return
       }
-      if (malas < 0 || malas > MAX_MALAS) {
+      if (!ehHourly && (malas < 0 || malas > MAX_MALAS)) {
         setErro(`Quantidade de malas deve ser entre 0 e ${MAX_MALAS}.`)
         return
       }
@@ -283,7 +340,12 @@ export function ReservarPage() {
 
   function confirmar(e: FormEvent) {
     e.preventDefault()
-    if (!usuario || !preco || !origemEndereco || !destinoEndereco || !rota) return
+    if (!usuario || !preco || !origemEndereco) return
+    if (!ehHourly && (!destinoEndereco || !rota)) return
+    if (ehHourly && !hourlyOk) {
+      setErro('Hourly Chauffeur sem preço configurado.')
+      return
+    }
     const check = validarAntecedenciaMinima(dataViagem, horario)
     if (!check.valido || !listarHorariosDisponiveis(dataViagem).includes(horario)) {
       setErro(check.mensagem ?? 'Horário inválido — mínimo de 4 horas de antecedência.')
@@ -297,17 +359,22 @@ export function ReservarPage() {
     setErro('')
     try {
       const viagem = criarViagem(usuario.id, {
+        modalidade,
         origemEndereco,
-        destinoEndereco,
+        destinoEndereco: ehHourly ? null : destinoEndereco,
         data_viagem: dataViagem,
         horario,
         passageiros,
         categoria_id: categoriaId,
-        malas,
-        numero_voo: pedirDadosVoo && numeroVoo.trim() ? numeroVoo.trim().toUpperCase() : undefined,
+        duracao_minutos: ehHourly ? duracaoMinutos : undefined,
+        malas: ehHourly ? undefined : malas,
+        numero_voo:
+          !ehHourly && pedirDadosVoo && numeroVoo.trim()
+            ? numeroVoo.trim().toUpperCase()
+            : undefined,
         nome_passageiro: nomePassageiro.trim(),
         observacoes: montarObservacoes(),
-        distancia_km: rota.distanciaKm,
+        distancia_km: ehHourly ? undefined : rota?.distanciaKm,
       })
       navigate(`/app/viagens/${viagem.id}`)
     } catch (err) {
@@ -328,6 +395,35 @@ export function ReservarPage() {
         })}
       </p>
 
+      <div className="reserva-modalidade" role="group" aria-label="Modalidade da reserva">
+        <button
+          type="button"
+          className={`reserva-modalidade-btn ${!ehHourly ? 'reserva-modalidade-btn--ativo' : ''}`}
+          onClick={() => {
+            setModalidade('one_way')
+            setErro('')
+          }}
+        >
+          ONE-WAY RIDE
+        </button>
+        <button
+          type="button"
+          className={`reserva-modalidade-btn ${ehHourly ? 'reserva-modalidade-btn--ativo' : ''}`}
+          onClick={() => {
+            setModalidade('hourly')
+            setErro('')
+          }}
+        >
+          HOURLY CHAUFFEUR
+        </button>
+      </div>
+      {ehHourly && !hourlyOk && (
+        <p className="reserva-hourly-aviso">
+          Hourly Chauffeur ainda sem preço por hora na tabela administrativa. ONE-WAY continua
+          disponível.
+        </p>
+      )}
+
       <div className="mt-4 mb-6 flex gap-1">
         {ETAPAS.map((nome, i) => (
           <div
@@ -341,26 +437,51 @@ export function ReservarPage() {
         {etapa === 0 && (
           <>
             <CampoEndereco
-              rotulo="Embarque (origem)"
+              rotulo={ehHourly ? 'Embarque (pickup)' : 'Embarque (origem)'}
               valor={origemEndereco}
               onChange={definirOrigem}
               placeholder="Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU..."
               papel="origem"
             />
+            {ehHourly && (
+              <div>
+                <label className="rotulo" htmlFor="reserva-duracao">
+                  Duração contratada (mín. 2h)
+                </label>
+                <select
+                  id="reserva-duracao"
+                  className="campo"
+                  value={duracaoMinutos}
+                  onChange={(e) => setDuracaoMinutos(Number(e.target.value))}
+                >
+                  {pacotesHourly.map((m) => (
+                    <option key={m} value={m}>
+                      {rotuloDuracao(m)}
+                    </option>
+                  ))}
+                </select>
+                <p className="reserva-horario-dica">
+                  Destino final não é exigido — o motorista fica à disposição pelo período
+                  contratado (as directed).
+                </p>
+              </div>
+            )}
             {embarqueAeroporto && (
               <p className="text-xs text-[var(--color-success)]">
                 Embarque no aeroporto: o carro busca no nível de desembarque (chegadas) do terminal.
                 Os dados do voo entram na próxima etapa.
               </p>
             )}
-            <CampoEndereco
-              rotulo="Destino"
-              valor={destinoEndereco}
-              onChange={definirDestino}
-              placeholder="Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU..."
-              papel="destino"
-            />
-            {destinoAeroporto && !embarqueAeroporto && (
+            {!ehHourly && (
+              <CampoEndereco
+                rotulo="Destino"
+                valor={destinoEndereco}
+                onChange={definirDestino}
+                placeholder="Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU..."
+                papel="destino"
+              />
+            )}
+            {!ehHourly && destinoAeroporto && !embarqueAeroporto && (
               <p className="text-xs text-[var(--color-slate)]">
                 Destino no aeroporto: o desembarque do carro fica no nível de embarque (saídas) do
                 terminal escolhido.
@@ -521,9 +642,13 @@ export function ReservarPage() {
         {etapa === 3 && (
           <>
             <div className="rounded-2xl border border-[var(--color-line)] bg-[rgba(184,149,108,0.08)] p-3 text-sm">
-              <p className="font-medium text-[var(--color-ink)]">Trecho</p>
+              <p className="font-medium text-[var(--color-ink)]">
+                {ehHourly ? 'HOURLY CHAUFFEUR' : 'ONE-WAY RIDE'}
+              </p>
               <p className="mt-1 text-[var(--color-slate)]">
-                {origemEndereco?.formatted ?? '—'} → {destinoEndereco?.formatted ?? '—'}
+                {ehHourly
+                  ? `${origemEndereco?.formatted ?? '—'} · ${rotuloDuracao(duracaoMinutos)}`
+                  : `${origemEndereco?.formatted ?? '—'} → ${destinoEndereco?.formatted ?? '—'}`}
               </p>
             </div>
 
@@ -571,23 +696,25 @@ export function ReservarPage() {
               />
             </div>
 
-            <div>
-              <label className="rotulo" htmlFor="malas">
-                Quantidade de malas
-              </label>
-              <input
-                id="malas"
-                type="number"
-                min={0}
-                max={MAX_MALAS}
-                className="campo"
-                value={malas}
-                onChange={(e) => setMalas(Number(e.target.value))}
-              />
-              <p className="mt-1 text-xs text-[var(--color-slate)]">
-                Inclua bagagem de mão e despachada (máx. {MAX_MALAS}).
-              </p>
-            </div>
+            {!ehHourly && (
+              <div>
+                <label className="rotulo" htmlFor="malas">
+                  Quantidade de malas
+                </label>
+                <input
+                  id="malas"
+                  type="number"
+                  min={0}
+                  max={MAX_MALAS}
+                  className="campo"
+                  value={malas}
+                  onChange={(e) => setMalas(Number(e.target.value))}
+                />
+                <p className="mt-1 text-xs text-[var(--color-slate)]">
+                  Inclua bagagem de mão e despachada (máx. {MAX_MALAS}).
+                </p>
+              </div>
+            )}
 
             {!trechoComAeroporto && (
               <div>
@@ -608,33 +735,77 @@ export function ReservarPage() {
 
         {etapa === 4 && preco && (
           <div className="space-y-3 text-sm">
+            <Linha
+              label="Modalidade"
+              valor={ehHourly ? 'HOURLY CHAUFFEUR' : 'ONE-WAY RIDE'}
+            />
             <Linha label="Embarque" valor={origemEndereco?.formatted ?? '—'} />
-            <Linha label="Destino" valor={destinoEndereco?.formatted ?? '—'} />
+            {!ehHourly && <Linha label="Destino" valor={destinoEndereco?.formatted ?? '—'} />}
             <Linha label="Data" valor={dataViagem.split('-').reverse().join('/')} />
-            <Linha label="Horário" valor={horario} />
+            <Linha label={ehHourly ? 'Início' : 'Horário'} valor={horario} />
+            {ehHourly && (
+              <>
+                <Linha label="Duração" valor={rotuloDuracao(duracaoMinutos)} />
+                <Linha
+                  label="Término previsto"
+                  valor={
+                    janelaHourly
+                      ? janelaHourly.fim.toLocaleTimeString(locale, {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : '—'
+                  }
+                />
+                <Linha
+                  label="Franquia de milhas"
+                  valor={`${'franquia_milhas' in preco ? preco.franquia_milhas : 0} mi incluídas`}
+                />
+              </>
+            )}
             <Linha label="Passageiros" valor={String(passageiros)} />
-            <Linha label="Malas" valor={String(malas)} />
+            {!ehHourly && <Linha label="Malas" valor={String(malas)} />}
             <Linha label="Passageiro" valor={nomePassageiro.trim() || '—'} />
-            {trechoComAeroporto && naoVouEmbarcar && (
+            {!ehHourly && trechoComAeroporto && naoVouEmbarcar && (
               <Linha label="Voo" valor="Não vou embarcar" />
             )}
-            {pedirDadosVoo && numeroVoo.trim() && (
+            {!ehHourly && pedirDadosVoo && numeroVoo.trim() && (
               <Linha label="Voo" valor={numeroVoo.trim().toUpperCase()} />
             )}
-            {pedirDadosVoo && terminal.trim() && (
+            {!ehHourly && pedirDadosVoo && terminal.trim() && (
               <Linha label="Portão" valor={terminal.trim()} />
             )}
             <Linha label="Categoria" valor={categoria?.nome ?? '—'} />
-            <Linha
-              label="Distância"
-              valor={
-                rota?.provedor === 'mapbox'
-                  ? `${preco.distancia_km} km · ${rota.tempoMinutos} min`
-                  : `${preco.distancia_km} km`
-              }
-            />
+            {!ehHourly && (
+              <Linha
+                label="Distância"
+                valor={
+                  rota?.provedor === 'mapbox'
+                    ? `${preco.distancia_km} km · ${rota.tempoMinutos} min`
+                    : `${preco.distancia_km} km`
+                }
+              />
+            )}
             <hr className="border-[var(--color-line)]" />
             <Linha label="Total" valor={formatarMoeda(preco.total, locale)} destaque />
+            {ehHourly && regraPreco && (
+              <div className="reserva-hourly-regras text-xs text-[var(--color-slate)]">
+                <p>
+                  <strong>Extensão:</strong>{' '}
+                  {regraPreco.regra_extensao ??
+                    '+30 min / +1h / +2h com disponibilidade e pagamento confirmado.'}
+                </p>
+                <p>
+                  <strong>Cancelamento:</strong>{' '}
+                  {regraPreco.regra_cancelamento ?? 'Conforme política da plataforma.'}
+                </p>
+                <p>
+                  <strong>Cobranças extras:</strong>{' '}
+                  {regraPreco.cobrancas_adicionais ??
+                    'Pedágios, estacionamento e milhas acima da franquia.'}
+                </p>
+              </div>
+            )}
             <p className="text-xs text-[var(--color-slate)]">
               Após confirmar, a reserva fica aguardando pagamento. Empresas só recebem a corrida
               depois do pagamento aprovado.

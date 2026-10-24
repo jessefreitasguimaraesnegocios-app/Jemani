@@ -2,6 +2,24 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-10-23]
+
+### Adicionado
+
+- **Hourly Chauffeur**: reserva por tempo (sem destino fixo), pacotes de duração, preço por hora/franquia de milhas e regras de extensão/cancelamento em Admin → Preços (`preco_por_hora = 0` mantém hourly desabilitado).
+- Migration `20261023220000_hourly_chauffeur.sql`: colunas hourly em `price_rules`/`trips`, tabelas `trip_extensions` e `trip_hourly_alerts`, RPC `confirmar_extensao_hourly` e Realtime nas extensões.
+- Avisos de fim de janela (20/15/10/5 min) no app (`VigilanciaHourly`) e resumo hourly na corrida.
+- Reservas e aeroportos **mundiais** (Mapbox sem bbox de LA; hubs EUA + mundo; POI de aeroporto no mapa).
+- Motorista: alerta de chat da empresa (som + badge) com **!** pulsando no menu.
+
+### Alterado
+
+- APK **1.0.30** (`npm run android:apk` → `public/downloads/jemani-android.apk` + `versao-android.json`).
+
+### Observação
+
+Aplicar a migration `hourly_chauffeur` no SQL Editor do projeto Jemani (`qdiocaeoevxhdsrtcahn`) se ainda não estiver no banco remoto. Depois configure preço por hora em Admin → Preços para liberar a modalidade.
+
 ## [2026-10-21] (noite)
 
 ### Corrigido
