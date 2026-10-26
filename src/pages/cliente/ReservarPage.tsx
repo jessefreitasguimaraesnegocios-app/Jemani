@@ -315,12 +315,6 @@ export function ReservarPage() {
         )
         return
       }
-      if (passageiros < categoria.capacidade_min) {
-        setErro(
-          `${categoria.nome} exige no mínimo ${categoria.capacidade_min} passageiros.`,
-        )
-        return
-      }
       if (!nomePassageiro.trim()) {
         setErro('Informe o nome do passageiro principal.')
         return

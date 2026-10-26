@@ -39,7 +39,8 @@ export function SeletorCategoria3D({
     () =>
       categorias.map((c) => ({
         ...c,
-        serve: passageiros >= c.capacidade_min && passageiros <= c.capacidade_max,
+        // Sem mínimo: 1 passageiro pode escolher van, shuttle ou ônibus.
+        serve: passageiros <= c.capacidade_max,
       })),
     [categorias, passageiros],
   )
@@ -153,9 +154,7 @@ export function SeletorCategoria3D({
 
       <ul className="showroom-specs">
         <li>
-          <span className="showroom-spec-valor">
-            {selecionada.capacidade_min}–{selecionada.capacidade_max}
-          </span>
+          <span className="showroom-spec-valor">até {selecionada.capacidade_max}</span>
           <span className="showroom-spec-rotulo">Passageiros</span>
         </li>
         <li>
