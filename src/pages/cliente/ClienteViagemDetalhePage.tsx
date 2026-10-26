@@ -4,8 +4,11 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { AvaliacaoEstrelas } from '@/components/AvaliacaoEstrelas'
 import { BadgeStatus } from '@/components/BadgeStatus'
+import { ParadasHourlyCliente } from '@/components/cliente/ParadasHourlyCliente'
 import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
+import { HourlyResumo } from '@/components/HourlyResumo'
 import { MapaCorrida } from '@/components/MapaCorrida'
+import { ehHourly } from '@/services/hourlyChauffeur'
 import { useAuth } from '@/contexts/AuthContext'
 import { stripeCheckoutDisponivel } from '@/lib/stripeApi'
 import { criarIntencaoPagamento, permitirSimulacaoPagamentoDev } from '@/services/pagamentoService'
@@ -304,6 +307,13 @@ export function ClienteViagemDetalhePage() {
                   : 'Rota da corrida. A posição do motorista aparece quando ele sai.'
               }
             />
+          </div>
+        )}
+
+        {ehHourly(viagem) && (
+          <div className="mt-4 space-y-4">
+            <HourlyResumo viagem={viagem} papel="cliente" />
+            <ParadasHourlyCliente viagem={viagem} />
           </div>
         )}
 

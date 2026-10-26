@@ -43,6 +43,13 @@ import {
   gravarEmpresasNuvem,
   gravarRegraPrecoNuvem,
 } from '@/services/nuvemCatalogo'
+import {
+  lerParadasPorBloco,
+  lerRaioParadasKm,
+  liberadasDaViagem,
+  slotsParadaRestantes,
+  validarParadaNoRaio,
+} from '@/services/paradasHourly'
 import { apagarVeiculoNuvem, gravarVeiculoNuvem } from '@/services/nuvemVeiculos'
 import {
   apagarNotificacoesNuvem,
@@ -100,6 +107,7 @@ import type {
   Motorista,
   Notificacao,
   Pagamento,
+  ParadaHourly,
   Perfil,
   RegraPreco,
   StatusViagem,
@@ -194,6 +202,8 @@ interface EstadoDemo {
   ) => Promise<ExtensaoViagem>
   aplicarExtensaoNuvem: (ext: ExtensaoViagem) => void
   verificarAvisosHourly: (agora?: Date) => void
+  adicionarParadaHourly: (viagemId: string, endereco: EnderecoLocal) => ParadaHourly
+  marcarParadaHourlyChegou: (viagemId: string, paradaId: string) => void
   simularPagamentoEDistribuir: (viagemId: string, usuarioId: string) => Promise<Viagem>
   confirmarPagamentoStripe: (
     viagemId: string,
@@ -694,6 +704,9 @@ export const useDemoStore = create<EstadoDemo>()(
           inicio_agendado: janela?.inicioIso,
           fim_agendado: janela?.fimIso,
           franquia_milhas: franquiaMilhas,
+          paradas_liberadas:
+            modalidade === 'hourly' ? lerParadasPorBloco(state.configuracoes) : undefined,
+          paradas: modalidade === 'hourly' ? [] : undefined,
           passageiros: dados.passageiros,
           malas: dados.malas,
           numero_voo: dados.numero_voo,
@@ -879,6 +892,7 @@ export const useDemoStore = create<EstadoDemo>()(
           payment_id: pagamento.id,
           confirmed_at: agora,
         }
+        const blocoParadas = lerParadasPorBloco(state.configuracoes)
         const atualizada: Viagem = {
           ...viagem,
           duracao_contratada_minutos:
@@ -891,6 +905,7 @@ export const useDemoStore = create<EstadoDemo>()(
             (viagem.franquia_milhas ?? 0) +
             (ext.minutos / 60) *
               Number(state.regrasPreco.find((r) => r.ativo)?.franquia_milhas_por_hora ?? 0),
+          paradas_liberadas: liberadasDaViagem(viagem, state.configuracoes) + blocoParadas,
           updated_at: agora,
           version: viagem.version + 1,
         }
@@ -1047,6 +1062,113 @@ export const useDemoStore = create<EstadoDemo>()(
             }
           }
         }
+      },
+
+      adicionarParadaHourly: (viagemId, endereco) => {
+        const state = get()
+        const viagem = state.viagens.find((v) => v.id === viagemId)
+        if (!viagem || !ehHourly(viagem)) throw new Error('Reserva hourly não encontrada.')
+        if (viagem.payment_status !== 'paid') throw new Error('Pagamento pendente.')
+        if (
+          ![
+            'empresa_confirmada',
+            'motorista_atribuido',
+            'motorista_a_caminho',
+            'motorista_chegou',
+            'passageiro_embarcou',
+            'viagem_em_andamento',
+          ].includes(viagem.status)
+        ) {
+          throw new Error('Roteiro disponível após a empresa aceitar a corrida.')
+        }
+        if (slotsParadaRestantes(viagem, state.configuracoes) <= 0) {
+          throw new Error(
+            'Limite de endereços deste bloco. Estenda a reserva hourly para liberar mais.',
+          )
+        }
+        const empresa = state.empresas.find((e) => e.id === viagem.empresa_id)
+        const noRaio = validarParadaNoRaio({
+          viagem,
+          empresa,
+          endereco,
+          raioKm: lerRaioParadasKm(state.configuracoes),
+        })
+        if (!noRaio.ok) throw new Error(noRaio.mensagem)
+
+        const agora = agoraIso()
+        const parada: ParadaHourly = {
+          id: gerarId(),
+          ordem: (viagem.paradas?.length ?? 0) + 1,
+          endereco: endereco.formatted,
+          latitude: endereco.latitude,
+          longitude: endereco.longitude,
+          place_id: endereco.place_id,
+          status: 'pendente',
+          created_at: agora,
+        }
+        const atualizada: Viagem = {
+          ...viagem,
+          paradas: [...(viagem.paradas ?? []), parada],
+          updated_at: agora,
+          version: viagem.version + 1,
+        }
+        set({
+          viagens: state.viagens.map((v) => (v.id === viagemId ? atualizada : v)),
+        })
+        void gravarViagemNuvem(atualizada)
+        if (viagem.motorista_id) {
+          const m = get().motoristas.find((x) => x.id === viagem.motorista_id)
+          if (m?.usuario_id) {
+            notificar(
+              set,
+              get,
+              m.usuario_id,
+              'Novo endereço no roteiro',
+              `${viagem.codigo}: ${parada.endereco}`,
+              'status',
+              parada.id,
+            )
+          }
+        }
+        return parada
+      },
+
+      marcarParadaHourlyChegou: (viagemId, paradaId) => {
+        const state = get()
+        const viagem = state.viagens.find((v) => v.id === viagemId)
+        if (!viagem || !ehHourly(viagem)) throw new Error('Reserva hourly não encontrada.')
+        const lista = viagem.paradas ?? []
+        const alvo = lista.find((p) => p.id === paradaId)
+        if (!alvo) throw new Error('Parada não encontrada.')
+        if (alvo.status === 'chegou') return
+        const pendenteAnterior = lista
+          .filter((p) => p.status === 'pendente')
+          .sort((a, b) => a.ordem - b.ordem)[0]
+        if (pendenteAnterior && pendenteAnterior.id !== paradaId) {
+          throw new Error('Conclua o endereço atual antes do próximo.')
+        }
+        const agora = agoraIso()
+        const atualizada: Viagem = {
+          ...viagem,
+          paradas: lista.map((p) =>
+            p.id === paradaId ? { ...p, status: 'chegou', chegou_em: agora } : p,
+          ),
+          updated_at: agora,
+          version: viagem.version + 1,
+        }
+        set({
+          viagens: state.viagens.map((v) => (v.id === viagemId ? atualizada : v)),
+        })
+        void gravarViagemNuvem(atualizada)
+        notificar(
+          set,
+          get,
+          viagem.cliente_id,
+          'Motorista chegou ao endereço',
+          `${viagem.codigo}: ${alvo.endereco}`,
+          'status',
+          paradaId,
+        )
       },
 
       simularPagamentoEDistribuir: async (viagemId, usuarioId) => {

@@ -7,6 +7,7 @@ import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { linkMapa, MapaCorrida } from '@/components/MapaCorrida'
 import { ModalFinalizarViagem } from '@/components/ModalFinalizarViagem'
 import { ClimaCorrida } from '@/components/motorista/ClimaCorrida'
+import { ListaParadasMotorista } from '@/components/motorista/ListaParadasMotorista'
 import { ObservacoesCorrida } from '@/components/motorista/ObservacoesCorrida'
 import { PainelVoo } from '@/components/motorista/PainelVoo'
 import { useAuth } from '@/contexts/AuthContext'
@@ -88,12 +89,21 @@ export function MotoristaDashboardPage() {
   const { aba } = usarAbaMotorista()
   const { t } = usarIdioma()
 
+  const veiculos = useDemoStore((s) => s.veiculos)
+  const marcarParadaHourlyChegou = useDemoStore((s) => s.marcarParadaHourlyChegou)
   const proxima = viagens[0]
   const cliente = perfis.find((p) => p.id === proxima?.cliente_id)
   const nomePassageiro = proxima?.nome_passageiro ?? cliente?.nome ?? 'Passageiro'
   const telefone = cliente?.telefone
   const ligar = telefoneDiscavel(telefone)
   const online = motorista ? Boolean(turnoAberto(turnos, motorista.id)) : false
+  const empresaCorrida = proxima
+    ? empresas.find((e) => e.id === proxima.empresa_id) ??
+      empresas.find((e) => e.id === motorista?.empresa_id)
+    : undefined
+  const veiculoCorrida = proxima?.veiculo_id
+    ? veiculos.find((v) => v.id === proxima.veiculo_id)
+    : undefined
 
   useEffect(() => {
     const seguirCorrida = Boolean(proxima && COM_GPS.includes(proxima.status))
@@ -180,7 +190,7 @@ export function MotoristaDashboardPage() {
 
           <ClimaCorrida viagem={proxima} gpsLat={gpsLat} gpsLng={gpsLng} />
 
-          <HourlyResumo viagem={proxima} papel="motorista" />
+          <HourlyResumo viagem={proxima} papel="motorista" minimizar />
 
           <MapaCorrida
             origemLat={proxima.origem_lat}
@@ -217,6 +227,20 @@ export function MotoristaDashboardPage() {
               <span>Destino</span>
               <strong>{proxima.destino}</strong>
             </a>
+          )}
+
+          {proxima.modalidade === 'hourly' && (proxima.paradas?.length ?? 0) > 0 && (
+            <ListaParadasMotorista
+              viagem={proxima}
+              onChegou={(paradaId) => {
+                try {
+                  marcarParadaHourlyChegou(proxima.id, paradaId)
+                  setErro('')
+                } catch (e) {
+                  setErro(e instanceof Error ? e.message : 'Erro ao marcar parada')
+                }
+              }}
+            />
           )}
 
           <ObservacoesCorrida observacoes={proxima.observacoes} />
@@ -282,6 +306,14 @@ export function MotoristaDashboardPage() {
         <ModalFinalizarViagem
           viagem={proxima}
           clienteNome={nomePassageiro}
+          empresaNome={empresaCorrida?.nome_comercial}
+          veiculoLabel={
+            veiculoCorrida
+              ? `${veiculoCorrida.marca} ${veiculoCorrida.modelo}${
+                  veiculoCorrida.placa ? ` · ${veiculoCorrida.placa}` : ''
+                }`
+              : undefined
+          }
           onCancelar={() => setMostrarFinalizar(false)}
           onConfirmar={() => {
             if (!usuario) return

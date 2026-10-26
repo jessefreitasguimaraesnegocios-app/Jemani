@@ -22,8 +22,25 @@
 /* Mapa e blocos de cima não encolhem quando o voo abre — o resto desce e a página rola */
 .corrida-tela > .corrida-topo,
 .corrida-tela > .clima-corrida,
+.corrida-tela > .hourly-resumo {
+  border-color: rgba(201, 164, 108, 0.35);
+  background: rgba(20, 20, 20, 0.92);
+}
+
+.corrida-tela > .hourly-resumo .hourly-resumo-grade span,
+.corrida-tela > .hourly-resumo .hourly-resumo-dica,
+.corrida-tela > .hourly-resumo .hourly-resumo-msg {
+  color: rgba(246, 241, 232, 0.55);
+}
+
+.corrida-tela > .hourly-resumo .hourly-resumo-grade strong {
+  color: #f6f1e8;
+}
+
+.corrida-tela > .hourly-resumo,
 .corrida-tela > .mapa-corrida,
 .corrida-tela > .painel-voo,
+.corrida-tela > .lista-paradas-mot,
 .corrida-tela > .obs-corrida,
 .corrida-tela > .corrida-endereco,
 .corrida-tela > .corrida-contato {

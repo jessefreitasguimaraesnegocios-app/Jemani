@@ -339,12 +339,43 @@
   gap: 0.65rem;
 }
 
+.cliente-historico-secao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.cliente-historico-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cliente-historico-topo .cliente-viagens-grupo-titulo {
+  margin: 0;
+}
+
+.cliente-historico-topo em {
+  font-style: normal;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-gold-deep, #8a6a3e);
+}
+
 .cliente-historico-ver-mais {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  margin-top: 0.65rem;
+  margin-top: 0.35rem;
   min-height: 2.55rem;
   padding: 0.55rem 1.1rem;
   border-radius: 999px;

@@ -363,9 +363,7 @@ export function ReservarPage() {
         duracao_minutos: ehHourly ? duracaoMinutos : undefined,
         malas: ehHourly ? undefined : malas,
         numero_voo:
-          !ehHourly && pedirDadosVoo && numeroVoo.trim()
-            ? numeroVoo.trim().toUpperCase()
-            : undefined,
+          pedirDadosVoo && numeroVoo.trim() ? numeroVoo.trim().toUpperCase() : undefined,
         nome_passageiro: nomePassageiro.trim(),
         observacoes: montarObservacoes(),
         distancia_km: ehHourly ? undefined : rota?.distanciaKm,
@@ -760,13 +758,13 @@ export function ReservarPage() {
             <Linha label="Passageiros" valor={String(passageiros)} />
             {!ehHourly && <Linha label="Malas" valor={String(malas)} />}
             <Linha label="Passageiro" valor={nomePassageiro.trim() || '—'} />
-            {!ehHourly && trechoComAeroporto && naoVouEmbarcar && (
+            {trechoComAeroporto && naoVouEmbarcar && (
               <Linha label="Voo" valor="Não vou embarcar" />
             )}
-            {!ehHourly && pedirDadosVoo && numeroVoo.trim() && (
+            {pedirDadosVoo && numeroVoo.trim() && (
               <Linha label="Voo" valor={numeroVoo.trim().toUpperCase()} />
             )}
-            {!ehHourly && pedirDadosVoo && terminal.trim() && (
+            {pedirDadosVoo && terminal.trim() && (
               <Linha label="Portão" valor={terminal.trim()} />
             )}
             <Linha label="Categoria" valor={categoria?.nome ?? '—'} />

@@ -90,6 +90,44 @@ export function AdminConfiguracoesPage() {
       </section>
 
       <section className="cartao config-secao">
+        <h2 className="fonte-display text-2xl">Hourly Chauffeur</h2>
+        <div className="config-grade">
+          <div>
+            <label className="rotulo" htmlFor="cfg-paradas-bloco">
+              Endereços por bloco
+            </label>
+            <input
+              id="cfg-paradas-bloco"
+              type="number"
+              min={1}
+              max={20}
+              className="campo"
+              value={ler('hourly_paradas_por_bloco', '5')}
+              onChange={(e) => atualizarConfiguracao('hourly_paradas_por_bloco', e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="rotulo" htmlFor="cfg-raio-paradas">
+              Raio máximo das paradas (km)
+            </label>
+            <input
+              id="cfg-raio-paradas"
+              type="number"
+              min={5}
+              max={500}
+              className="campo"
+              value={ler('hourly_raio_paradas_km', '80')}
+              onChange={(e) => atualizarConfiguracao('hourly_raio_paradas_km', e.target.value)}
+            />
+          </div>
+        </div>
+        <p className="config-sub">
+          No início da corrida o cliente pode enviar até N endereços. Cada extensão paga libera mais
+          N vagas, dentro do raio e das regiões da empresa.
+        </p>
+      </section>
+
+      <section className="cartao config-secao">
         <h2 className="fonte-display text-2xl">{t('config.alertas')}</h2>
         <TogglePreferencia
           titulo={t('config.som')}

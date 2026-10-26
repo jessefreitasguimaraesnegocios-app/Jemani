@@ -248,6 +248,19 @@ export interface AvisoHourly {
   created_at: string
 }
 
+/** Parada sob demanda no Hourly Chauffeur (cliente envia; motorista segue a lista). */
+export interface ParadaHourly {
+  id: string
+  ordem: number
+  endereco: string
+  latitude: number
+  longitude: number
+  place_id?: string
+  status: 'pendente' | 'chegou'
+  chegou_em?: string
+  created_at: string
+}
+
 export interface Viagem {
   id: string
   codigo: string
@@ -279,6 +292,9 @@ export interface Viagem {
   milhas_percorridas?: number
   horario_vencido_em?: string
   conclusao_efetiva_em?: string
+  /** Quantos endereços extras o cliente pode cadastrar neste bloco hourly */
+  paradas_liberadas?: number
+  paradas?: ParadaHourly[]
   passageiros: number
   malas?: number
   numero_voo?: string

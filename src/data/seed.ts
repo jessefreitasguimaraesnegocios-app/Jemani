@@ -1023,6 +1023,20 @@ export function criarDadosIniciais(): {
 
   const configuracoes: ConfiguracaoPlataforma[] = [
     {
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa10',
+      chave: 'hourly_paradas_por_bloco',
+      valor: '5',
+      descricao: 'Endereços liberados por bloco hourly / extensão paga',
+      updated_at: agora,
+    },
+    {
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11',
+      chave: 'hourly_raio_paradas_km',
+      valor: '80',
+      descricao: 'Raio máximo (km) das paradas a partir do embarque/base',
+      updated_at: agora,
+    },
+    {
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
       chave: 'comissao_percentual',
       valor: '10',

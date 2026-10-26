@@ -32,6 +32,7 @@ export function ClienteHistoricoViagensPage() {
   const motoristas = useDemoStore((s) => s.motoristas)
   const categorias = useDemoStore((s) => s.categorias)
   const [visiveis, setVisiveis] = useState<Record<string, number>>({})
+  const [abertos, setAbertos] = useState<Record<string, boolean>>({})
   const idsAvaliados = useMemo(
     () => new Set(avaliacoes.map((a) => a.viagem_id)),
     [avaliacoes],
@@ -60,6 +61,17 @@ export function ClienteHistoricoViagensPage() {
     }))
   }
 
+  function grupoAberto(chave: string) {
+    return abertos[chave] ?? true
+  }
+
+  function alternarGrupo(chave: string) {
+    setAbertos((atual) => ({
+      ...atual,
+      [chave]: !(atual[chave] ?? true),
+    }))
+  }
+
   return (
     <div className="cliente-agenda animar-entrada">
       <Link to="/app/viagens" className="cliente-agenda-voltar">
@@ -77,38 +89,57 @@ export function ClienteHistoricoViagensPage() {
         GRUPOS.map((grupo) => {
           const lista = historico.filter(grupo.filtro)
           if (lista.length === 0) return null
+          const aberto = grupoAberto(grupo.chave)
           const limite = limiteGrupo(grupo.chave)
           const visivel = lista.slice(0, limite)
           const temMais = lista.length > limite
           return (
-            <section key={grupo.chave}>
-              <h2 className="cliente-viagens-grupo-titulo">{t(grupo.chave)}</h2>
-              <div className="cliente-viagens-lista">
-                {visivel.map((viagem) => (
-                  <CartaoReservaCliente
-                    key={viagem.id}
-                    viagem={viagem}
-                    categoria={mapaCategorias.get(viagem.categoria_id)}
-                    empresa={viagem.empresa_id ? mapaEmpresas.get(viagem.empresa_id) : undefined}
-                    motorista={
-                      viagem.motorista_id ? mapaMotoristas.get(viagem.motorista_id) : undefined
-                    }
-                    pedirAvaliacao={
-                      viagem.status === 'viagem_finalizada' &&
-                      Boolean(viagem.empresa_id) &&
-                      !idsAvaliados.has(viagem.id)
-                    }
-                  />
-                ))}
-              </div>
-              {temMais && (
-                <button
-                  type="button"
-                  className="cliente-historico-ver-mais"
-                  onClick={() => verMais(grupo.chave)}
-                >
-                  {t('comum.verMais')}
-                </button>
+            <section key={grupo.chave} className="cliente-historico-secao">
+              <button
+                type="button"
+                className="cliente-historico-topo"
+                onClick={() => alternarGrupo(grupo.chave)}
+                aria-expanded={aberto}
+              >
+                <h2 className="cliente-viagens-grupo-titulo">
+                  {t(grupo.chave)} ({lista.length})
+                </h2>
+                <em>{aberto ? 'Minimizar' : 'Abrir'}</em>
+              </button>
+              {aberto && (
+                <>
+                  <div className="cliente-viagens-lista">
+                    {visivel.map((viagem) => (
+                      <CartaoReservaCliente
+                        key={viagem.id}
+                        viagem={viagem}
+                        categoria={mapaCategorias.get(viagem.categoria_id)}
+                        empresa={
+                          viagem.empresa_id ? mapaEmpresas.get(viagem.empresa_id) : undefined
+                        }
+                        motorista={
+                          viagem.motorista_id
+                            ? mapaMotoristas.get(viagem.motorista_id)
+                            : undefined
+                        }
+                        pedirAvaliacao={
+                          viagem.status === 'viagem_finalizada' &&
+                          Boolean(viagem.empresa_id) &&
+                          !idsAvaliados.has(viagem.id)
+                        }
+                      />
+                    ))}
+                  </div>
+                  {temMais && (
+                    <button
+                      type="button"
+                      className="cliente-historico-ver-mais"
+                      onClick={() => verMais(grupo.chave)}
+                    >
+                      {t('comum.verMais')}
+                    </button>
+                  )}
+                </>
               )}
             </section>
           )

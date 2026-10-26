@@ -15,15 +15,23 @@ type Props = {
   viagem: Viagem
   papel: 'cliente' | 'motorista' | 'admin' | 'empresa'
   locale?: string
+  /** No motorista começa aberto; pode minimizar como observações. */
+  minimizar?: boolean
 }
 
-export function HourlyResumo({ viagem, papel, locale = 'en-US' }: Props) {
+export function HourlyResumo({
+  viagem,
+  papel,
+  locale = 'en-US',
+  minimizar = false,
+}: Props) {
   const extensoes = useDemoStore((s) => s.extensoesViagem)
   const solicitarExtensaoHourly = useDemoStore((s) => s.solicitarExtensaoHourly)
   const confirmarExtensaoHourlyPaga = useDemoStore((s) => s.confirmarExtensaoHourlyPaga)
   const sessaoId = useDemoStore((s) => s.sessaoId)
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
+  const [aberto, setAberto] = useState(true)
 
   const daViagem = useMemo(
     () =>
@@ -57,9 +65,8 @@ export function HourlyResumo({ viagem, papel, locale = 'en-US' }: Props) {
     }
   }
 
-  return (
-    <section className="hourly-resumo">
-      <p className="hourly-resumo-selo">HOURLY CHAUFFEUR</p>
+  const corpo = (
+    <>
       <div className="hourly-resumo-grade">
         <p>
           <span>Início</span>
@@ -155,6 +162,30 @@ export function HourlyResumo({ viagem, papel, locale = 'en-US' }: Props) {
           . Conclua com segurança — sem abandono do passageiro.
         </p>
       )}
+    </>
+  )
+
+  if (!minimizar) {
+    return (
+      <section className="hourly-resumo">
+        <p className="hourly-resumo-selo">HOURLY CHAUFFEUR</p>
+        {corpo}
+      </section>
+    )
+  }
+
+  return (
+    <section className={`hourly-resumo${aberto ? '' : ' hourly-resumo--compacto'}`}>
+      <button
+        type="button"
+        className="hourly-resumo-topo"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+      >
+        <span>HOURLY CHAUFFEUR</span>
+        <em>{aberto ? 'Minimizar' : 'Abrir'}</em>
+      </button>
+      {aberto && corpo}
     </section>
   )
 }

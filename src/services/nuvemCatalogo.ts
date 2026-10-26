@@ -24,6 +24,8 @@ export const CHAVES_CONFIG_NUVEM = new Set([
   'nome_plataforma',
   'taxa_servico',
   'regiao_atuacao',
+  'hourly_paradas_por_bloco',
+  'hourly_raio_paradas_km',
 ])
 
 function horaCurta(valor: string | null | undefined, padrao: string): string {
