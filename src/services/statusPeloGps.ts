@@ -12,7 +12,7 @@ export function statusPeloGps(
   if (typeof viagem.origem_lat !== 'number' || typeof viagem.origem_lng !== 'number') return null
   const ateOrigem = calcularDistanciaKm(latitude, longitude, viagem.origem_lat, viagem.origem_lng)
 
-  if (viagem.status === 'motorista_atribuido') return 'motorista_a_caminho'
+  // "A caminho" só pelo botão do motorista — GPS não dispara no 1º tick.
   if (viagem.status === 'motorista_a_caminho' && ateOrigem <= RAIO_CHEGADA_KM) {
     return 'motorista_chegou'
   }

@@ -8,11 +8,13 @@ import { ParadasHourlyCliente } from '@/components/cliente/ParadasHourlyCliente'
 import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { HourlyResumo } from '@/components/HourlyResumo'
 import { MapaCorrida } from '@/components/MapaCorrida'
+import { PainelVoo } from '@/components/motorista/PainelVoo'
 import { ehHourly } from '@/services/hourlyChauffeur'
 import { useAuth } from '@/contexts/AuthContext'
 import { stripeCheckoutDisponivel } from '@/lib/stripeApi'
-import { criarIntencaoPagamento, permitirSimulacaoPagamentoDev } from '@/services/pagamentoService'
+import { criarIntencaoPagamento } from '@/services/pagamentoService'
 import { useDemoStore } from '@/store/demoStore'
+import { rotuloRotaCliente } from '@/utils/contatoViagem'
 import { formatarData, formatarMoeda } from '@/utils/format'
 import './ClienteViagemDetalhePage.css'
 
@@ -39,8 +41,8 @@ export function ClienteViagemDetalhePage() {
   const avaliacoes = useDemoStore((s) => s.avaliacoes)
   const cancelarViagem = useDemoStore((s) => s.cancelarViagem)
   const criarAvaliacao = useDemoStore((s) => s.criarAvaliacao)
-  const simularPagamentoEDistribuir = useDemoStore((s) => s.simularPagamentoEDistribuir)
   const confirmarPagamentoStripe = useDemoStore((s) => s.confirmarPagamentoStripe)
+  const confirmarExtensaoHourlyPaga = useDemoStore((s) => s.confirmarExtensaoHourlyPaga)
   const confirmandoRef = useRef(false)
   const stripeTimerRef = useRef(0)
   const stripeConsultaEmCursoRef = useRef(false)
@@ -88,15 +90,26 @@ export function ClienteViagemDetalhePage() {
     if (status === 'ok' && sessionId && usuario && id && !confirmandoRef.current) {
       confirmandoRef.current = true
       setPagando(true)
-      void confirmarPagamentoStripe(id, usuario.id, sessionId)
-        .then(() => setMsg('Pagamento confirmado via Stripe. Corrida liberada para as empresas.'))
+      const extensaoId = sessionStorage.getItem(`jemani-extensao-${id}`)
+      const tarefa = extensaoId
+        ? confirmarExtensaoHourlyPaga(extensaoId, usuario.id, {
+            provider: 'stripe',
+            sessionId,
+          }).then(() => {
+            sessionStorage.removeItem(`jemani-extensao-${id}`)
+            setMsg('Extensão paga via Stripe. Tempo e endereços liberados.')
+          })
+        : confirmarPagamentoStripe(id, usuario.id, sessionId).then(() =>
+            setMsg('Pagamento confirmado via Stripe. Corrida liberada para as empresas.'),
+          )
+      void tarefa
         .catch((err) => setMsg(err instanceof Error ? err.message : 'Erro ao confirmar Stripe'))
         .finally(() => {
           setPagando(false)
           setParams({}, { replace: true })
         })
     }
-  }, [params, setParams, usuario, id, confirmarPagamentoStripe])
+  }, [params, setParams, usuario, id, confirmarPagamentoStripe, confirmarExtensaoHourlyPaga])
 
   useEffect(() => {
     if (!precisaAvaliar) return
@@ -235,9 +248,7 @@ export function ClienteViagemDetalhePage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="fonte-display text-3xl">{viagem.codigo}</h1>
-            <p className="mt-1 text-[var(--color-slate)]">
-              {viagem.origem} → {viagem.destino}
-            </p>
+            <p className="mt-1 text-[var(--color-slate)]">{rotuloRotaCliente(viagem)}</p>
           </div>
           <BadgeStatus status={viagem.status} />
         </div>
@@ -260,28 +271,6 @@ export function ClienteViagemDetalhePage() {
                   {pagando ? 'Abrindo Stripe...' : 'Pagar com Stripe (teste)'}
                 </button>
               )}
-              {permitirSimulacaoPagamentoDev() && (
-                <button
-                  type="button"
-                  className="btn-secundario"
-                  disabled={pagando}
-                  onClick={() => {
-                    if (!usuario) return
-                    setPagando(true)
-                    setMsg('')
-                    void simularPagamentoEDistribuir(viagem.id, usuario.id)
-                      .then(() =>
-                        setMsg('Pagamento DEV simulado. Corrida distribuída por proximidade.'),
-                      )
-                      .catch((err) =>
-                        setMsg(err instanceof Error ? err.message : 'Erro no pagamento DEV'),
-                      )
-                      .finally(() => setPagando(false))
-                  }}
-                >
-                  {pagando ? 'Processando...' : 'Simular pagamento (DEV)'}
-                </button>
-              )}
             </div>
             {!stripeOk && (
               <p className="mt-2 text-xs text-[var(--color-slate)]">
@@ -289,6 +278,12 @@ export function ClienteViagemDetalhePage() {
                 STRIPE_SECRET_KEY (sk_test_...).
               </p>
             )}
+          </div>
+        )}
+
+        {viagem.numero_voo && (
+          <div className="mt-4">
+            <PainelVoo viagem={viagem} />
           </div>
         )}
 
@@ -436,7 +431,9 @@ export function ClienteViagemDetalhePage() {
         </ul>
       </div>
 
-      {!['viagem_finalizada', 'cancelada'].includes(viagem.status) && (
+      {!['viagem_finalizada', 'cancelada', 'expired', 'passageiro_embarcou', 'viagem_em_andamento'].includes(
+        viagem.status,
+      ) && (
         <form className="cartao space-y-3" onSubmit={handleCancelar}>
           <h2 className="fonte-display text-2xl">Cancelar</h2>
           <input

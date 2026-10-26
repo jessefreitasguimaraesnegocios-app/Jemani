@@ -44,7 +44,8 @@ export function ModalFinalizarViagem({
             <strong>Origem:</strong> {viagem.origem}
           </p>
           <p>
-            <strong>Destino:</strong> {viagem.destino}
+            <strong>{viagem.modalidade === 'hourly' ? 'Serviço' : 'Destino'}:</strong>{' '}
+            {viagem.modalidade === 'hourly' ? 'Hourly Chauffeur (as directed)' : viagem.destino}
           </p>
           <p>
             <strong>Data/hora:</strong> {formatarData(viagem.data_viagem)} · {viagem.horario}

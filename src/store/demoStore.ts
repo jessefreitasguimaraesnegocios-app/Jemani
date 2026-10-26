@@ -50,6 +50,7 @@ import {
   slotsParadaRestantes,
   validarParadaNoRaio,
 } from '@/services/paradasHourly'
+import { gravarComissaoNuvem } from '@/services/nuvemComissoes'
 import { apagarVeiculoNuvem, gravarVeiculoNuvem } from '@/services/nuvemVeiculos'
 import {
   apagarNotificacoesNuvem,
@@ -198,7 +199,7 @@ interface EstadoDemo {
   confirmarExtensaoHourlyPaga: (
     extensaoId: string,
     usuarioId: string,
-    opcoes?: { provider?: Pagamento['provider'] },
+    opcoes?: { provider?: Pagamento['provider']; sessionId?: string },
   ) => Promise<ExtensaoViagem>
   aplicarExtensaoNuvem: (ext: ExtensaoViagem) => void
   verificarAvisosHourly: (agora?: Date) => void
@@ -246,6 +247,7 @@ interface EstadoDemo {
   aplicarRegrasPrecoNuvem: (regras: RegraPreco[]) => void
   aplicarConfiguracoesNuvem: (configs: ConfiguracaoPlataforma[]) => void
   aplicarEmpresasNuvem: (empresas: Empresa[]) => void
+  aplicarComissoesNuvem: (comissoes: Comissao[]) => void
   solicitarFinalizacao: (viagemId: string) => { ok: boolean; mensagem: string }
   confirmarFinalizacao: (viagemId: string, usuarioId: string, confirmado: boolean) => Viagem
   cancelarViagem: (viagemId: string, usuarioId: string, motivo: string) => Viagem
@@ -851,6 +853,11 @@ export const useDemoStore = create<EstadoDemo>()(
         if (ext.status !== 'pendente') throw new Error('Extensão não está pendente.')
         const viagem = state.viagens.find((v) => v.id === ext.viagem_id)
         if (!viagem || viagem.cliente_id !== usuarioId) throw new Error('Sem permissão.')
+        if (opcoes?.provider !== 'stripe' || !opcoes.sessionId) {
+          throw new Error('Extensão só confirma após pagamento Stripe (teste).')
+        }
+        const sessao = await confirmarSessaoCheckoutStripe(opcoes.sessionId, viagem.id)
+        if (sessao.status !== 'pago') throw new Error('Pagamento Stripe da extensão não confirmado.')
         if (
           viagem.motorista_id &&
           motoristaTemConflito({
@@ -875,13 +882,14 @@ export const useDemoStore = create<EstadoDemo>()(
         const pagamento: Pagamento = {
           id: gerarId(),
           booking_id: viagem.id,
-          payment_id: `ext_${ext.id.slice(0, 8)}`,
+          payment_id: sessao.paymentId,
           amount: ext.preco_adicional,
           platform_fee: ext.valor_plataforma,
           company_amount: ext.valor_empresa,
           status: 'pago',
-          payment_method: opcoes?.provider === 'stripe' ? 'stripe' : 'teste',
-          provider: opcoes?.provider ?? 'teste',
+          payment_method: 'stripe_checkout',
+          provider: 'stripe',
+          stripe_checkout_session_id: opcoes.sessionId,
           created_at: agora,
           updated_at: agora,
         }
@@ -1840,7 +1848,7 @@ export const useDemoStore = create<EstadoDemo>()(
         if (viagem.payment_status !== 'paid') {
           throw new Error('Corrida sem pagamento aprovado')
         }
-        if (!['aguardando_empresa', 'oferta_enviada'].includes(viagem.status)) {
+        if (!['aguardando_empresa', 'oferta_enviada', 'paid'].includes(viagem.status)) {
           throw new Error('Esta solicitação não está mais disponível')
         }
         if (viagem.empresa_id && viagem.empresa_id !== empresaId) {
@@ -1963,12 +1971,13 @@ export const useDemoStore = create<EstadoDemo>()(
         const dist =
           state.atribuicoes.find((a) => a.viagem_id === viagemId && a.empresa_id === empresaId)
             ?.distancia_km ?? 0
+        const atualizadas = state.atribuicoes.map((a) =>
+          a.viagem_id === viagemId && a.empresa_id === empresaId
+            ? { ...a, status: 'recusada' as const, respondido_em: agora, motivo: 'recusada_pela_empresa' }
+            : a,
+        )
         set({
-          atribuicoes: state.atribuicoes.map((a) =>
-            a.viagem_id === viagemId && a.empresa_id === empresaId
-              ? { ...a, status: 'recusada', respondido_em: agora, motivo: 'recusada_pela_empresa' }
-              : a,
-          ),
+          atribuicoes: atualizadas,
           distribuicoes: [
             {
               id: gerarId(),
@@ -1982,6 +1991,10 @@ export const useDemoStore = create<EstadoDemo>()(
             ...state.distribuicoes,
           ],
         })
+        const oferta = atualizadas.filter(
+          (a) => a.viagem_id === viagemId && a.empresa_id === empresaId,
+        )
+        void gravarOfertasNuvem(oferta)
       },
 
       atribuirEquipe: (viagemId, motoristaId, veiculoId) => {
@@ -2251,6 +2264,8 @@ export const useDemoStore = create<EstadoDemo>()(
         )
 
         void gravarViagemNuvem(atualizada)
+        const novaComissao = comissoes.find((c) => c.viagem_id === viagem.id && c.created_at === agora)
+        if (novaComissao) void gravarComissaoNuvem(novaComissao)
         return atualizada
       },
 
@@ -2261,20 +2276,34 @@ export const useDemoStore = create<EstadoDemo>()(
         if (viagem.status === 'viagem_finalizada' || viagem.status === 'cancelada') {
           throw new Error('Viagem não pode ser cancelada')
         }
+        if (
+          ['passageiro_embarcou', 'viagem_em_andamento'].includes(viagem.status)
+        ) {
+          throw new Error(
+            'Não é possível cancelar depois do embarque. Fale com a empresa/suporte.',
+          )
+        }
 
         const agora = agoraIso()
+        const pago = viagem.payment_status === 'paid'
         const atualizada: Viagem = {
           ...viagem,
           status: 'cancelada',
           cancelado_por: usuarioId,
           motivo_cancelamento: motivo,
           cancelado_em: agora,
+          payment_status: pago ? 'refunded' : viagem.payment_status,
           version: viagem.version + 1,
           updated_at: agora,
         }
 
         set({
           viagens: state.viagens.map((v) => (v.id === viagemId ? atualizada : v)),
+          pagamentos: state.pagamentos.map((p) =>
+            p.booking_id === viagemId && pago
+              ? { ...p, status: 'reembolsado', updated_at: agora }
+              : p,
+          ),
           motoristas: state.motoristas.map((m) =>
             m.id === viagem.motorista_id ? { ...m, status: 'disponivel', disponivel: true } : m,
           ),
@@ -2285,6 +2314,20 @@ export const useDemoStore = create<EstadoDemo>()(
 
         registrarHistorico(set, get, viagemId, viagem.status, 'cancelada', usuarioId, motivo)
         void gravarViagemNuvem(atualizada)
+
+        const texto = `Corrida ${viagem.codigo} cancelada: ${motivo}`
+        if (viagem.motorista_id) {
+          const m = get().motoristas.find((x) => x.id === viagem.motorista_id)
+          if (m?.usuario_id) {
+            notificar(set, get, m.usuario_id, 'Corrida cancelada', texto, 'status', viagemId)
+          }
+        }
+        if (viagem.empresa_id) {
+          const emp = get().empresas.find((e) => e.id === viagem.empresa_id)
+          if (emp?.usuario_id) {
+            notificar(set, get, emp.usuario_id, 'Corrida cancelada', texto, 'status', viagemId)
+          }
+        }
         return atualizada
       },
 
@@ -3216,6 +3259,17 @@ export const useDemoStore = create<EstadoDemo>()(
             mapa.set(remoto.id, local ? { ...local, ...remoto } : remoto)
           }
           return { empresas: [...mapa.values()] }
+        })
+      },
+
+      aplicarComissoesNuvem: (remotos) => {
+        if (!remotos.length) return
+        set((state) => {
+          const mapa = new Map(state.comissoes.map((item) => [item.id, item]))
+          for (const remoto of remotos) {
+            mapa.set(remoto.id, remoto)
+          }
+          return { comissoes: [...mapa.values()] }
         })
       },
     }),

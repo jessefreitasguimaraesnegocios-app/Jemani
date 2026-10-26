@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { SENHA_DEMO } from '@/data/seed'
+import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { IdiomaApp } from '@/i18n/tipos'
 import { useDemoStore } from '@/store/demoStore'
@@ -12,6 +13,7 @@ const IDIOMAS: Array<{ valor: IdiomaApp; rotulo: string }> = [
 ]
 
 export function AdminConfiguracoesPage() {
+  const { modoDemo } = useAuth()
   const resetarDemo = useDemoStore((s) => s.resetarDemo)
   const configuracoes = useDemoStore((s) => s.configuracoes)
   const atualizarConfiguracao = useDemoStore((s) => s.atualizarConfiguracao)
@@ -149,19 +151,21 @@ export function AdminConfiguracoesPage() {
         />
       </section>
 
-      <section className="cartao config-secao">
-        <h2 className="fonte-display text-2xl">{t('config.demo')}</h2>
-        <p className="config-sub">{t('config.demoTexto', { senha: SENHA_DEMO })}</p>
-        <button
-          type="button"
-          className="btn-perigo"
-          onClick={() => {
-            if (confirm(t('config.resetConfirm'))) resetarDemo()
-          }}
-        >
-          {t('config.resetDemo')}
-        </button>
-      </section>
+      {modoDemo && (
+        <section className="cartao config-secao">
+          <h2 className="fonte-display text-2xl">{t('config.demo')}</h2>
+          <p className="config-sub">{t('config.demoTexto', { senha: SENHA_DEMO })}</p>
+          <button
+            type="button"
+            className="btn-perigo"
+            onClick={() => {
+              if (confirm(t('config.resetConfirm'))) resetarDemo()
+            }}
+          >
+            {t('config.resetDemo')}
+          </button>
+        </section>
+      )}
 
       <section className="cartao config-tech">
         <p>

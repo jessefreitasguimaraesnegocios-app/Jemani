@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { separarAgendamentos } from '@/services/agendamentoCliente'
 import { useDemoStore } from '@/store/demoStore'
+import { rotuloRotaCliente } from '@/utils/contatoViagem'
 import { formatarData, formatarMoeda } from '@/utils/format'
 import './ClienteInicioPage.css'
 
@@ -46,9 +47,7 @@ export function ClienteInicioPage() {
                   <p className="cliente-inicio-cartao-codigo">{proxima.codigo}</p>
                   <p className="cliente-inicio-cartao-rota">
                     <MapPin size={14} className="mt-0.5 shrink-0" />
-                    <span>
-                      {proxima.origem} → {proxima.destino}
-                    </span>
+                    <span>{rotuloRotaCliente(proxima)}</span>
                   </p>
                   <p className="cliente-inicio-cartao-meta">
                     {formatarData(proxima.data_viagem, locale)} · {proxima.horario} ·{' '}

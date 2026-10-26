@@ -58,8 +58,9 @@ export async function criarIntencaoPagamento(
   }
 }
 
+/** Simulação DEV desligada — use Stripe teste (4242…). */
 export function permitirSimulacaoPagamentoDev(): boolean {
-  return import.meta.env.DEV === true && import.meta.env.VITE_ALLOW_DEV_PAYMENT === 'true'
+  return false
 }
 
 export async function simularPagamentoDev(

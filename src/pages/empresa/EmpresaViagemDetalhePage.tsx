@@ -6,15 +6,7 @@ import { ModalFinalizarViagem } from '@/components/ModalFinalizarViagem'
 import { useAuth } from '@/contexts/AuthContext'
 import { SLUG_SHIELD } from '@/data/seed'
 import { useDemoStore } from '@/store/demoStore'
-import type { StatusViagem } from '@/types'
 import { formatarData, formatarMoeda } from '@/utils/format'
-
-const PROXIMOS: Partial<Record<StatusViagem, { label: string; status: StatusViagem }>> = {
-  motorista_atribuido: { label: 'Motorista a caminho', status: 'motorista_a_caminho' },
-  motorista_a_caminho: { label: 'Motorista chegou', status: 'motorista_chegou' },
-  motorista_chegou: { label: 'Passageiro embarcou', status: 'passageiro_embarcou' },
-  passageiro_embarcou: { label: 'Iniciar viagem', status: 'viagem_em_andamento' },
-}
 
 export function EmpresaViagemDetalhePage() {
   const { id } = useParams()
@@ -60,7 +52,6 @@ export function EmpresaViagemDetalhePage() {
     [veiculos, viagem],
   )
   const atribuirEquipe = useDemoStore((s) => s.atribuirEquipe)
-  const atualizarStatus = useDemoStore((s) => s.atualizarStatus)
   const solicitarFinalizacao = useDemoStore((s) => s.solicitarFinalizacao)
   const confirmarFinalizacao = useDemoStore((s) => s.confirmarFinalizacao)
 
@@ -83,7 +74,6 @@ export function EmpresaViagemDetalhePage() {
   const cliente = perfis.find((p) => p.id === viagem.cliente_id)
   const motoristaAtual = todosMotoristas.find((m) => m.id === viagem.motorista_id)
   const veiculoAtual = todosVeiculos.find((v) => v.id === viagem.veiculo_id)
-  const proximo = PROXIMOS[viagem.status]
   const nomeCliente = cliente?.nome ?? viagem.nome_passageiro ?? 'Cliente'
 
   function handleAtribuir(e: FormEvent) {
@@ -93,17 +83,6 @@ export function EmpresaViagemDetalhePage() {
     try {
       atribuirEquipe(viagem!.id, motoristaId, veiculoId)
       setOk('Equipe atribuída com sucesso')
-    } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Erro')
-    }
-  }
-
-  function avancarStatus() {
-    if (!proximo || !usuario) return
-    setErro('')
-    try {
-      atualizarStatus(viagem!.id, proximo.status, usuario.id)
-      setOk(`Status atualizado: ${proximo.label}`)
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro')
     }
@@ -253,15 +232,6 @@ export function EmpresaViagemDetalhePage() {
             Confirmar equipe
           </button>
         </form>
-      )}
-
-      {proximo && (
-        <div className="cartao">
-          <h2 className="fonte-display text-2xl">Atualizar status</h2>
-          <button type="button" className="btn-primario mt-3" onClick={avancarStatus}>
-            {proximo.label}
-          </button>
-        </div>
       )}
 
       {viagem.status === 'viagem_em_andamento' && (

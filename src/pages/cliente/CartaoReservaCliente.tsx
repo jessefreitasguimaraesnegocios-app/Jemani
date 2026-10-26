@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { Viagem } from '@/types'
+import { rotuloRotaCliente } from '@/utils/contatoViagem'
 import { formatarData, formatarMoeda } from '@/utils/format'
 
 export function CartaoReservaCliente({
@@ -27,9 +28,7 @@ export function CartaoReservaCliente({
             {viagem.codigo}
             {categoria ? ` · ${categoria}` : ''}
           </p>
-          <p className="cliente-viagens-cartao-texto">
-            {viagem.origem} → {viagem.destino}
-          </p>
+          <p className="cliente-viagens-cartao-texto">{rotuloRotaCliente(viagem)}</p>
           <p className="cliente-viagens-cartao-texto">
             {formatarData(viagem.data_viagem, locale)} {viagem.horario} ·{' '}
             {formatarMoeda(viagem.preco_total, locale)}

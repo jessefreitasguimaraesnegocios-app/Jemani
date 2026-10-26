@@ -70,6 +70,29 @@
   line-height: 1;
 }
 
+.corrida-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.corrida-fila-item {
+  border: 1px solid rgba(201, 164, 108, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(246, 241, 232, 0.7);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.corrida-fila-item--ativa {
+  border-color: rgba(201, 164, 108, 0.7);
+  background: rgba(201, 164, 108, 0.18);
+  color: #f6f1e8;
+}
+
 .corrida-endereco,
 .corrida-contato {
   display: flex;

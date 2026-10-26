@@ -330,10 +330,8 @@ describe('status pelo gps', () => {
     updated_at: '2026-10-15T00:00:00Z',
   } as Viagem
 
-  it('marca a caminho quando o motorista sai e chegou ao chegar no embarque', () => {
-    expect(statusPeloGps({ ...base, status: 'motorista_atribuido' }, 34.2, -118.4)).toBe(
-      'motorista_a_caminho',
-    )
+  it('não marca a caminho sozinho; marca chegou ao chegar no embarque', () => {
+    expect(statusPeloGps({ ...base, status: 'motorista_atribuido' }, 34.2, -118.4)).toBeNull()
     expect(statusPeloGps({ ...base, status: 'motorista_a_caminho' }, 34.05, -118.25)).toBe(
       'motorista_chegou',
     )

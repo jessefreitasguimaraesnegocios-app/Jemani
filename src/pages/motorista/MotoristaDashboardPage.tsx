@@ -18,6 +18,7 @@ import { turnoAberto } from '@/services/turnoEmpresa'
 import { MotoristaMenuPainel } from '@/pages/motorista/MotoristaMenuPainel'
 import { useDemoStore } from '@/store/demoStore'
 import type { StatusViagem } from '@/types'
+import { telefoneDaViagem } from '@/utils/contatoViagem'
 import './MotoristaDashboardPage.css'
 
 const ACOES: Array<{ statusAtual: StatusViagem; proximo: StatusViagem; label: string }> = [
@@ -91,11 +92,23 @@ export function MotoristaDashboardPage() {
 
   const veiculos = useDemoStore((s) => s.veiculos)
   const marcarParadaHourlyChegou = useDemoStore((s) => s.marcarParadaHourlyChegou)
-  const proxima = viagens[0]
+  const [viagemSelecionadaId, setViagemSelecionadaId] = useState<string | null>(null)
+  const proxima =
+    viagens.find((v) => v.id === viagemSelecionadaId) ?? viagens[0] ?? undefined
   const cliente = perfis.find((p) => p.id === proxima?.cliente_id)
   const nomePassageiro = proxima?.nome_passageiro ?? cliente?.nome ?? 'Passageiro'
-  const telefone = cliente?.telefone
+  const telefone = (proxima ? telefoneDaViagem(proxima) : undefined) || cliente?.telefone
   const ligar = telefoneDiscavel(telefone)
+
+  useEffect(() => {
+    if (!proxima) {
+      setViagemSelecionadaId(null)
+      return
+    }
+    if (!viagens.some((v) => v.id === viagemSelecionadaId)) {
+      setViagemSelecionadaId(proxima.id)
+    }
+  }, [proxima, viagemSelecionadaId, viagens])
   const online = motorista ? Boolean(turnoAberto(turnos, motorista.id)) : false
   const empresaCorrida = proxima
     ? empresas.find((e) => e.id === proxima.empresa_id) ??
@@ -187,6 +200,23 @@ export function MotoristaDashboardPage() {
             </div>
             <BadgeStatus status={proxima.status} />
           </header>
+
+          {viagens.length > 1 && (
+            <div className="corrida-fila">
+              {viagens.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`corrida-fila-item${
+                    item.id === proxima.id ? ' corrida-fila-item--ativa' : ''
+                  }`}
+                  onClick={() => setViagemSelecionadaId(item.id)}
+                >
+                  {item.codigo}
+                </button>
+              ))}
+            </div>
+          )}
 
           <ClimaCorrida viagem={proxima} gpsLat={gpsLat} gpsLng={gpsLng} />
 

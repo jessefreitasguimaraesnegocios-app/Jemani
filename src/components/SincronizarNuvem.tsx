@@ -41,13 +41,12 @@ import {
   refrescarMeuPerfilNuvem,
 } from '@/services/nuvemPerfis'
 import {
-  gravarCategoriasNuvem,
-  gravarRegraPrecoNuvem,
   listarCategoriasNuvem,
   listarConfiguracoesNuvem,
   listarEmpresasNuvem,
   listarRegrasPrecoNuvem,
 } from '@/services/nuvemCatalogo'
+import { listarComissoesNuvem } from '@/services/nuvemComissoes'
 import { gravarVeiculosNuvem, listarVeiculosNuvem } from '@/services/nuvemVeiculos'
 import { useDemoStore } from '@/store/demoStore'
 import type { TurnoMotorista, Viagem } from '@/types'
@@ -85,24 +84,10 @@ export function SincronizarNuvem() {
       store().aplicarRegrasPrecoNuvem(regras)
       store().aplicarConfiguracoesNuvem(configs)
       store().aplicarEmpresasNuvem(empresas)
-
-      if (sessao.tipo !== 'admin') return
-
-      // Admin: publica no banco categorias/preços que só existiam no aparelho.
-      const slugsNuvem = new Set(categorias.map((item) => item.slug))
-      const categoriasFaltando = store().categorias.filter((item) => !slugsNuvem.has(item.slug))
-      if (categoriasFaltando.length) {
-        await gravarCategoriasNuvem(categoriasFaltando).catch(() => undefined)
-        const atualizadas = await listarCategoriasNuvem()
-        if (ativoRef.current) store().aplicarCategoriasNuvem(atualizadas)
-      }
-      if (regras.length === 0) {
-        const local = store().regrasPreco.find((item) => item.ativo) ?? store().regrasPreco[0]
-        if (local) {
-          await gravarRegraPrecoNuvem(local).catch(() => undefined)
-          const atualizadas = await listarRegrasPrecoNuvem()
-          if (ativoRef.current) store().aplicarRegrasPrecoNuvem(atualizadas)
-        }
+      // Não empurra seed/local → nuvem automaticamente (evita poluir o catálogo).
+      if (sessao.tipo === 'admin') {
+        const comissoes = await listarComissoesNuvem()
+        if (ativoRef.current && comissoes.length) store().aplicarComissoesNuvem(comissoes)
       }
     }
 

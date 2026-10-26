@@ -1,3 +1,5 @@
+import { Browser } from '@capacitor/browser'
+import { Capacitor } from '@capacitor/core'
 import { useMemo, useState } from 'react'
 import {
   ehHourly,
@@ -6,6 +8,8 @@ import {
   rotuloDuracao,
   formatarExtensaoConfirmada,
 } from '@/services/hourlyChauffeur'
+import { stripeCheckoutDisponivel } from '@/lib/stripeApi'
+import { criarIntencaoPagamento } from '@/services/pagamentoService'
 import { useDemoStore } from '@/store/demoStore'
 import type { Viagem } from '@/types'
 import { formatarMoeda } from '@/utils/format'
@@ -29,6 +33,7 @@ export function HourlyResumo({
   const solicitarExtensaoHourly = useDemoStore((s) => s.solicitarExtensaoHourly)
   const confirmarExtensaoHourlyPaga = useDemoStore((s) => s.confirmarExtensaoHourlyPaga)
   const sessaoId = useDemoStore((s) => s.sessaoId)
+  const perfis = useDemoStore((s) => s.perfis)
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const [aberto, setAberto] = useState(true)
@@ -54,13 +59,66 @@ export function HourlyResumo({
     setBusy(true)
     setMsg('')
     try {
+      if (!stripeCheckoutDisponivel()) {
+        throw new Error(
+          'Stripe teste indisponível. Ative VITE_STRIPE_ENABLED e as Edge Functions.',
+        )
+      }
       const chave = `ui-${viagem.id}-${minutos}-${Math.floor(Date.now() / 5000)}`
       const ext = solicitarExtensaoHourly(viagem.id, minutos, sessaoId, chave)
-      await confirmarExtensaoHourlyPaga(ext.id, sessaoId, { provider: 'teste' })
-      setMsg(formatarExtensaoConfirmada(ext, locale))
+      const email = perfis.find((p) => p.id === sessaoId)?.email
+      const intencao = await criarIntencaoPagamento({
+        bookingId: viagem.id,
+        codigo: `${viagem.codigo}-EXT`,
+        amount: ext.preco_adicional,
+        platformFee: ext.valor_plataforma,
+        companyAmount: ext.valor_empresa,
+        emailCliente: email,
+      })
+      if (!intencao.checkoutUrl || !intencao.sessionId) {
+        throw new Error('Checkout Stripe da extensão indisponível.')
+      }
+      sessionStorage.setItem(`jemani-extensao-${viagem.id}`, ext.id)
+      const noComputador =
+        window.location.protocol === 'http:' &&
+        ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
+      if (noComputador) {
+        window.location.assign(intencao.checkoutUrl)
+        return
+      }
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url: intencao.checkoutUrl })
+      } else {
+        window.open(intencao.checkoutUrl, '_blank')
+      }
+      setMsg('Stripe aberto. Ao pagar, volte a esta viagem para confirmar a extensão.')
+      let tentativas = 0
+      const timer = window.setInterval(() => {
+        if (document.visibilityState !== 'visible') return
+        tentativas += 1
+        if (tentativas > 36) {
+          window.clearInterval(timer)
+          setBusy(false)
+          setMsg('Stripe ainda não confirmou a extensão. Abra a viagem de novo se já pagou.')
+          return
+        }
+        void confirmarExtensaoHourlyPaga(ext.id, sessaoId, {
+          provider: 'stripe',
+          sessionId: intencao.sessionId,
+        })
+          .then((confirmada) => {
+            window.clearInterval(timer)
+            sessionStorage.removeItem(`jemani-extensao-${viagem.id}`)
+            setMsg(formatarExtensaoConfirmada(confirmada, locale))
+            setBusy(false)
+            if (Capacitor.isNativePlatform()) void Browser.close().catch(() => undefined)
+          })
+          .catch(() => {
+            /* aguardando pagamento */
+          })
+      }, 5000)
     } catch (err) {
       setMsg(err instanceof Error ? err.message : 'Falha na extensão')
-    } finally {
       setBusy(false)
     }
   }
@@ -146,8 +204,8 @@ export function HourlyResumo({
             ))}
           </div>
           <p className="hourly-resumo-dica">
-            Extensão só entra após pagamento confirmado. Em produção use Stripe; aqui a confirmação
-            de teste valida o fluxo completo.
+            Extensão só entra após pagamento Stripe (cartão teste 4242…). Libera mais tempo e
+            endereços no roteiro.
           </p>
         </div>
       )}
