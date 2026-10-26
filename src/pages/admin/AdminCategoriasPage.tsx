@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState } from 'react'
+import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { SLUG_SHIELD } from '@/data/seed'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { useDemoStore } from '@/store/demoStore'
@@ -20,8 +21,8 @@ export function AdminCategoriasPage() {
   const [nome, setNome] = useState('')
   const [adicional, setAdicional] = useState(0)
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+  function handleSubmit() {
+    if (!nome.trim()) throw new Error('nome')
     salvarCategoria({ nome, adicional_preco: adicional })
     setNome('')
     setAdicional(0)
@@ -41,16 +42,18 @@ export function AdminCategoriasPage() {
               {formatarMoeda(c.adicional_preco, locale)} · {c.capacidade_min}-{c.capacidade_max}
             </p>
           </div>
-          <button
-            type="button"
+          <BotaoSalvar
             className="btn-secundario !py-2"
-            onClick={() => salvarCategoria({ ...c, ativo: !c.ativo })}
+            aoSalvar={() => {
+              salvarCategoria({ ...c, ativo: !c.ativo })
+            }}
+            rotuloOk="OK"
           >
             {c.ativo ? t('admin.categorias.desativar') : t('admin.categorias.ativar')}
-          </button>
+          </BotaoSalvar>
         </div>
       ))}
-      <form className="cartao space-y-3" onSubmit={handleSubmit}>
+      <div className="cartao space-y-3">
         <h2 className="fonte-display text-2xl">{t('admin.categorias.nova')}</h2>
         <input
           className="campo"
@@ -65,10 +68,10 @@ export function AdminCategoriasPage() {
           value={adicional}
           onChange={(e) => setAdicional(Number(e.target.value))}
         />
-        <button type="submit" className="btn-primario">
+        <BotaoSalvar className="btn-primario" aoSalvar={handleSubmit}>
           {t('admin.categorias.adicionar')}
-        </button>
-      </form>
+        </BotaoSalvar>
+      </div>
     </div>
   )
 }

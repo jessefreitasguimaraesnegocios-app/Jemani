@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState, type FormEvent } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { BadgeStatus } from '@/components/BadgeStatus'
+import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -97,8 +98,7 @@ export function EmpresaMotoristasPage() {
 
   if (!empresa) return null
 
-  function enviar(e: FormEvent) {
-    e.preventDefault()
+  function enviar() {
     setErro('')
     setMsg('')
     try {
@@ -123,6 +123,7 @@ export function EmpresaMotoristasPage() {
       setMsg(t('empresa.motoristas.acessoDica'))
     } catch (err) {
       setErro(err instanceof Error ? err.message : t('cadastrar.falha'))
+      throw err
     }
   }
 
@@ -421,7 +422,7 @@ export function EmpresaMotoristasPage() {
       )}
 
       {cadastroAberto && (
-      <form className="cartao motorista-form" onSubmit={enviar}>
+      <div className="cartao motorista-form">
         <div>
           <h2 className="fonte-display text-2xl">{t('empresa.motoristas.cadastrar')}</h2>
           <p className="motorista-form-sub">{t('empresa.motoristas.acessoDica')}</p>
@@ -537,9 +538,9 @@ export function EmpresaMotoristasPage() {
         {msg && <p className="motorista-ok">{msg}</p>}
 
         <div className="motorista-form-acoes">
-          <button type="submit" className="btn-primario">
+          <BotaoSalvar className="btn-primario" aoSalvar={enviar}>
             {t('empresa.motoristas.salvar')}
-          </button>
+          </BotaoSalvar>
           <button
             type="button"
             className="btn-secundario"
@@ -551,7 +552,7 @@ export function EmpresaMotoristasPage() {
             {t('comum.cancelar')}
           </button>
         </div>
-      </form>
+      </div>
       )}
     </div>
   )

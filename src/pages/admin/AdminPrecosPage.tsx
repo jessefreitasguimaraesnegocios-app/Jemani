@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
+import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { useDemoStore } from '@/store/demoStore'
 
@@ -24,8 +25,7 @@ export function AdminPrecosPage() {
 
   if (!regra) return <div className="cartao">Nenhuma regra de preço.</div>
 
-  function salvar(e: FormEvent) {
-    e.preventDefault()
+  function salvar() {
     atualizarRegraPreco(regra!.id, {
       ...form,
       pacotes_minutos: regra!.pacotes_minutos?.length
@@ -37,7 +37,7 @@ export function AdminPrecosPage() {
   return (
     <div className="animar-entrada space-y-4">
       <h1 className="fonte-display text-3xl">{t('admin.precos.titulo')}</h1>
-      <form className="cartao grid gap-3 sm:grid-cols-2" onSubmit={salvar}>
+      <div className="cartao grid gap-3 sm:grid-cols-2">
         <p className="sm:col-span-2 text-sm font-medium">ONE-WAY RIDE</p>
         {(
           [
@@ -101,10 +101,10 @@ export function AdminPrecosPage() {
             />
           </div>
         ))}
-        <button type="submit" className="btn-primario sm:col-span-2">
+        <BotaoSalvar className="btn-primario sm:col-span-2" aoSalvar={salvar}>
           Salvar regra de preço
-        </button>
-      </form>
+        </BotaoSalvar>
+      </div>
     </div>
   )
 }

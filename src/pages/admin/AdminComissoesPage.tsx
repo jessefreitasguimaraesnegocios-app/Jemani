@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState } from 'react'
+import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { lerComissaoPadrao } from '@/services/comissaoService'
 import { useDemoStore } from '@/store/demoStore'
@@ -67,8 +68,7 @@ export function AdminComissoesPage() {
     return rascunhos[empresaId] ?? String(atual ?? padraoAtual)
   }
 
-  function salvarPadrao(e: FormEvent) {
-    e.preventDefault()
+  function salvarPadrao() {
     atualizarConfiguracao('comissao_percentual', padrao)
     setMsg(`Padrão da plataforma salvo em ${padrao}%. Novas empresas e corridas sem % própria usam este valor.`)
   }
@@ -77,7 +77,7 @@ export function AdminComissoesPage() {
     const pct = Number(padrao)
     if (Number.isNaN(pct) || pct < 0 || pct > 100) {
       setMsg('Informe um percentual entre 0 e 100.')
-      return
+      throw new Error('pct')
     }
     atualizarConfiguracao('comissao_percentual', String(pct))
     aplicarComissaoTodasEmpresas(pct)
@@ -93,7 +93,7 @@ export function AdminComissoesPage() {
     const pct = Number(bruto)
     if (Number.isNaN(pct) || pct < 0 || pct > 100) {
       setMsg('Percentual inválido (0 a 100).')
-      return
+      throw new Error('pct')
     }
     const empresa = salvarEmpresa({ id: empresaId, comissao_percentual: pct })
     setRascunhos((atual) => {
@@ -113,7 +113,7 @@ export function AdminComissoesPage() {
         </div>
       </div>
 
-      <form className="cartao comissoes-padrao" onSubmit={salvarPadrao}>
+      <div className="cartao comissoes-padrao">
         <h2 className="fonte-display text-2xl">{t('admin.comissoes.padrao')}</h2>
         <div className="comissoes-padrao-linha">
           <div>
@@ -132,18 +132,18 @@ export function AdminComissoesPage() {
               required
             />
           </div>
-          <button type="submit" className="btn-primario">
+          <BotaoSalvar className="btn-primario" aoSalvar={salvarPadrao}>
             Salvar padrão
-          </button>
-          <button type="button" className="btn-ouro" onClick={aplicarTodas}>
+          </BotaoSalvar>
+          <BotaoSalvar className="btn-ouro" aoSalvar={aplicarTodas} rotuloOk="Aplicado">
             {t('admin.comissoes.aplicarTodas')}
-          </button>
+          </BotaoSalvar>
         </div>
         <p className="comissoes-dica">
           “Salvar padrão” só define o valor global. “Aplicar a todas” copia esse % para cada
           empresa. Corridas já finalizadas mantêm o percentual registrado na época.
         </p>
-      </form>
+      </div>
 
       {msg && (
         <div className="cartao">
@@ -180,13 +180,12 @@ export function AdminComissoesPage() {
                       setRascunhos((atual) => ({ ...atual, [empresa.id]: e.target.value }))
                     }
                   />
-                  <button
-                    type="button"
+                  <BotaoSalvar
                     className="btn-secundario !py-2"
-                    onClick={() => salvarEmpresaPct(empresa.id)}
+                    aoSalvar={() => salvarEmpresaPct(empresa.id)}
                   >
                     Salvar
-                  </button>
+                  </BotaoSalvar>
                 </div>
               </div>
             )

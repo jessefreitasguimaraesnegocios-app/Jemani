@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState } from 'react'
+import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import {
   cadastrarFotoCatalogoVeiculo,
@@ -26,7 +27,6 @@ export function AdminCatalogoVeiculos() {
   const [ano, setAno] = useState(new Date().getFullYear())
   const [nome, setNome] = useState('')
   const [arquivo, setArquivo] = useState<File | null>(null)
-  const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState('')
   const [msg, setMsg] = useState('')
 
@@ -39,12 +39,10 @@ export function AdminCatalogoVeiculos() {
     })
   }, [fotos, busca])
 
-  async function enviar(e: FormEvent) {
-    e.preventDefault()
-    if (!arquivo || enviando) return
+  async function enviar() {
+    if (!arquivo) throw new Error('arquivo')
     setErro('')
     setMsg('')
-    setEnviando(true)
     try {
       const foto = await cadastrarFotoCatalogoVeiculo({
         marca,
@@ -62,8 +60,7 @@ export function AdminCatalogoVeiculos() {
       setMsg(t('admin.catalogo.salvo'))
     } catch (err) {
       setErro(err instanceof Error ? err.message : t('admin.catalogo.erroSalvar'))
-    } finally {
-      setEnviando(false)
+      throw err
     }
   }
 
@@ -87,7 +84,7 @@ export function AdminCatalogoVeiculos() {
         <p className="admin-catalogo-sub">{t('admin.catalogo.sub')}</p>
       </div>
 
-      <form className="cartao admin-catalogo-form" onSubmit={(e) => void enviar(e)}>
+      <div className="cartao admin-catalogo-form">
         <h3 className="fonte-display text-xl">{t('admin.catalogo.cadastrar')}</h3>
         <div className="admin-catalogo-grade">
           <div>
@@ -153,10 +150,10 @@ export function AdminCatalogoVeiculos() {
             />
           </div>
         </div>
-        <button type="submit" className="btn-primario" disabled={enviando || !arquivo}>
-          {enviando ? t('admin.catalogo.enviando') : t('admin.catalogo.salvar')}
-        </button>
-      </form>
+        <BotaoSalvar className="btn-primario" aoSalvar={enviar} disabled={!arquivo}>
+          {t('admin.catalogo.salvar')}
+        </BotaoSalvar>
+      </div>
 
       {(erro || msg) && (
         <p className={erro ? 'admin-catalogo-erro' : 'admin-catalogo-ok'}>{erro || msg}</p>

@@ -1,0 +1,24 @@
+.admin-frota-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.admin-frota-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.admin-frota-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.admin-frota-filtros .campo {
+  min-width: 12rem;
+}

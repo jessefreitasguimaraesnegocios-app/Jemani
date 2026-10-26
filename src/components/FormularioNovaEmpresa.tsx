@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
+import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { CampoEndereco } from '@/components/CampoEndereco'
 import { criarEmpresaNoSupabase } from '@/services/empresaAdminService'
 import type { CategoriaVeiculo, Empresa, EnderecoLocal } from '@/types'
@@ -25,7 +26,6 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
     categorias.filter((c) => c.ativo).map((c) => c.id),
   )
   const [erro, setErro] = useState('')
-  const [enviando, setEnviando] = useState(false)
 
   function alternarCategoria(id: string) {
     setCategoriasIds((atual) =>
@@ -33,19 +33,17 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
     )
   }
 
-  async function enviar(e: FormEvent) {
-    e.preventDefault()
+  async function enviar() {
     setErro('')
     const check = enderecoProntoParaReserva(endereco)
     if (!check.ok || !endereco) {
       setErro(check.mensagem ?? 'Informe o endereço-base com número válido.')
-      return
+      throw new Error('endereco')
     }
     if (categoriasIds.length === 0) {
       setErro('Selecione ao menos uma categoria de veículo.')
-      return
+      throw new Error('categoria')
     }
-    setEnviando(true)
     try {
       const listaRegioes = regioes
         .split(',')
@@ -64,20 +62,19 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
         longitude: endereco.longitude,
         regioes_atendidas: listaRegioes.length
           ? listaRegioes
-          : [cidade.trim() || endereco.cidade].filter(Boolean) as string[],
+          : ([cidade.trim() || endereco.cidade].filter(Boolean) as string[]),
         categorias_ids: categoriasIds,
         nome_gestor: `Gestor ${nomeComercial.trim()}`,
       })
       onCriada(empresa, senha)
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Falha ao criar empresa')
-    } finally {
-      setEnviando(false)
+      throw err
     }
   }
 
   return (
-    <form className="cartao formulario-nova-empresa" onSubmit={enviar}>
+    <div className="cartao formulario-nova-empresa">
       <h2 className="fonte-display text-2xl">Nova empresa parceira</h2>
       <p className="formulario-nova-empresa-dica">
         O cadastro é gravado no Supabase. A empresa entra ativa e habilitada a receber corridas.
@@ -215,13 +212,13 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
       {erro && <p className="text-sm text-[var(--color-danger)]">{erro}</p>}
 
       <div className="formulario-nova-empresa-acoes">
-        <button type="button" className="btn-secundario" onClick={onCancelar} disabled={enviando}>
+        <button type="button" className="btn-secundario" onClick={onCancelar}>
           Cancelar
         </button>
-        <button type="submit" className="btn-ouro" disabled={enviando}>
-          {enviando ? 'Salvando no Supabase...' : 'Criar'}
-        </button>
+        <BotaoSalvar className="btn-ouro" aoSalvar={enviar} rotuloOk="Criada">
+          Criar
+        </BotaoSalvar>
       </div>
-    </form>
+    </div>
   )
 }

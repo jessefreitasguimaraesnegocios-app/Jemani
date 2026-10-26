@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { BadgeStatus } from '@/components/BadgeStatus'
+import { FormularioEditarEmpresa } from '@/components/FormularioEditarEmpresa'
 import { FormularioNovaEmpresa } from '@/components/FormularioNovaEmpresa'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { AdminCatalogoVeiculos } from '@/pages/admin/AdminCatalogoVeiculos'
+import { AdminFrotaVeiculos } from '@/pages/admin/AdminFrotaVeiculos'
 import { ordenarEmpresasPorProximidade } from '@/services/distribuicaoService'
 import { agruparCorridasPorEmpresa, montarResumoHistorico } from '@/services/historicoCorridas'
 import { useDemoStore } from '@/store/demoStore'
@@ -161,7 +163,10 @@ export function AdminEmpresasPage() {
       </div>
 
       {aba === 'veiculos' ? (
-        <AdminCatalogoVeiculos />
+        <div className="space-y-8">
+          <AdminFrotaVeiculos />
+          <AdminCatalogoVeiculos />
+        </div>
       ) : (
         <>
           {mostrarForm && (
@@ -382,6 +387,18 @@ export function AdminEmpresasPage() {
                       <Link to={`/admin/empresas/${e.id}`} className="admin-empresa-historico-link">
                         {t('admin.empresas.historico')}
                       </Link>
+                    </div>
+
+                    <div className="admin-empresa-bloco">
+                      <FormularioEditarEmpresa
+                        empresa={e}
+                        categorias={categorias}
+                        onSalvar={(patch) => {
+                          salvarEmpresa(patch)
+                          setMsg(`Empresa ${patch.nome_comercial ?? e.nome_comercial} atualizada.`)
+                          setErro('')
+                        }}
+                      />
                     </div>
 
                     <div className="admin-empresa-bloco">

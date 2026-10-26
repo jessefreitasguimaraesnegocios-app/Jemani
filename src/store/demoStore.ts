@@ -2461,7 +2461,7 @@ export const useDemoStore = create<EstadoDemo>()(
           bagageiro: dados.bagageiro ?? true,
           fotos: dados.fotos ?? [],
           placa: dados.placa,
-          status: 'disponivel',
+          status: dados.status ?? 'disponivel',
           created_at: agora,
           updated_at: agora,
         }

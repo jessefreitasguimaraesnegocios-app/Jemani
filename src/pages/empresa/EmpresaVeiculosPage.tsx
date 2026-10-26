@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { SeletorFotoVeiculo } from '@/components/SeletorFotoVeiculo'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -240,8 +241,11 @@ export function EmpresaVeiculosPage() {
     setMsg(t('empresa.veiculos.excluido'))
   }
 
-  function enviar(e: FormEvent) {
-    e.preventDefault()
+  function enviar() {
+    if (!marca.trim() || !modelo.trim()) {
+      setErro('Informe marca e modelo.')
+      throw new Error('campos')
+    }
     const eraEdicao = Boolean(editandoId)
     salvarVeiculo({
       id: editandoId ?? undefined,
@@ -364,7 +368,7 @@ export function EmpresaVeiculosPage() {
       )}
 
       {cadastroAberto && (
-        <form className="cartao veiculo-form" onSubmit={enviar}>
+        <div className="cartao veiculo-form">
           <h2 className="fonte-display text-2xl">
             {editandoId ? t('empresa.veiculos.editarTitulo') : t('empresa.veiculos.cadastrar')}
           </h2>
@@ -451,9 +455,9 @@ export function EmpresaVeiculosPage() {
             </div>
           </div>
           <div className="veiculo-form-acoes">
-            <button type="submit" className="btn-primario">
+            <BotaoSalvar className="btn-primario" aoSalvar={enviar}>
               {t('empresa.veiculos.salvar')}
-            </button>
+            </BotaoSalvar>
             <button
               type="button"
               className="btn-secundario"
@@ -467,7 +471,7 @@ export function EmpresaVeiculosPage() {
               </button>
             )}
           </div>
-        </form>
+        </div>
       )}
 
       {confirmando &&
