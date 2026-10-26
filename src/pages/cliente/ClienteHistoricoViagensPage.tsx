@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -9,6 +9,8 @@ import { useDemoStore } from '@/store/demoStore'
 import type { Viagem } from '@/types'
 import { CartaoReservaCliente } from './CartaoReservaCliente'
 import './ClienteViagensPage.css'
+
+const POR_PAGINA = 10
 
 const GRUPOS: { chave: ChaveTraducao; filtro: (v: Viagem) => boolean }[] = [
   {
@@ -29,6 +31,7 @@ export function ClienteHistoricoViagensPage() {
   const empresas = useDemoStore((s) => s.empresas)
   const motoristas = useDemoStore((s) => s.motoristas)
   const categorias = useDemoStore((s) => s.categorias)
+  const [visiveis, setVisiveis] = useState<Record<string, number>>({})
   const idsAvaliados = useMemo(
     () => new Set(avaliacoes.map((a) => a.viagem_id)),
     [avaliacoes],
@@ -45,6 +48,17 @@ export function ClienteHistoricoViagensPage() {
     [empresas],
   )
   const mapaMotoristas = useMemo(() => new Map(motoristas.map((m) => [m.id, m.nome])), [motoristas])
+
+  function limiteGrupo(chave: string) {
+    return visiveis[chave] ?? POR_PAGINA
+  }
+
+  function verMais(chave: string) {
+    setVisiveis((atual) => ({
+      ...atual,
+      [chave]: (atual[chave] ?? POR_PAGINA) + POR_PAGINA,
+    }))
+  }
 
   return (
     <div className="cliente-agenda animar-entrada">
@@ -63,11 +77,14 @@ export function ClienteHistoricoViagensPage() {
         GRUPOS.map((grupo) => {
           const lista = historico.filter(grupo.filtro)
           if (lista.length === 0) return null
+          const limite = limiteGrupo(grupo.chave)
+          const visivel = lista.slice(0, limite)
+          const temMais = lista.length > limite
           return (
             <section key={grupo.chave}>
               <h2 className="cliente-viagens-grupo-titulo">{t(grupo.chave)}</h2>
               <div className="cliente-viagens-lista">
-                {lista.map((viagem) => (
+                {visivel.map((viagem) => (
                   <CartaoReservaCliente
                     key={viagem.id}
                     viagem={viagem}
@@ -84,6 +101,15 @@ export function ClienteHistoricoViagensPage() {
                   />
                 ))}
               </div>
+              {temMais && (
+                <button
+                  type="button"
+                  className="cliente-historico-ver-mais"
+                  onClick={() => verMais(grupo.chave)}
+                >
+                  {t('comum.verMais')}
+                </button>
+              )}
             </section>
           )
         })

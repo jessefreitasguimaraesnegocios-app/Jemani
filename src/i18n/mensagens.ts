@@ -6,6 +6,7 @@ const pt = {
   'comum.salvar': 'Salvar',
   'comum.cancelar': 'Cancelar',
   'comum.buscar': 'Buscar',
+  'comum.verMais': 'Ver mais',
   'atualizacao.olho': 'Nova versão',
   'atualizacao.titulo': 'Atualização disponível',
   'atualizacao.texto':
@@ -472,6 +473,7 @@ const en: Record<ChaveTraducao, string> = {
   'comum.salvar': 'Save',
   'comum.cancelar': 'Cancel',
   'comum.buscar': 'Search',
+  'comum.verMais': 'See more',
   'atualizacao.olho': 'New version',
   'atualizacao.titulo': 'Update available',
   'atualizacao.texto':
@@ -933,6 +935,7 @@ const es: Record<ChaveTraducao, string> = {
   'comum.salvar': 'Guardar',
   'comum.cancelar': 'Cancelar',
   'comum.buscar': 'Buscar',
+  'comum.verMais': 'Ver más',
   'atualizacao.olho': 'Nueva versión',
   'atualizacao.titulo': 'Actualización disponible',
   'atualizacao.texto':

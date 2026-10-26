@@ -339,6 +339,29 @@
   gap: 0.65rem;
 }
 
+.cliente-historico-ver-mais {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 0.65rem;
+  min-height: 2.55rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(12, 18, 34, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--color-ink);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.cliente-historico-ver-mais:hover {
+  border-color: rgba(184, 149, 108, 0.55);
+  background: #fff;
+}
+
 .cliente-viagens-cartao {
   display: block;
   padding: 1rem 1.05rem;
