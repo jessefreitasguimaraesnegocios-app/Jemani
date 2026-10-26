@@ -4,23 +4,21 @@ Marketplace de transporte executivo nos **Estados Unidos** e no **mundo** — en
 
 A plataforma capta clientes, distribui solicitações para empresas parceiras e registra a comissão.
 
-## Novidades — 23/10/2026
+## Novidades — 26/10/2026
 
-### Hourly Chauffeur
+### Hourly Chauffeur (roteiro + auditoria)
 
-- Modalidade **por hora** na reserva (além do transfer one-way): duração contratada, franquia de milhas e extensão com pagamento.
-- Admin configura preço/hora e regras em **Preços** (`0` = hourly desligado).
-- Migration: `supabase/migrations/20261023220000_hourly_chauffeur.sql` (aplicar no SQL Editor do Supabase Jemani).
-
-### Cobertura e chat
-
-- Endereços e aeroportos no **mundo todo** (Mapbox sem limite de LA).
-- Motorista recebe alerta quando a empresa manda mensagem no chat (**!** pulsando no menu).
+- Cliente envia **próximos endereços** na corrida hourly (limite por bloco, padrão **5**; admin ajusta em Configurações).
+- Motorista vê a lista: endereço atual em destaque, concluídos transparentes, botão “Cheguei”.
+- Extensão de horas e pagamento da reserva só via **Stripe teste** (cartão `4242…`); sem “simular DEV”.
+- Minimizar Hourly no motorista; histórico do cliente com minimizar + Ver mais (10 em 10).
+- Cancelamento avisa empresa/motorista e bloqueia depois do embarque; GPS não marca “a caminho” sozinho.
+- Migrations: `20261026120000_hourly_paradas.sql` e `20261026190000_auditoria_correcoes.sql` (colar no SQL Editor do Jemani se ainda não rodou).
 
 ### Entre aparelhos (site + APK)
 
-- Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens e notificações.
-- APK atual: **1.0.30** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
+- Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens, notificações e comissões.
+- APK atual: **1.0.38** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
 
 Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -30,7 +28,7 @@ A ordem está no [`CHANGELOG.md`](CHANGELOG.md):
 
 6. Stripe em produção só quando for pedido. Continua em teste.
 7. Políticas de acesso antes de ligar o RLS em `company_users` e `pickup_locations`.
-8. Fechar sync restante (motorista/empresa na nuvem, avaliações/comissões) se ainda divergir entre aparelhos.
+8. Auth real de motorista/empresa na nuvem e claim atômico de aceite no servidor.
 
 ## Novidades — 01/10/2026
 
@@ -96,10 +94,10 @@ Outras empresas: `empresa@pacificexec.app`, `empresa@westcoastmobility.app`
 1. Entre como **cliente**
 2. Reserve: LAX Airport → Beverly Hills · amanhã · 15:00 · 4 passageiros · JEMANI VAN  
    (na etapa de categoria, teste o showroom 3D)
-3. Confirme e, se Stripe estiver configurado, pague com **Pagar com Stripe (teste)**
+3. Confirme e pague com **Pagar com Stripe (teste)** (`4242 4242 4242 4242`)
 4. Entre como **empresa** (`empresa@lapremier.app`)
 5. Aceite a solicitação e atribua motorista/veículo
-6. Acompanhe status como cliente / motorista
+6. Acompanhe status como cliente / motorista (no hourly, cliente adiciona endereços e motorista marca “Cheguei”)
 7. Finalize e confira comissão no **admin**
 
 ## 5. Supabase / Deploy

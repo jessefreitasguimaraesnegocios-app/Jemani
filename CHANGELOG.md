@@ -2,6 +2,44 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-10-26]
+
+### Adicionado
+
+- **Paradas hourly sob demanda**: cliente envia endereços no roteiro (`ParadasHourlyCliente`); motorista vê lista com “Cheguei” (`ListaParadasMotorista`); limite por bloco e raio km em Admin → Configurações (`hourly_paradas_por_bloco`, `hourly_raio_paradas_km`).
+- Extensão hourly libera mais vagas de endereço após pagamento Stripe.
+- Migration `20261026120000_hourly_paradas.sql` (`trips.paradas`, `paradas_liberadas`, platform_settings).
+- Migration `20261026190000_auditoria_correcoes.sql` (RPC `empresas_para_distribuicao` sem expor CNPJ/razão social).
+- Comissões gravadas/lidas em `public.commissions` (`nuvemComissoes`).
+- Histórico do cliente: minimizar por grupo + paginação 10 + Ver mais.
+- Hourly no motorista com Minimizar; fila de corridas quando há mais de uma atribuída.
+- Painel de voo também na viagem do cliente; notificação do cliente abre a viagem.
+
+### Alterado / corrigido
+
+- Pagamento e extensão hourly **somente Stripe teste**; botão “Simular pagamento (DEV)” removido.
+- GPS não avança `motorista_atribuido` → `a_caminho` no primeiro tick (só botão do motorista).
+- Cancelamento: notifica motorista/empresa, bloqueia após embarque, marca reembolso local.
+- Aceite de oferta aceita status `paid`; recusa sincroniza oferta na nuvem.
+- Empresa não avança mais o status operacional do motorista (fica com o motorista/GPS).
+- Admin: reset demo só com `VITE_DEMO_MODE`; sync não empurra categorias seed → nuvem.
+- UX hourly: cartões/home sem “origem → As directed”; telefone da reserva usado no contato do motorista.
+- Finalizar corrida mostra empresa/veículo; destino hourly rotulado como serviço.
+- APK **1.0.38**.
+
+### Observação
+
+Aplicar no SQL Editor do projeto Jemani (`qdiocaeoevxhdsrtcahn`), se ainda não rodou:
+
+1. `supabase/migrations/20261026120000_hourly_paradas.sql`
+2. `supabase/migrations/20261026190000_auditoria_correcoes.sql`
+
+### Próximos passos
+
+6. **Stripe em produção**, só quando for pedido.
+7. **RLS** em `company_users` / `pickup_locations` com políticas antes de ligar.
+8. **Auth real** de motorista/empresa na nuvem + claim atômico de aceite no servidor.
+
 ## [2026-10-23]
 
 ### Adicionado
@@ -14,7 +52,7 @@ Registro das mudanças do Jemani.
 
 ### Alterado
 
-- APK **1.0.30** (`npm run android:apk` → `public/downloads/jemani-android.apk` + `versao-android.json`).
+- APK **1.0.30** (superseded por **1.0.38** em 26/10).
 
 ### Observação
 
