@@ -3,6 +3,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { AvisoAtualizacaoApp } from '@/components/AvisoAtualizacaoApp'
 import { SincronizarIdioma } from '@/components/SincronizarIdioma'
 import { PrepararAlertas } from '@/components/PrepararAlertas'
+import { VigilanciaAlertas } from '@/components/VigilanciaAlertas'
 import { VigilanciaHourly } from '@/components/VigilanciaHourly'
 import { SincronizarNuvem } from '@/components/SincronizarNuvem'
 import { RotaProtegida } from '@/components/RotaProtegida'
@@ -51,6 +52,7 @@ export default function App() {
       <PrepararAlertas />
       <SincronizarNuvem />
       <VigilanciaHourly />
+      <VigilanciaAlertas />
       <AvisoAtualizacaoApp />
       <BrowserRouter>
         <Routes>

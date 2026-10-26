@@ -8,6 +8,7 @@ import {
   buscarViagemNuvem,
   entrarNuvem,
   gravarOfertasNuvem,
+  gravarViagemNuvem,
   gravarViagensNuvem,
   INTERVALO_SEGURANCA_NUVEM_MS,
   listarOfertasNuvem,
@@ -39,6 +40,14 @@ import {
   buscarPerfisNuvem,
   refrescarMeuPerfilNuvem,
 } from '@/services/nuvemPerfis'
+import {
+  gravarCategoriasNuvem,
+  gravarRegraPrecoNuvem,
+  listarCategoriasNuvem,
+  listarConfiguracoesNuvem,
+  listarEmpresasNuvem,
+  listarRegrasPrecoNuvem,
+} from '@/services/nuvemCatalogo'
 import { gravarVeiculosNuvem, listarVeiculosNuvem } from '@/services/nuvemVeiculos'
 import { useDemoStore } from '@/store/demoStore'
 import type { TurnoMotorista, Viagem } from '@/types'
@@ -63,6 +72,39 @@ export function SincronizarNuvem() {
     let canalNotificacoes: RealtimeChannel | null = null
 
     const store = () => useDemoStore.getState()
+
+    async function puxarCatalogoPlataforma() {
+      const [categorias, regras, configs, empresas] = await Promise.all([
+        listarCategoriasNuvem(),
+        listarRegrasPrecoNuvem(),
+        listarConfiguracoesNuvem(),
+        listarEmpresasNuvem(),
+      ])
+      if (!ativoRef.current) return
+      store().aplicarCategoriasNuvem(categorias)
+      store().aplicarRegrasPrecoNuvem(regras)
+      store().aplicarConfiguracoesNuvem(configs)
+      store().aplicarEmpresasNuvem(empresas)
+
+      if (sessao.tipo !== 'admin') return
+
+      // Admin: publica no banco categorias/preços que só existiam no aparelho.
+      const slugsNuvem = new Set(categorias.map((item) => item.slug))
+      const categoriasFaltando = store().categorias.filter((item) => !slugsNuvem.has(item.slug))
+      if (categoriasFaltando.length) {
+        await gravarCategoriasNuvem(categoriasFaltando).catch(() => undefined)
+        const atualizadas = await listarCategoriasNuvem()
+        if (ativoRef.current) store().aplicarCategoriasNuvem(atualizadas)
+      }
+      if (regras.length === 0) {
+        const local = store().regrasPreco.find((item) => item.ativo) ?? store().regrasPreco[0]
+        if (local) {
+          await gravarRegraPrecoNuvem(local).catch(() => undefined)
+          const atualizadas = await listarRegrasPrecoNuvem()
+          if (ativoRef.current) store().aplicarRegrasPrecoNuvem(atualizadas)
+        }
+      }
+    }
 
     async function puxarPerfisEFotos(viagensAgora: Viagem[]) {
       const meuPerfil = await refrescarMeuPerfilNuvem(sessao.id)
@@ -159,7 +201,11 @@ export function SincronizarNuvem() {
         for (const mensagem of mensagensAgora) store().aplicarMensagemNuvem(mensagem, false)
         // Margem de 2s evita perder update entre o fetch e o marcador.
         ultimaViagemSyncRef.current = new Date(Date.now() - 2000).toISOString()
-        if (opcoes.comPerfis) await puxarPerfisEFotos(viagensAgora)
+        if (opcoes.comPerfis) {
+          await puxarCatalogoPlataforma()
+          if (!ativoRef.current) return
+          await puxarPerfisEFotos(viagensAgora)
+        }
       } finally {
         puxandoRef.current = false
       }
@@ -189,7 +235,10 @@ export function SincronizarNuvem() {
       for (const item of historicos) store().aplicarHistoricoNuvem(item)
       for (const alerta of alertas) store().aplicarNotificacaoNuvem(alerta)
       store().aplicarVeiculosNuvem(frota)
+      await puxarCatalogoPlataforma()
+      if (!ativoRef.current) return
       store().limparDuplicatasNuvem()
+      store().limparNotificacoesExpiradas(sessao.id)
       store().retomarCorridasPagas()
       ultimaViagemSyncRef.current = new Date().toISOString()
       await puxarPerfisEFotos(viagens)
@@ -225,6 +274,20 @@ export function SincronizarNuvem() {
               !store().veiculosExcluidos.includes(veiculo.id),
           )
           if (daEmpresa.length) await gravarVeiculosNuvem(daEmpresa).catch(() => undefined)
+          // Reenvia equipe (motorista+veículo) se a nuvem ainda não tinha veiculo_id.
+          const comEquipe = store().viagens.filter(
+            (viagem) =>
+              viagem.empresa_id === empresa.id &&
+              viagem.motorista_id &&
+              viagem.veiculo_id &&
+              !['cancelada', 'expired', 'viagem_finalizada'].includes(viagem.status),
+          )
+          for (const viagem of comEquipe) {
+            const remota = viagens.find((item) => item.id === viagem.id)
+            if (remota && !remota.veiculo_id) {
+              await gravarViagemNuvem(viagem).catch(() => undefined)
+            }
+          }
         }
       }
       if (sessao.tipo === 'cliente') {

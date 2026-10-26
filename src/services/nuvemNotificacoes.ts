@@ -88,6 +88,16 @@ export async function marcarNotificacaoLidaNuvem(id: string) {
   if (error) console.warn('Falha ao marcar notificação lida na nuvem', error.message)
 }
 
+export async function apagarNotificacoesNuvem(ids: string[]) {
+  const db = banco()
+  if (!db || ids.length === 0) return
+  const sessao = await db.auth.getSession()
+  const uid = sessao.data.session?.user.id
+  if (!uid) return
+  const { error } = await db.from('notifications').delete().in('id', ids).eq('usuario_id', uid)
+  if (error) console.warn('Falha ao apagar notificações na nuvem', error.message)
+}
+
 export function assinarNotificacoesNuvem(aoMudar: (item: Notificacao) => void) {
   const db = banco()
   if (!db) return null

@@ -330,7 +330,11 @@ export function ClienteViagemDetalhePage() {
           </div>
           <Info
             label="Veículo"
-            valor={veiculo ? `${veiculo.marca} ${veiculo.modelo}` : '—'}
+            valor={
+              veiculo
+                ? `${veiculo.marca} ${veiculo.modelo}${veiculo.placa ? ` · ${veiculo.placa}` : ''}`
+                : '—'
+            }
           />
           <Info label="Passageiro" valor={viagem.nome_passageiro ?? usuario?.nome ?? '—'} />
           {viagem.malas != null && <Info label="Malas" valor={String(viagem.malas)} />}

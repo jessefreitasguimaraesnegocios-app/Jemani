@@ -9,6 +9,7 @@ type LinhaViagem = {
   cliente_id: string
   empresa_id: string | null
   motorista_id: string | null
+  veiculo_id: string | null
   categoria_id: string
   modalidade?: string | null
   origem: string
@@ -227,6 +228,7 @@ function paraLinha(viagem: Viagem): LinhaViagem {
     cliente_id: viagem.cliente_id,
     empresa_id: viagem.empresa_id ?? null,
     motorista_id: viagem.motorista_id ?? null,
+    veiculo_id: viagem.veiculo_id ?? null,
     categoria_id: viagem.categoria_id,
     modalidade: viagem.modalidade ?? 'one_way',
     origem: viagem.origem,
@@ -277,6 +279,7 @@ export function viagemDaLinha(linha: LinhaViagem): Viagem {
     cliente_id: linha.cliente_id,
     empresa_id: linha.empresa_id ?? undefined,
     motorista_id: linha.motorista_id ?? undefined,
+    veiculo_id: linha.veiculo_id ?? undefined,
     categoria_id: linha.categoria_id,
     modalidade: linha.modalidade === 'hourly' ? 'hourly' : 'one_way',
     origem: linha.origem,
@@ -441,7 +444,7 @@ export const INTERVALO_SEGURANCA_NUVEM_MS = 25_000
 
 /** Colunas usadas pelo app — evita select('*') genérico. */
 export const COLUNAS_VIAGEM =
-  'id,codigo,cliente_id,empresa_id,motorista_id,categoria_id,modalidade,origem,destino,origem_lat,origem_lng,destino_lat,destino_lng,origem_place_id,destino_place_id,data_viagem,horario,duracao_contratada_minutos,inicio_agendado,fim_agendado,franquia_milhas,milhas_percorridas,horario_vencido_em,conclusao_efetiva_em,passageiros,malas,numero_voo,nome_passageiro,observacoes,distancia_km,preco_base,taxas,preco_total,comissao_percentual,valor_plataforma,valor_empresa,status,payment_status,motorista_lat,motorista_lng,finalizado_em,finalizado_por,version,created_at,updated_at'
+  'id,codigo,cliente_id,empresa_id,motorista_id,veiculo_id,categoria_id,modalidade,origem,destino,origem_lat,origem_lng,destino_lat,destino_lng,origem_place_id,destino_place_id,data_viagem,horario,duracao_contratada_minutos,inicio_agendado,fim_agendado,franquia_milhas,milhas_percorridas,horario_vencido_em,conclusao_efetiva_em,passageiros,malas,numero_voo,nome_passageiro,observacoes,distancia_km,preco_base,taxas,preco_total,comissao_percentual,valor_plataforma,valor_empresa,status,payment_status,motorista_lat,motorista_lng,finalizado_em,finalizado_por,version,created_at,updated_at'
 
 export const COLUNAS_OFERTA =
   'id,viagem_id,empresa_id,status,distancia_km,motivo,respondido_em,created_at'

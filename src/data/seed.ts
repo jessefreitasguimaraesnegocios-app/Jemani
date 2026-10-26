@@ -197,14 +197,22 @@ export function sincronizarFrota(categorias: CategoriaVeiculo[], agora = agoraIs
   const porSlug = new Map(categorias.map((c) => [c.slug, c]))
   const frota = FROTA_LUXO.map((def) => {
     const atual = porSlug.get(def.slug)
+    // Mantém o id da nuvem/local quando já existe (slug é a chave estável).
     return {
       ...(atual ?? {
         created_at: agora,
         ativo: true,
       }),
       ...def,
-      ativo: true,
-      updated_at: agora,
+      id: atual?.id ?? def.id,
+      nome: atual?.nome ?? def.nome,
+      descricao: atual?.descricao ?? def.descricao,
+      capacidade_min: atual?.capacidade_min ?? def.capacidade_min,
+      capacidade_max: atual?.capacidade_max ?? def.capacidade_max,
+      adicional_preco: atual?.adicional_preco ?? def.adicional_preco,
+      ordem: atual?.ordem ?? def.ordem,
+      ativo: atual?.ativo ?? true,
+      updated_at: atual?.updated_at ?? agora,
       created_at: atual?.created_at ?? agora,
     }
   })
@@ -318,10 +326,17 @@ export function completarCatalogo<
 >(estado: T): T {
   const agora = agoraIso()
   let categorias = sincronizarFrota(estado.categorias, agora)
+  const idPorSlug = new Map(categorias.map((c) => [c.slug, c.id]))
+  const idCat = (slug: string, fallback: string) => idPorSlug.get(slug) ?? fallback
+  const idsExtras = [
+    idCat(SLUG_SHIELD, IDS.catShield),
+    idCat('jemani-expedition', IDS.catExpedition),
+    idCat('jemani-charter', IDS.catCharter),
+  ]
 
   const empresas = estado.empresas.map((empresa) => {
     let comShield = empresa.categorias_ids
-    for (const id of [IDS.catShield, IDS.catExpedition, IDS.catCharter]) {
+    for (const id of idsExtras) {
       if (!comShield.includes(id)) comShield = [...comShield, id]
     }
     return {
@@ -345,20 +360,30 @@ export function completarCatalogo<
     veiculosSemExcluidos.some((v) => v.id === ID_VEICULO_SHIELD) || excluidos.has(ID_VEICULO_SHIELD)
       ? veiculosSemExcluidos
       : [...veiculosSemExcluidos, criarVeiculoShield(agora)]
-  let veiculos = veiculosBase.map((veiculo) =>
-    veiculo.id === ID_VEICULO_SHIELD
-      ? { ...veiculo, marca: 'Cadillac', modelo: 'Escalade' }
-      : veiculo,
-  )
+  let veiculos = veiculosBase.map((veiculo) => {
+    if (veiculo.id === ID_VEICULO_SHIELD) {
+      return {
+        ...veiculo,
+        marca: 'Cadillac',
+        modelo: 'Escalade',
+        categoria_id: idCat(SLUG_SHIELD, IDS.catShield),
+      }
+    }
+    return veiculo
+  })
   for (const empresa of empresas) {
     for (const item of FROTA_PARA_OFERTA) {
-      if (!empresa.categorias_ids.includes(item.categoriaId)) continue
+      const categoriaId = idCat(
+        item.categoriaId === IDS.catExpedition ? 'jemani-expedition' : 'jemani-charter',
+        item.categoriaId,
+      )
+      if (!empresa.categorias_ids.includes(categoriaId)) continue
       const idFrota = `99999999-9999-9999-9997-${item.sufixo}${empresa.id.slice(-2).padStart(11, '0')}`
       if (excluidos.has(idFrota)) continue
       const jaTem = veiculos.some(
         (veiculo) =>
           veiculo.empresa_id === empresa.id &&
-          veiculo.categoria_id === item.categoriaId &&
+          veiculo.categoria_id === categoriaId &&
           veiculo.status !== 'inativo',
       )
       if (jaTem) continue
@@ -370,7 +395,7 @@ export function completarCatalogo<
           marca: item.marca,
           modelo: item.modelo,
           ano: 2024,
-          categoria_id: item.categoriaId,
+          categoria_id: categoriaId,
           capacidade: item.capacidade,
           ar_condicionado: true,
           bagageiro: true,

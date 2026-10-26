@@ -35,8 +35,17 @@ import {
   gravarViagemNuvem,
   gravarViagensNuvem,
 } from '@/services/nuvemCorrida'
+import {
+  CHAVES_CONFIG_NUVEM,
+  gravarCategoriaNuvem,
+  gravarConfiguracaoNuvem,
+  gravarEmpresaNuvem,
+  gravarEmpresasNuvem,
+  gravarRegraPrecoNuvem,
+} from '@/services/nuvemCatalogo'
 import { apagarVeiculoNuvem, gravarVeiculoNuvem } from '@/services/nuvemVeiculos'
 import {
+  apagarNotificacoesNuvem,
   gravarNotificacaoNuvem,
   marcarNotificacaoLidaNuvem,
 } from '@/services/nuvemNotificacoes'
@@ -223,11 +232,17 @@ interface EstadoDemo {
   adicionarFotoCatalogoVeiculo: (foto: FotoCatalogoVeiculo) => void
   removerFotoCatalogoVeiculoLocal: (id: string) => void
   aplicarVeiculosNuvem: (veiculos: Veiculo[]) => void
+  aplicarCategoriasNuvem: (categorias: CategoriaVeiculo[]) => void
+  aplicarRegrasPrecoNuvem: (regras: RegraPreco[]) => void
+  aplicarConfiguracoesNuvem: (configs: ConfiguracaoPlataforma[]) => void
+  aplicarEmpresasNuvem: (empresas: Empresa[]) => void
   solicitarFinalizacao: (viagemId: string) => { ok: boolean; mensagem: string }
   confirmarFinalizacao: (viagemId: string, usuarioId: string, confirmado: boolean) => Viagem
   cancelarViagem: (viagemId: string, usuarioId: string, motivo: string) => Viagem
   criarAvaliacao: (dados: Omit<Avaliacao, 'id' | 'created_at'>) => Avaliacao
   marcarNotificacaoLida: (id: string) => void
+  /** Remove alertas com mais de 24h se o usuário não estiver em corrida ativa. */
+  limparNotificacoesExpiradas: (usuarioId: string) => void
   registrarAudit: (acao: string, usuarioId?: string, entidadeTipo?: string, entidadeId?: string, metadados?: Record<string, unknown>) => void
   atualizarConfiguracao: (chave: string, valor: string) => void
   atualizarRegraPreco: (id: string, patch: Partial<RegraPreco>) => void
@@ -293,6 +308,44 @@ function estadoInicial() {
 
 function chaveNotificacao(n: Pick<Notificacao, 'usuario_id' | 'tipo' | 'titulo' | 'referencia_id'>) {
   return `${n.usuario_id}|${n.tipo}|${n.titulo}|${n.referencia_id ?? ''}`
+}
+
+const LIMITE_ALERTA_MS = 24 * 60 * 60 * 1000
+
+const STATUS_CORRIDA_ATIVA: StatusViagem[] = [
+  'empresa_confirmada',
+  'motorista_atribuido',
+  'motorista_a_caminho',
+  'motorista_chegou',
+  'passageiro_embarcou',
+  'viagem_em_andamento',
+]
+
+function usuarioTemCorridaAtiva(get: () => EstadoDemo, usuarioId: string) {
+  const state = get()
+  const ativa = (status: StatusViagem) => STATUS_CORRIDA_ATIVA.includes(status)
+  if (state.viagens.some((v) => v.cliente_id === usuarioId && ativa(v.status))) return true
+  const motorista = state.obterMotoristaDoUsuario(usuarioId)
+  if (
+    motorista &&
+    state.viagens.some((v) => v.motorista_id === motorista.id && ativa(v.status))
+  ) {
+    return true
+  }
+  const empresa = state.obterEmpresaDoUsuario(usuarioId)
+  if (
+    empresa &&
+    state.viagens.some((v) => v.empresa_id === empresa.id && ativa(v.status))
+  ) {
+    return true
+  }
+  return false
+}
+
+function notificacaoExpirada(createdAt: string, agora = Date.now()) {
+  const marca = new Date(createdAt).getTime()
+  if (!Number.isFinite(marca)) return false
+  return agora - marca >= LIMITE_ALERTA_MS
 }
 
 function chaveHistorico(h: Pick<HistoricoStatus, 'viagem_id' | 'status_anterior' | 'status_novo'>) {
@@ -1862,8 +1915,8 @@ export const useDemoStore = create<EstadoDemo>()(
           set,
           get,
           viagem.cliente_id,
-          'Motorista atribuído',
-          `${motorista.nome} irá conduzir sua viagem ${viagem.codigo}.`,
+          'Motorista e veículo atribuídos',
+          `${motorista.nome} · ${veiculo.marca} ${veiculo.modelo} na viagem ${viagem.codigo}.`,
           'status',
           viagemId,
         )
@@ -2130,7 +2183,29 @@ export const useDemoStore = create<EstadoDemo>()(
         void marcarNotificacaoLidaNuvem(id)
       },
 
+      limparNotificacoesExpiradas: (usuarioId) => {
+        if (!usuarioId) return
+        // Com corrida ativa, espera terminar para não apagar o histórico da viagem.
+        if (usuarioTemCorridaAtiva(get, usuarioId)) return
+        const expiradas = get().notificacoes.filter(
+          (n) => n.usuario_id === usuarioId && notificacaoExpirada(n.created_at),
+        )
+        if (expiradas.length === 0) return
+        const ids = new Set(expiradas.map((n) => n.id))
+        set({
+          notificacoes: get().notificacoes.filter((n) => !ids.has(n.id)),
+        })
+        void apagarNotificacoesNuvem([...ids])
+      },
+
       aplicarNotificacaoNuvem: (item) => {
+        if (
+          notificacaoExpirada(item.created_at) &&
+          !usuarioTemCorridaAtiva(get, item.usuario_id)
+        ) {
+          void apagarNotificacoesNuvem([item.id])
+          return
+        }
         const lista = get().notificacoes
         const chave = chaveNotificacao(item)
         const indice = lista.findIndex(
@@ -2169,12 +2244,13 @@ export const useDemoStore = create<EstadoDemo>()(
       },
 
       atualizarConfiguracao: (chave, valor) => {
+        const agora = agoraIso()
         set((s) => {
           const existe = s.configuracoes.some((c) => c.chave === chave)
           if (existe) {
             return {
               configuracoes: s.configuracoes.map((c) =>
-                c.chave === chave ? { ...c, valor, updated_at: agoraIso() } : c,
+                c.chave === chave ? { ...c, valor, updated_at: agora } : c,
               ),
             }
           }
@@ -2186,19 +2262,32 @@ export const useDemoStore = create<EstadoDemo>()(
                 chave,
                 valor,
                 descricao: chave,
-                updated_at: agoraIso(),
+                updated_at: agora,
               },
             ],
           }
         })
+        if (CHAVES_CONFIG_NUVEM.has(chave)) {
+          const atual = get().configuracoes.find((c) => c.chave === chave)
+          void gravarConfiguracaoNuvem({
+            id: atual?.id,
+            chave,
+            valor,
+            descricao: atual?.descricao ?? chave,
+            updated_at: agora,
+          }).catch(() => undefined)
+        }
       },
 
       atualizarRegraPreco: (id, patch) => {
+        const agora = agoraIso()
         set((s) => ({
           regrasPreco: s.regrasPreco.map((r) =>
-            r.id === id ? { ...r, ...patch, updated_at: agoraIso() } : r,
+            r.id === id ? { ...r, ...patch, updated_at: agora } : r,
           ),
         }))
+        const atualizada = get().regrasPreco.find((r) => r.id === id)
+        if (atualizada) void gravarRegraPrecoNuvem(atualizada).catch(() => undefined)
       },
 
       salvarCategoria: (cat) => {
@@ -2212,6 +2301,7 @@ export const useDemoStore = create<EstadoDemo>()(
           set((s) => ({
             categorias: s.categorias.map((c) => (c.id === cat.id ? atualizada : c)),
           }))
+          void gravarCategoriaNuvem(atualizada).catch(() => undefined)
           return atualizada
         }
         const nova: CategoriaVeiculo = {
@@ -2228,6 +2318,7 @@ export const useDemoStore = create<EstadoDemo>()(
           updated_at: agora,
         }
         set((s) => ({ categorias: [...s.categorias, nova] }))
+        void gravarCategoriaNuvem(nova).catch(() => undefined)
         return nova
       },
 
@@ -2238,6 +2329,7 @@ export const useDemoStore = create<EstadoDemo>()(
         set((s) => ({
           empresas: s.empresas.map((e) => (e.id === patch.id ? atualizada : e)),
         }))
+        void gravarEmpresaNuvem(atualizada).catch(() => undefined)
         return atualizada
       },
 
@@ -2251,6 +2343,7 @@ export const useDemoStore = create<EstadoDemo>()(
             updated_at: agora,
           })),
         }))
+        void gravarEmpresasNuvem(get().empresas).catch(() => undefined)
       },
 
       criarEmpresa: (empresa, senhaAcesso) => {
@@ -2908,6 +3001,99 @@ export const useDemoStore = create<EstadoDemo>()(
             mapa.set(remoto.id, local ? { ...local, ...remoto } : remoto)
           }
           return { veiculos: [...mapa.values()] }
+        })
+      },
+
+      aplicarCategoriasNuvem: (remotos) => {
+        if (!remotos.length) return
+        set((state) => {
+          const porSlugRemoto = new Map(remotos.map((item) => [item.slug, item]))
+          const mapaIds = new Map<string, string>()
+          for (const local of state.categorias) {
+            const remoto = porSlugRemoto.get(local.slug)
+            if (remoto && remoto.id !== local.id) mapaIds.set(local.id, remoto.id)
+          }
+
+          const porSlugLocal = new Map(state.categorias.map((item) => [item.slug, item]))
+          const mescladas = [
+            ...remotos.map((remoto) => {
+              const local = porSlugLocal.get(remoto.slug)
+              return local ? { ...local, ...remoto } : remoto
+            }),
+            ...state.categorias.filter((local) => !porSlugRemoto.has(local.slug)),
+          ]
+
+          const trocar = (id: string | undefined) =>
+            id && mapaIds.has(id) ? (mapaIds.get(id) as string) : id
+
+          return {
+            categorias: mescladas,
+            veiculos: state.veiculos.map((veiculo) => ({
+              ...veiculo,
+              categoria_id: trocar(veiculo.categoria_id) ?? veiculo.categoria_id,
+            })),
+            empresas: state.empresas.map((empresa) => ({
+              ...empresa,
+              categorias_ids: empresa.categorias_ids.map((id) => trocar(id) ?? id),
+            })),
+            viagens: state.viagens.map((viagem) => ({
+              ...viagem,
+              categoria_id: trocar(viagem.categoria_id) ?? viagem.categoria_id,
+            })),
+          }
+        })
+      },
+
+      aplicarRegrasPrecoNuvem: (remotos) => {
+        if (!remotos.length) return
+        set((state) => {
+          const porId = new Map(state.regrasPreco.map((item) => [item.id, item]))
+          const porNome = new Map(state.regrasPreco.map((item) => [item.nome, item]))
+          const mescladas = remotos.map((remoto) => {
+            const local = porId.get(remoto.id) ?? porNome.get(remoto.nome)
+            if (!local) return remoto
+            return {
+              ...local,
+              ...remoto,
+              // Preserva textos locais se a nuvem ainda não tiver (colunas novas).
+              regra_extensao: remoto.regra_extensao ?? local.regra_extensao,
+              regra_cancelamento: remoto.regra_cancelamento ?? local.regra_cancelamento,
+              cobrancas_adicionais: remoto.cobrancas_adicionais ?? local.cobrancas_adicionais,
+              pacotes_minutos:
+                remoto.pacotes_minutos?.length > 0 ? remoto.pacotes_minutos : local.pacotes_minutos,
+            }
+          })
+          const idsRemotos = new Set(remotos.map((item) => item.id))
+          const nomesRemotos = new Set(remotos.map((item) => item.nome))
+          const soLocais = state.regrasPreco.filter(
+            (item) => !idsRemotos.has(item.id) && !nomesRemotos.has(item.nome),
+          )
+          return { regrasPreco: [...mescladas, ...soLocais] }
+        })
+      },
+
+      aplicarConfiguracoesNuvem: (remotos) => {
+        if (!remotos.length) return
+        set((state) => {
+          const porChave = new Map(state.configuracoes.map((item) => [item.chave, item]))
+          for (const remoto of remotos) {
+            if (!CHAVES_CONFIG_NUVEM.has(remoto.chave)) continue
+            const local = porChave.get(remoto.chave)
+            porChave.set(remoto.chave, local ? { ...local, ...remoto } : remoto)
+          }
+          return { configuracoes: [...porChave.values()] }
+        })
+      },
+
+      aplicarEmpresasNuvem: (remotos) => {
+        if (!remotos.length) return
+        set((state) => {
+          const mapa = new Map(state.empresas.map((item) => [item.id, item]))
+          for (const remoto of remotos) {
+            const local = mapa.get(remoto.id)
+            mapa.set(remoto.id, local ? { ...local, ...remoto } : remoto)
+          }
+          return { empresas: [...mapa.values()] }
         })
       },
     }),
