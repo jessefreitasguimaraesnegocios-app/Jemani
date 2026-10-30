@@ -96,6 +96,12 @@ describe('validarAntecedenciaMinima', () => {
     const r = validarAntecedenciaMinima('2026-09-18', '16:01', agora, 'UTC')
     expect(r.valido).toBe(true)
   })
+
+  it('respeita antecedência configurável (2h)', () => {
+    const agora = new Date('2026-09-18T12:00:00.000Z')
+    expect(validarAntecedenciaMinima('2026-09-18', '13:59', agora, 'UTC', 2).valido).toBe(false)
+    expect(validarAntecedenciaMinima('2026-09-18', '14:00', agora, 'UTC', 2).valido).toBe(true)
+  })
 })
 
 describe('listarHorariosDisponiveis', () => {
@@ -112,6 +118,13 @@ describe('listarHorariosDisponiveis', () => {
     const slots = listarHorariosDisponiveis('2026-09-19', agora, 'UTC', 15)
     expect(slots[0]).toBe('00:00')
     expect(slots.includes('09:00')).toBe(true)
+  })
+
+  it('usa antecedência do admin (6h)', () => {
+    const agora = new Date('2026-09-18T12:00:00.000Z')
+    const slots = listarHorariosDisponiveis('2026-09-18', agora, 'UTC', 15, 6)
+    expect(slots[0]).toBe('18:00')
+    expect(slots.includes('17:45')).toBe(false)
   })
 })
 

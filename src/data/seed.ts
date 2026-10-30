@@ -1037,6 +1037,13 @@ export function criarDadosIniciais(): {
       updated_at: agora,
     },
     {
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa12',
+      chave: 'reserva_antecedencia_horas',
+      valor: '4',
+      descricao: 'Antecedência mínima (horas) para agendar uma corrida',
+      updated_at: agora,
+    },
+    {
       id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
       chave: 'comissao_percentual',
       valor: '10',

@@ -1,5 +1,6 @@
 const TIMEZONE = import.meta.env.VITE_TIMEZONE || 'America/Los_Angeles'
-const MINUTOS_MINIMOS = 4 * 60
+/** Padrão se o admin ainda não configurou (horas). */
+export const ANTECEDENCIA_HORAS_PADRAO = 4
 const INTERVALO_SLOTS_MIN = 15
 
 export interface ResultadoValidacaoReserva {
@@ -46,6 +47,16 @@ function minutosParaHorario(totalMinutos: number): string {
   const h = Math.floor(totalMinutos / 60)
   const m = totalMinutos % 60
   return `${pad2(h)}:${pad2(m)}`
+}
+
+/** Lê horas mínimas de antecedência nas configs da plataforma (1–72). */
+export function lerAntecedenciaHoras(
+  configuracoes: Array<{ chave: string; valor: string }> | undefined,
+): number {
+  const bruto = configuracoes?.find((c) => c.chave === 'reserva_antecedencia_horas')?.valor
+  const n = Number(bruto)
+  if (!Number.isFinite(n) || n < 1) return ANTECEDENCIA_HORAS_PADRAO
+  return Math.min(72, Math.floor(n))
 }
 
 export function dataIsoNoTimezone(agora: Date = new Date(), timezone = TIMEZONE): string {
@@ -98,7 +109,9 @@ export function validarAntecedenciaMinima(
   horario: string,
   agora: Date = new Date(),
   timezone = TIMEZONE,
+  antecedenciaHoras = ANTECEDENCIA_HORAS_PADRAO,
 ): ResultadoValidacaoReserva {
+  const minutosMinimos = Math.max(1, Math.floor(antecedenciaHoras)) * 60
   try {
     const partida = montarDataViagem(data, horario, timezone)
     const diffMs = partida.getTime() - agora.getTime()
@@ -112,11 +125,13 @@ export function validarAntecedenciaMinima(
       }
     }
 
-    if (minutos < MINUTOS_MINIMOS) {
+    if (minutos < minutosMinimos) {
+      const horas = Math.round(minutosMinimos / 60)
       return {
         valido: false,
-        mensagem:
-          'A reserva precisa de no mínimo 4 horas de antecedência. Escolha um horário mais tarde.',
+        mensagem: `A reserva precisa de no mínimo ${horas} ${
+          horas === 1 ? 'hora' : 'horas'
+        } de antecedência. Escolha um horário mais tarde.`,
         minutosAntecedencia: minutos,
       }
     }
@@ -129,13 +144,14 @@ export function validarAntecedenciaMinima(
 
 /**
  * Horários elegíveis para a data (intervalo de 15 min).
- * No mesmo dia, começa no primeiro slot com ≥ 4h de antecedência (fuso LA).
+ * No mesmo dia, começa no primeiro slot com a antecedência mínima (fuso LA).
  */
 export function listarHorariosDisponiveis(
   data: string,
   agora: Date = new Date(),
   timezone = TIMEZONE,
   intervaloMin = INTERVALO_SLOTS_MIN,
+  antecedenciaHoras = ANTECEDENCIA_HORAS_PADRAO,
 ): string[] {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return []
 
@@ -145,7 +161,7 @@ export function listarHorariosDisponiveis(
   const slots: string[] = []
   for (let total = 0; total < 24 * 60; total += intervaloMin) {
     const horario = minutosParaHorario(total)
-    if (validarAntecedenciaMinima(data, horario, agora, timezone).valido) {
+    if (validarAntecedenciaMinima(data, horario, agora, timezone, antecedenciaHoras).valido) {
       slots.push(horario)
     }
   }
@@ -157,6 +173,7 @@ export function primeiraDataDisponivel(
   agora: Date = new Date(),
   timezone = TIMEZONE,
   diasBusca = 14,
+  antecedenciaHoras = ANTECEDENCIA_HORAS_PADRAO,
 ): string {
   const formatador = formatadorTimezone(timezone)
   const base = partesTimezone(agora, formatador)
@@ -165,7 +182,9 @@ export function primeiraDataDisponivel(
   for (let i = 0; i < diasBusca; i++) {
     const dia = new Date(baseUtc + i * 24 * 60 * 60 * 1000)
     const iso = `${dia.getUTCFullYear()}-${pad2(dia.getUTCMonth() + 1)}-${pad2(dia.getUTCDate())}`
-    if (listarHorariosDisponiveis(iso, agora, timezone).length > 0) return iso
+    if (listarHorariosDisponiveis(iso, agora, timezone, INTERVALO_SLOTS_MIN, antecedenciaHoras).length > 0) {
+      return iso
+    }
   }
 
   return dataIsoNoTimezone(agora, timezone)

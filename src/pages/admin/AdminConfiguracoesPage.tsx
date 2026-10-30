@@ -92,6 +92,30 @@ export function AdminConfiguracoesPage() {
       </section>
 
       <section className="cartao config-secao">
+        <h2 className="fonte-display text-2xl">Reservas</h2>
+        <div className="config-grade">
+          <div>
+            <label className="rotulo" htmlFor="cfg-antecedencia">
+              Antecedência mínima (horas)
+            </label>
+            <input
+              id="cfg-antecedencia"
+              type="number"
+              min={1}
+              max={72}
+              className="campo"
+              value={ler('reserva_antecedencia_horas', '4')}
+              onChange={(e) => atualizarConfiguracao('reserva_antecedencia_horas', e.target.value)}
+            />
+          </div>
+        </div>
+        <p className="config-sub">
+          O cliente só consegue agendar com pelo menos essas horas a partir do momento atual (fuso
+          da plataforma).
+        </p>
+      </section>
+
+      <section className="cartao config-secao">
         <h2 className="fonte-display text-2xl">Hourly Chauffeur</h2>
         <div className="config-grade">
           <div>

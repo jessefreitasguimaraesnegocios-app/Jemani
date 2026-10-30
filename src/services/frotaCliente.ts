@@ -36,5 +36,7 @@ export function veiculoDestaqueDaCategoria(
   const frota = veiculosOfereceiveis(veiculos, empresas).filter(
     (veiculo) => veiculo.categoria_id === categoriaId,
   )
-  return frota.find((veiculo) => veiculo.fotos[0]) ?? frota[0]
+  const disponiveis = frota.filter((veiculo) => veiculo.status === 'disponivel')
+  const base = disponiveis.length ? disponiveis : frota
+  return base.find((veiculo) => veiculo.fotos[0]) ?? base[0]
 }

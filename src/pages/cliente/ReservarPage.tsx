@@ -14,10 +14,12 @@ import {
   type ModalidadeReserva,
 } from '@/services/hourlyChauffeur'
 import {
+  lerAntecedenciaHoras,
   listarHorariosDisponiveis,
   primeiraDataDisponivel,
   validarAntecedenciaMinima,
 } from '@/services/reservaValidacao'
+import { listarVeiculosNuvem } from '@/services/nuvemVeiculos'
 import { useDemoStore } from '@/store/demoStore'
 import type { EnderecoLocal } from '@/types'
 import { enderecoEhAeroporto, enderecoProntoParaReserva } from '@/utils/endereco'
@@ -35,9 +37,6 @@ const ETAPAS: ChaveTraducao[] = [
 ]
 const MAX_MALAS = 12
 
-const dataInicial = primeiraDataDisponivel()
-const horariosIniciais = listarHorariosDisponiveis(dataInicial)
-
 export function ReservarPage() {
   const { t, locale } = usarIdioma()
   const { usuario } = useAuth()
@@ -45,6 +44,8 @@ export function ReservarPage() {
   const todasCategorias = useDemoStore((s) => s.categorias)
   const veiculos = useDemoStore((s) => s.veiculos)
   const empresas = useDemoStore((s) => s.empresas)
+  const configuracoes = useDemoStore((s) => s.configuracoes)
+  const aplicarVeiculosNuvem = useDemoStore((s) => s.aplicarVeiculosNuvem)
   const categorias = useMemo(
     () =>
       categoriasComFrotaDisponivel(todasCategorias, veiculos, empresas).sort((a, b) => {
@@ -58,7 +59,13 @@ export function ReservarPage() {
   const calcularPrecoHourlyReserva = useDemoStore((s) => s.calcularPrecoHourlyReserva)
   const criarViagem = useDemoStore((s) => s.criarViagem)
   const regraPreco = useDemoStore((s) => s.regrasPreco.find((r) => r.ativo))
+  const antecedenciaHoras = useMemo(
+    () => lerAntecedenciaHoras(configuracoes),
+    [configuracoes],
+  )
 
+  /** Só escolhe modalidade no 1º passo; depois fica travada até voltar. */
+  const [modalidadeConfirmada, setModalidadeConfirmada] = useState(false)
   const [modalidade, setModalidade] = useState<ModalidadeReserva>('one_way')
   const [duracaoMinutos, setDuracaoMinutos] = useState(120)
   const [etapa, setEtapa] = useState(0)
@@ -67,8 +74,8 @@ export function ReservarPage() {
   const ehHourly = modalidade === 'hourly'
   const hourlyOk = hourlyConfigurado(regraPreco)
   const pacotesHourly = regraPreco ? listarPacotesMinutos(regraPreco) : [120]
-  const [dataViagem, setDataViagem] = useState(dataInicial)
-  const [horario, setHorario] = useState(horariosIniciais[0] ?? '18:00')
+  const [dataViagem, setDataViagem] = useState(() => primeiraDataDisponivel())
+  const [horario, setHorario] = useState('18:00')
   const [agoraTick, setAgoraTick] = useState(() => Date.now())
   const [passageiros, setPassageiros] = useState(2)
   const [categoriaId, setCategoriaId] = useState(
@@ -132,11 +139,24 @@ export function ReservarPage() {
     return () => window.clearInterval(id)
   }, [])
 
+  useEffect(() => {
+    let vivo = true
+    void listarVeiculosNuvem().then((frota) => {
+      if (vivo && frota.length) aplicarVeiculosNuvem(frota)
+    })
+    return () => {
+      vivo = false
+    }
+  }, [aplicarVeiculosNuvem])
+
   const agora = useMemo(() => new Date(agoraTick), [agoraTick])
-  const dataMinima = useMemo(() => primeiraDataDisponivel(agora), [agora])
+  const dataMinima = useMemo(
+    () => primeiraDataDisponivel(agora, undefined, 14, antecedenciaHoras),
+    [agora, antecedenciaHoras],
+  )
   const horariosDisponiveis = useMemo(
-    () => listarHorariosDisponiveis(dataViagem, agora),
-    [dataViagem, agora],
+    () => listarHorariosDisponiveis(dataViagem, agora, undefined, 15, antecedenciaHoras),
+    [dataViagem, agora, antecedenciaHoras],
   )
 
   useEffect(() => {
@@ -184,9 +204,32 @@ export function ReservarPage() {
   const aguardandoRota = Boolean(!ehHourly && origemPronta && destinoPronto && !rota)
 
   const validacaoHorario = useMemo(
-    () => validarAntecedenciaMinima(dataViagem, horario, agora),
-    [dataViagem, horario, agora],
+    () => validarAntecedenciaMinima(dataViagem, horario, agora, undefined, antecedenciaHoras),
+    [dataViagem, horario, agora, antecedenciaHoras],
   )
+
+  function escolherModalidade(proxima: ModalidadeReserva) {
+    setModalidade(proxima)
+    setErro('')
+    if (proxima === 'hourly') {
+      setDestinoEndereco(null)
+      setRota(null)
+      setMalas(0)
+    }
+  }
+
+  function reiniciarEscolhaModalidade() {
+    setModalidadeConfirmada(false)
+    setEtapa(0)
+    setErro('')
+    setOrigemEndereco(null)
+    setDestinoEndereco(null)
+    setRota(null)
+    setNumeroVoo('')
+    setTerminal('')
+    setNaoVouEmbarcar(false)
+    setObservacoes('')
+  }
 
   const categoria = categorias.find((c) => c.id === categoriaId)
 
@@ -275,13 +318,15 @@ export function ReservarPage() {
         return
       }
       if (horariosDisponiveis.length === 0) {
-        setErro('Não há horários com 4h de antecedência nesta data. Escolha outro dia.')
+        setErro(
+          `Não há horários com ${antecedenciaHoras}h de antecedência nesta data. Escolha outro dia.`,
+        )
         return
       }
       if (!horariosDisponiveis.includes(horario) || !validacaoHorario.valido) {
         setErro(
           validacaoHorario.mensagem ??
-            'Horário inválido. Escolha um dos horários disponíveis (mín. 4h).',
+            `Horário inválido. Escolha um dos horários disponíveis (mín. ${antecedenciaHoras}h).`,
         )
         return
       }
@@ -340,9 +385,20 @@ export function ReservarPage() {
       setErro('Hourly Chauffeur sem preço configurado.')
       return
     }
-    const check = validarAntecedenciaMinima(dataViagem, horario)
+    const check = validarAntecedenciaMinima(
+      dataViagem,
+      horario,
+      new Date(),
+      undefined,
+      antecedenciaHoras,
+    )
     if (!check.valido || !listarHorariosDisponiveis(dataViagem).includes(horario)) {
-      setErro(check.mensagem ?? 'Horário inválido — mínimo de 4 horas de antecedência.')
+      setErro(
+        check.mensagem ??
+          `Horário inválido — mínimo de ${antecedenciaHoras} ${
+            antecedenciaHoras === 1 ? 'hora' : 'horas'
+          } de antecedência.`,
+      )
       return
     }
     if (!nomePassageiro.trim()) {
@@ -387,34 +443,57 @@ export function ReservarPage() {
         })}
       </p>
 
-      <div className="reserva-modalidade" role="group" aria-label="Modalidade da reserva">
-        <button
-          type="button"
-          className={`reserva-modalidade-btn ${!ehHourly ? 'reserva-modalidade-btn--ativo' : ''}`}
-          onClick={() => {
-            setModalidade('one_way')
-            setErro('')
-          }}
-        >
-          ONE-WAY RIDE
-        </button>
-        <button
-          type="button"
-          className={`reserva-modalidade-btn ${ehHourly ? 'reserva-modalidade-btn--ativo' : ''}`}
-          onClick={() => {
-            setModalidade('hourly')
-            setErro('')
-          }}
-        >
-          HOURLY CHAUFFEUR
-        </button>
-      </div>
-      {ehHourly && !hourlyOk && (
-        <p className="reserva-hourly-aviso">
-          Hourly Chauffeur ainda sem preço por hora na tabela administrativa. ONE-WAY continua
-          disponível.
+      {!modalidadeConfirmada ? (
+        <div className="reserva-escolha">
+          <p className="reserva-escolha-texto">Escolha o tipo de viagem para começar:</p>
+          <div className="reserva-modalidade" role="group" aria-label="Modalidade da reserva">
+            <button
+              type="button"
+              className={`reserva-modalidade-btn ${!ehHourly ? 'reserva-modalidade-btn--ativo' : ''}`}
+              onClick={() => escolherModalidade('one_way')}
+            >
+              ONE-WAY RIDE
+            </button>
+            <button
+              type="button"
+              className={`reserva-modalidade-btn ${ehHourly ? 'reserva-modalidade-btn--ativo' : ''}`}
+              onClick={() => escolherModalidade('hourly')}
+              disabled={!hourlyOk}
+            >
+              HOURLY CHAUFFEUR
+            </button>
+          </div>
+          {!hourlyOk && (
+            <p className="reserva-hourly-aviso">
+              Hourly Chauffeur ainda sem preço por hora na tabela administrativa. ONE-WAY continua
+              disponível.
+            </p>
+          )}
+          <button
+            type="button"
+            className="btn-primario reserva-escolha-iniciar"
+            onClick={() => {
+              setModalidadeConfirmada(true)
+              setEtapa(0)
+              setErro('')
+            }}
+          >
+            Continuar com {ehHourly ? 'Hourly Chauffeur' : 'One-Way Ride'}
+          </button>
+        </div>
+      ) : (
+        <>
+      <div className="reserva-modalidade-travada">
+        <p>
+          <span>Tipo de viagem</span>
+          <strong>{ehHourly ? 'HOURLY CHAUFFEUR' : 'ONE-WAY RIDE'}</strong>
         </p>
-      )}
+        {etapa === 0 && (
+          <button type="button" className="reserva-trocar-modalidade" onClick={reiniciarEscolhaModalidade}>
+            Trocar tipo
+          </button>
+        )}
+      </div>
 
       <div className="mt-4 mb-6 flex gap-1">
         {ETAPAS.map((nome, i) => (
@@ -513,7 +592,7 @@ export function ReservarPage() {
             </div>
             <div>
               <label className="rotulo" htmlFor="horario-viagem">
-                Horário (mín. 4h de antecedência · fuso LA)
+                Horário (mín. {antecedenciaHoras}h de antecedência · fuso LA)
               </label>
               <select
                 id="horario-viagem"
@@ -534,8 +613,9 @@ export function ReservarPage() {
                 )}
               </select>
               <p className="reserva-horario-dica">
-                No mesmo dia, a lista começa só após as 4 horas mínimas. Horários anteriores não
-                aparecem.
+                No mesmo dia, a lista começa só após as {antecedenciaHoras}{' '}
+                {antecedenciaHoras === 1 ? 'hora mínima' : 'horas mínimas'} definidas pelo admin.
+                Horários anteriores não aparecem.
                 {horariosDisponiveis[0]
                   ? ` Primeiro horário disponível: ${horariosDisponiveis[0]}.`
                   : ''}
@@ -824,6 +904,8 @@ export function ReservarPage() {
           )}
         </div>
       </form>
+        </>
+      )}
     </div>
   )
 }
