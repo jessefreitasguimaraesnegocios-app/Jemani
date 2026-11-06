@@ -58,7 +58,7 @@ export async function criarIntencaoPagamento(
   }
 }
 
-/** Simulação DEV desligada — use Stripe teste (4242…). */
+/** Simulação sem Stripe fica desligada. O teste é o checkout Stripe (cartão 4242). */
 export function permitirSimulacaoPagamentoDev(): boolean {
   return false
 }

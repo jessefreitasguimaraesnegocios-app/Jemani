@@ -1,6 +1,8 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { CORS, json } from '../_shared/cors.ts'
+import { exigirUsuario, ehAdmin, RespostaAuth } from '../_shared/auth.ts'
+import { limitarTaxa, resposta429 } from '../_shared/rateLimit.ts'
 import { criarClienteStripe } from '../_shared/stripe.ts'
 
 async function criarContaConnectV2(chave: string, email: string, nome: string) {
@@ -48,27 +50,49 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ erro: 'Método não permitido' }, 405)
 
   try {
+    const { user, perfil } = await exigirUsuario(req)
+    const limite = await limitarTaxa({
+      chave: `stripe-connect-onboarding:user:${user.id}`,
+      limite: 5,
+      janelaSegundos: 300,
+    })
+    if (!limite.ok) return resposta429(limite.retryAfterSegundos)
+
     const body = await req.json()
     const empresaId = String(body.empresa_id ?? '').trim()
-    const email = String(body.email ?? '').trim().toLowerCase()
-    const nome = String(body.nome ?? 'Empresa Jemani').trim()
-    const contaExistente = body.stripe_account_id
-      ? String(body.stripe_account_id).trim()
-      : ''
     const appUrl = String(body.app_url ?? Deno.env.get('APP_URL') ?? 'http://localhost:5173').replace(
       /\/$/,
       '',
     )
 
-    if (!empresaId || !email) {
-      return json({ erro: 'empresa_id e email são obrigatórios' }, 400)
-    }
+    if (!empresaId) return json({ erro: 'empresa_id obrigatório' }, 400)
 
+    const url = Deno.env.get('SUPABASE_URL')
+    const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     const chave = Deno.env.get('STRIPE_SECRET_KEY')
+    if (!url || !service) return json({ erro: 'Supabase admin não configurado' }, 500)
     if (!chave) return json({ erro: 'STRIPE_SECRET_KEY não configurada' }, 500)
 
+    const admin = createClient(url, service)
+    const { data: empresa } = await admin
+      .from('companies')
+      .select('id,usuario_id,email,nome_comercial,stripe_account_id')
+      .eq('id', empresaId)
+      .maybeSingle()
+
+    if (!empresa) return json({ erro: 'Empresa não encontrada' }, 404)
+    if (!ehAdmin(perfil) && empresa.usuario_id !== user.id) {
+      return json({ erro: 'Sem permissão para esta empresa' }, 403)
+    }
+
+    const email = String(empresa.email ?? body.email ?? '').trim().toLowerCase()
+    const nome = String(empresa.nome_comercial ?? body.nome ?? 'Empresa Jemani').trim()
+    if (!email) return json({ erro: 'Empresa sem e-mail' }, 400)
+
     const stripe = criarClienteStripe()
-    const accountId = contaExistente || (await criarContaConnectV2(chave, email, nome))
+    const accountId =
+      String(empresa.stripe_account_id ?? '').trim() ||
+      (await criarContaConnectV2(chave, email, nome))
 
     const link = await stripe.accountLinks.create({
       account: accountId,
@@ -77,12 +101,7 @@ Deno.serve(async (req: Request) => {
       type: 'account_onboarding',
     })
 
-    const url = Deno.env.get('SUPABASE_URL')
-    const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    if (url && service) {
-      const admin = createClient(url, service)
-      await admin.from('companies').update({ stripe_account_id: accountId }).eq('id', empresaId)
-    }
+    await admin.from('companies').update({ stripe_account_id: accountId }).eq('id', empresaId)
 
     return json({
       stripe_account_id: accountId,
@@ -90,6 +109,7 @@ Deno.serve(async (req: Request) => {
       modo: 'teste_connect_recipient',
     })
   } catch (err) {
+    if (err instanceof RespostaAuth) return json({ erro: err.message }, err.status)
     const mensagem = err instanceof Error ? err.message : 'Erro no onboarding Connect'
     return json({ erro: mensagem }, 500)
   }

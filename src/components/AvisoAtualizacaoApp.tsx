@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
+import type { PluginListenerHandle } from '@capacitor/core'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import {
   abrirDownloadApk,
@@ -8,27 +10,62 @@ import {
 } from '@/services/atualizacaoApp'
 import './AvisoAtualizacaoApp.css'
 
-const CHAVE_SESSAO = 'jemani.atualizacao.ignorar'
-
 export function AvisoAtualizacaoApp() {
   const { t } = usarIdioma()
   const [remota, setRemota] = useState<InfoVersaoRemota | null>(null)
   const [instalada, setInstalada] = useState('')
   const [aberto, setAberto] = useState(false)
   const [baixando, setBaixando] = useState(false)
+  const downloadDisparadoRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
-    if (sessionStorage.getItem(CHAVE_SESSAO) === '1') return
     let vivo = true
-    void verificarAtualizacaoApp().then((resultado) => {
-      if (!vivo || !resultado?.precisaAtualizar || !resultado.remota) return
+    let listenerApp: PluginListenerHandle | null = null
+
+    async function dispararDownload(info: InfoVersaoRemota) {
+      if (downloadDisparadoRef.current === info.versionCode) return
+      downloadDisparadoRef.current = info.versionCode
+      setBaixando(true)
+      try {
+        await abrirDownloadApk(info.apkUrl)
+      } finally {
+        if (vivo) setBaixando(false)
+      }
+    }
+
+    async function checar() {
+      const resultado = await verificarAtualizacaoApp()
+      if (!vivo || !resultado?.precisaAtualizar || !resultado.remota) {
+        if (vivo && resultado && !resultado.precisaAtualizar) {
+          setAberto(false)
+          setRemota(null)
+        }
+        return
+      }
       setRemota(resultado.remota)
       setInstalada(resultado.instalada?.versionName ?? '')
       setAberto(true)
+      void dispararDownload(resultado.remota)
+    }
+
+    void checar()
+
+    void App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void checar()
+    }).then((handle) => {
+      listenerApp = handle
     })
+
+    const aoVisivel = () => {
+      if (document.visibilityState === 'visible') void checar()
+    }
+    document.addEventListener('visibilitychange', aoVisivel)
+
     return () => {
       vivo = false
+      document.removeEventListener('visibilitychange', aoVisivel)
+      void listenerApp?.remove()
     }
   }, [])
 
@@ -41,11 +78,6 @@ export function AvisoAtualizacaoApp() {
     } finally {
       setBaixando(false)
     }
-  }
-
-  function depois() {
-    sessionStorage.setItem(CHAVE_SESSAO, '1')
-    setAberto(false)
   }
 
   return (
@@ -65,9 +97,6 @@ export function AvisoAtualizacaoApp() {
         <div className="aviso-atualizacao-acoes">
           <button type="button" className="btn-primario" disabled={baixando} onClick={() => void atualizarAgora()}>
             {baixando ? t('atualizacao.abrindo') : t('atualizacao.botao')}
-          </button>
-          <button type="button" className="btn-secundario" onClick={depois}>
-            {t('atualizacao.depois')}
           </button>
         </div>
         <p className="aviso-atualizacao-dica">{t('atualizacao.dica')}</p>

@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabase'
 import type { Empresa } from '@/types'
 
 export interface DadosNovaEmpresa {
@@ -27,11 +28,15 @@ function clienteFunctions() {
 
 export async function criarEmpresaNoSupabase(dados: DadosNovaEmpresa): Promise<Empresa> {
   const { base, anon } = clienteFunctions()
+  const sessao = supabase ? (await supabase.auth.getSession()).data.session : null
+  if (!sessao?.access_token) {
+    throw new Error('Faça login como admin para cadastrar empresa.')
+  }
   const resp = await fetch(`${base}/functions/v1/criar-empresa`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${anon}`,
+      Authorization: `Bearer ${sessao.access_token}`,
       apikey: anon,
     },
     body: JSON.stringify(dados),

@@ -14,7 +14,7 @@ import {
 import { statusPeloGps } from '@/services/statusPeloGps'
 import { fundirViagemNuvem, nuvemEstaAtrasada } from '@/services/fundirViagemNuvem'
 import { calcularDistanciaKm } from '@/services/mapasService'
-import { transferirParaEmpresa } from '@/lib/stripeApi'
+import { marcarPagamentoSimulado, transferirParaEmpresa } from '@/lib/stripeApi'
 import { emitirAvisoSistema } from '@/utils/avisoSistema'
 import {
   deveGravarPosicaoTurnoNuvem,
@@ -51,6 +51,7 @@ import {
   validarParadaNoRaio,
 } from '@/services/paradasHourly'
 import { gravarComissaoNuvem } from '@/services/nuvemComissoes'
+import { alinharCategoriaIdVeiculo } from '@/services/frotaCliente'
 import { apagarVeiculoNuvem, gravarVeiculoNuvem } from '@/services/nuvemVeiculos'
 import {
   apagarNotificacoesNuvem,
@@ -1197,6 +1198,8 @@ export const useDemoStore = create<EstadoDemo>()(
           platformFee: viagem.valor_plataforma,
           companyAmount: viagem.valor_empresa,
         })
+        // Grava "pago" no banco (service role). Se a function ainda não estiver publicada, segue local.
+        await marcarPagamentoSimulado(viagem.id).catch(() => undefined)
 
         const agora = agoraIso()
         set({
@@ -3162,10 +3165,19 @@ export const useDemoStore = create<EstadoDemo>()(
           )
           for (const remoto of remotos) {
             if (excluidos.has(remoto.id)) continue
+            const alinhado = {
+              ...remoto,
+              categoria_id: alinharCategoriaIdVeiculo(remoto.categoria_id, state.categorias),
+            }
             const local = mapa.get(remoto.id)
-            mapa.set(remoto.id, local ? { ...local, ...remoto } : remoto)
+            mapa.set(remoto.id, local ? { ...local, ...alinhado } : alinhado)
           }
-          return { veiculos: [...mapa.values()] }
+          return {
+            veiculos: [...mapa.values()].map((veiculo) => ({
+              ...veiculo,
+              categoria_id: alinharCategoriaIdVeiculo(veiculo.categoria_id, state.categorias),
+            })),
+          }
         })
       },
 
@@ -3220,7 +3232,7 @@ export const useDemoStore = create<EstadoDemo>()(
             return {
               ...local,
               ...remoto,
-              // Preserva textos locais se a nuvem ainda não tiver (colunas novas).
+              // Números/flags da nuvem mandam; textos só caem no local se a nuvem vier vazia.
               regra_extensao: remoto.regra_extensao ?? local.regra_extensao,
               regra_cancelamento: remoto.regra_cancelamento ?? local.regra_cancelamento,
               cobrancas_adicionais: remoto.cobrancas_adicionais ?? local.cobrancas_adicionais,
@@ -3230,9 +3242,11 @@ export const useDemoStore = create<EstadoDemo>()(
           })
           const idsRemotos = new Set(remotos.map((item) => item.id))
           const nomesRemotos = new Set(remotos.map((item) => item.nome))
-          const soLocais = state.regrasPreco.filter(
-            (item) => !idsRemotos.has(item.id) && !nomesRemotos.has(item.nome),
-          )
+          const nuvemTemAtiva = remotos.some((item) => item.ativo)
+          // Evita seed/local antigo competir com a regra ativa da nuvem (PC vs celular).
+          const soLocais = state.regrasPreco
+            .filter((item) => !idsRemotos.has(item.id) && !nomesRemotos.has(item.nome))
+            .map((item) => (nuvemTemAtiva ? { ...item, ativo: false } : item))
           return { regrasPreco: [...mescladas, ...soLocais] }
         })
       },
@@ -3243,8 +3257,13 @@ export const useDemoStore = create<EstadoDemo>()(
           const porChave = new Map(state.configuracoes.map((item) => [item.chave, item]))
           for (const remoto of remotos) {
             if (!CHAVES_CONFIG_NUVEM.has(remoto.chave)) continue
-            const local = porChave.get(remoto.chave)
-            porChave.set(remoto.chave, local ? { ...local, ...remoto } : remoto)
+            // Valor da nuvem é a fonte única entre aparelhos.
+            porChave.set(remoto.chave, {
+              ...(porChave.get(remoto.chave) ?? remoto),
+              ...remoto,
+              valor: remoto.valor,
+              updated_at: remoto.updated_at,
+            })
           }
           return { configuracoes: [...porChave.values()] }
         })

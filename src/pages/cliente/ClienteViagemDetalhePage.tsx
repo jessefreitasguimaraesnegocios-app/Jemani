@@ -12,7 +12,10 @@ import { PainelVoo } from '@/components/motorista/PainelVoo'
 import { ehHourly } from '@/services/hourlyChauffeur'
 import { useAuth } from '@/contexts/AuthContext'
 import { stripeCheckoutDisponivel } from '@/lib/stripeApi'
-import { criarIntencaoPagamento } from '@/services/pagamentoService'
+import {
+  criarIntencaoPagamento,
+  permitirSimulacaoPagamentoDev,
+} from '@/services/pagamentoService'
 import { useDemoStore } from '@/store/demoStore'
 import { rotuloRotaCliente } from '@/utils/contatoViagem'
 import { formatarData, formatarMoeda } from '@/utils/format'
@@ -42,6 +45,7 @@ export function ClienteViagemDetalhePage() {
   const cancelarViagem = useDemoStore((s) => s.cancelarViagem)
   const criarAvaliacao = useDemoStore((s) => s.criarAvaliacao)
   const confirmarPagamentoStripe = useDemoStore((s) => s.confirmarPagamentoStripe)
+  const simularPagamentoEDistribuir = useDemoStore((s) => s.simularPagamentoEDistribuir)
   const confirmarExtensaoHourlyPaga = useDemoStore((s) => s.confirmarExtensaoHourlyPaga)
   const confirmandoRef = useRef(false)
   const stripeTimerRef = useRef(0)
@@ -269,6 +273,28 @@ export function ClienteViagemDetalhePage() {
                   onClick={() => void pagarComStripe()}
                 >
                   {pagando ? 'Abrindo Stripe...' : 'Pagar com Stripe (teste)'}
+                </button>
+              )}
+              {permitirSimulacaoPagamentoDev() && (
+                <button
+                  type="button"
+                  className="btn-secundario"
+                  disabled={pagando}
+                  onClick={() => {
+                    if (!usuario) return
+                    setPagando(true)
+                    setMsg('')
+                    void simularPagamentoEDistribuir(viagem.id, usuario.id)
+                      .then(() =>
+                        setMsg('Pagamento de teste confirmado. Corrida liberada para as empresas.'),
+                      )
+                      .catch((err) =>
+                        setMsg(err instanceof Error ? err.message : 'Erro no pagamento de teste'),
+                      )
+                      .finally(() => setPagando(false))
+                  }}
+                >
+                  {pagando ? 'Processando...' : 'Simular pagamento (teste)'}
                 </button>
               )}
             </div>

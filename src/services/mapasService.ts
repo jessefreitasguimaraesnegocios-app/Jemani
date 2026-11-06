@@ -235,17 +235,26 @@ async function chamarPlacesProxy<T>(body: Record<string, unknown>): Promise<T> {
     throw new Error('Supabase não configurado para Places')
   }
 
+  const { supabase } = await import('@/lib/supabase')
+  const sessao = supabase ? (await supabase.auth.getSession()).data.session : null
+  if (!sessao?.access_token) {
+    throw new Error('Faça login para buscar endereços.')
+  }
+
   const resp = await fetch(`${base}/functions/v1/places-proxy`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${anon}`,
+      Authorization: `Bearer ${sessao.access_token}`,
       apikey: anon,
     },
     body: JSON.stringify(body),
   })
 
   const data = (await resp.json()) as T & { erro?: string }
+  if (resp.status === 429) {
+    throw new Error(data.erro ?? 'Muitas consultas de endereço. Aguarde um instante.')
+  }
   if (!resp.ok) {
     throw new Error(data.erro ?? `Places proxy falhou (${resp.status})`)
   }
@@ -484,6 +493,21 @@ export async function buscarSugestoesPlaces(termo: string): Promise<
 > {
   if (!termo.trim()) return []
 
+  // Preferir proxy autenticado (rate limit no servidor) em vez do token no browser.
+  if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    try {
+      const data = await chamarPlacesProxy<{
+        sugestoes: Array<{ description: string; place_id: string }>
+      }>({
+        acao: 'autocomplete',
+        termo,
+      })
+      return juntarSugestoes(termo, data.sugestoes ?? [])
+    } catch {
+      /* fallback Mapbox direto / DEV */
+    }
+  }
+
   if (tokenMapbox()) {
     try {
       const features = ordenarFeaturesPorNumero(
@@ -498,35 +522,17 @@ export async function buscarSugestoesPlaces(termo: string): Promise<
       })
       return juntarSugestoes(termo, remotas)
     } catch {
-      /* tenta proxy / DEV abaixo */
+      /* DEV abaixo */
     }
   }
 
-  if (!googleMapsConfigurado()) {
-    return juntarSugestoes(
-      termo,
-      buscarSugestoesDev(termo).map((p) => ({
-        description: p.formatted,
-        place_id: p.place_id ?? p.formatted,
-      })),
-    )
-  }
-
-  try {
-    const data = await chamarPlacesProxy<{ sugestoes: Array<{ description: string; place_id: string }> }>({
-      acao: 'autocomplete',
-      termo,
-    })
-    return juntarSugestoes(termo, data.sugestoes ?? [])
-  } catch {
-    return juntarSugestoes(
-      termo,
-      buscarSugestoesDev(termo).map((p) => ({
-        description: p.formatted,
-        place_id: p.place_id ?? p.formatted,
-      })),
-    )
-  }
+  return juntarSugestoes(
+    termo,
+    buscarSugestoesDev(termo).map((p) => ({
+      description: p.formatted,
+      place_id: p.place_id ?? p.formatted,
+    })),
+  )
 }
 
 export async function resolverPlaceId(placeId: string, descricao?: string): Promise<EnderecoLocal> {

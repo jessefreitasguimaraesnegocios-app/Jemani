@@ -132,6 +132,20 @@ export async function entrarNuvem(email: string, senha: string) {
   return !error
 }
 
+/** Aguarda a sessão Auth persistida (WebView/APK demora a restaurar o storage). */
+export async function garantirSessaoNuvem(
+  email: string,
+  senha: string,
+  tentativas = 5,
+): Promise<boolean> {
+  for (let i = 0; i < tentativas; i++) {
+    const ok = await entrarNuvem(email, senha)
+    if (ok) return true
+    await new Promise((r) => setTimeout(r, 400 * (i + 1)))
+  }
+  return false
+}
+
 function perfilDaLinha(linha: {
   id: string
   email: string

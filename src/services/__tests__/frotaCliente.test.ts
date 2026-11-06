@@ -101,6 +101,10 @@ describe('frotaCliente', () => {
     expect(veiculosOfereceiveis(veiculos, [empresaAtiva, empresaInativa])).toHaveLength(1)
   })
 
+  it('mantém veículo se a empresa ainda não veio no sync', () => {
+    expect(veiculosOfereceiveis(veiculos, [])).toHaveLength(2)
+  })
+
   it('lista só categorias com frota disponível', () => {
     const lista = categoriasComFrotaDisponivel(
       categorias,

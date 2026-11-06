@@ -19,6 +19,7 @@ import {
   primeiraDataDisponivel,
   validarAntecedenciaMinima,
 } from '@/services/reservaValidacao'
+import { listarEmpresasNuvem } from '@/services/nuvemCatalogo'
 import { listarVeiculosNuvem } from '@/services/nuvemVeiculos'
 import { useDemoStore } from '@/store/demoStore'
 import type { EnderecoLocal } from '@/types'
@@ -46,6 +47,7 @@ export function ReservarPage() {
   const empresas = useDemoStore((s) => s.empresas)
   const configuracoes = useDemoStore((s) => s.configuracoes)
   const aplicarVeiculosNuvem = useDemoStore((s) => s.aplicarVeiculosNuvem)
+  const aplicarEmpresasNuvem = useDemoStore((s) => s.aplicarEmpresasNuvem)
   const categorias = useMemo(
     () =>
       categoriasComFrotaDisponivel(todasCategorias, veiculos, empresas).sort((a, b) => {
@@ -141,13 +143,15 @@ export function ReservarPage() {
 
   useEffect(() => {
     let vivo = true
-    void listarVeiculosNuvem().then((frota) => {
-      if (vivo && frota.length) aplicarVeiculosNuvem(frota)
+    void Promise.all([listarVeiculosNuvem(), listarEmpresasNuvem()]).then(([frota, remotas]) => {
+      if (!vivo) return
+      if (remotas.length) aplicarEmpresasNuvem(remotas)
+      if (frota.length) aplicarVeiculosNuvem(frota)
     })
     return () => {
       vivo = false
     }
-  }, [aplicarVeiculosNuvem])
+  }, [aplicarVeiculosNuvem, aplicarEmpresasNuvem])
 
   const agora = useMemo(() => new Date(agoraTick), [agoraTick])
   const dataMinima = useMemo(

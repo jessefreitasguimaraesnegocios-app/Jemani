@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { supabase } from '@/lib/supabase'
 
 function urlDoApp() {
   try {
@@ -44,30 +45,53 @@ const urlBaseSupabase = () => {
   return url.replace(/\/$/, '')
 }
 
-const cabecalhos = (): Record<string, string> => {
+async function cabecalhosAuth(permitirAnon = false): Promise<Record<string, string>> {
   const local = apiLocal()
   if (local) {
     return { 'Content-Type': 'application/json' }
   }
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
   if (!anon) throw new Error('VITE_SUPABASE_ANON_KEY não configurada')
+
+  const sessao = supabase ? (await supabase.auth.getSession()).data.session : null
+  const token = sessao?.access_token
+  if (!token && !permitirAnon) {
+    throw new Error('Faça login novamente para continuar o pagamento.')
+  }
+
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${anon}`,
+    Authorization: `Bearer ${token || anon}`,
     apikey: anon,
   }
 }
 
-async function chamarFuncao<T>(nome: string, corpo: Record<string, unknown>): Promise<T> {
+function noSitePublicado() {
+  if (typeof window === 'undefined') return false
+  const host = window.location.hostname
+  return host === 'jemani.vercel.app' || host.endsWith('.vercel.app')
+}
+
+async function chamarFuncao<T>(
+  nome: string,
+  corpo: Record<string, unknown>,
+  permitirAnon = false,
+): Promise<T> {
   const local = apiLocal()
+  const checkout =
+    nome === 'stripe-criar-checkout' || nome === 'stripe-verificar-sessao'
   const endpoint = local
     ? `${local}/${nome}`
-    : `${urlBaseSupabase()}/functions/v1/${nome}`
+    : checkout
+      ? noSitePublicado()
+        ? `${window.location.origin}/api/${nome}`
+        : 'https://jemani.vercel.app/api/' + nome
+      : `${urlBaseSupabase()}/functions/v1/${nome}`
   let res: Response
   try {
     res = await fetch(endpoint, {
       method: 'POST',
-      headers: cabecalhos(),
+      headers: await cabecalhosAuth(permitirAnon),
       body: JSON.stringify(corpo),
     })
   } catch {
@@ -78,6 +102,9 @@ async function chamarFuncao<T>(nome: string, corpo: Record<string, unknown>): Pr
     )
   }
   const data = (await res.json()) as T & { erro?: string }
+  if (res.status === 429) {
+    throw new Error(data.erro ?? 'Muitas tentativas. Aguarde um momento.')
+  }
   if (!res.ok || data.erro) {
     throw new Error(data.erro ?? `Falha em ${nome}`)
   }
@@ -98,10 +125,16 @@ export function criarCheckoutStripe(dados: {
   company_amount: number
   email_cliente?: string
 }) {
-  return chamarFuncao<{ session_id: string; url: string }>('stripe-criar-checkout', {
-    ...dados,
+  return chamarFuncao<{ session_id: string; url: string; amount?: number }>('stripe-criar-checkout', {
+    viagem_id: dados.viagem_id,
+    codigo: dados.codigo,
+    email_cliente: dados.email_cliente,
+    // No modo teste, se a corrida ainda não está no banco, o servidor usa estes valores.
+    amount: dados.amount,
+    platform_fee: dados.platform_fee,
+    company_amount: dados.company_amount,
     app_url: Capacitor.isNativePlatform() ? 'https://jemani.vercel.app' : urlDoApp(),
-  })
+  }, true)
 }
 
 export function verificarSessaoStripe(session_id: string, viagem_id: string) {
@@ -109,7 +142,7 @@ export function verificarSessaoStripe(session_id: string, viagem_id: string) {
     pago: boolean
     session_id: string
     payment_intent: string | null
-  }>('stripe-verificar-sessao', { session_id, viagem_id })
+  }>('stripe-verificar-sessao', { session_id, viagem_id }, true)
 }
 
 export function iniciarOnboardingConnect(dados: {
@@ -121,12 +154,16 @@ export function iniciarOnboardingConnect(dados: {
   return chamarFuncao<{ stripe_account_id: string; onboarding_url: string }>(
     'stripe-connect-onboarding',
     {
-      ...dados,
+      empresa_id: dados.empresa_id,
       app_url: Capacitor.isNativePlatform()
         ? 'https://jemani.vercel.app'
         : window.location.origin,
     },
   )
+}
+
+export async function marcarPagamentoSimulado(viagem_id: string) {
+  return chamarFuncao<{ pago: boolean }>('pagamento-simulado', { viagem_id })
 }
 
 export function transferirParaEmpresa(dados: {
@@ -135,5 +172,7 @@ export function transferirParaEmpresa(dados: {
   viagem_id: string
   codigo: string
 }) {
-  return chamarFuncao<{ transfer_id: string }>('stripe-transferir-empresa', dados)
+  return chamarFuncao<{ transfer_id: string }>('stripe-transferir-empresa', {
+    viagem_id: dados.viagem_id,
+  })
 }

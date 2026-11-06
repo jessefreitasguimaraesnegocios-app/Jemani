@@ -1,9 +1,11 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+import { exigirUsuario, RespostaAuth } from '../_shared/auth.ts'
+import { limitarTaxa, resposta429 } from '../_shared/rateLimit.ts'
 
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 type MapboxContext = {
@@ -21,24 +23,10 @@ type MapboxFeature = {
   context?: MapboxContext[]
 }
 
-const limitePorIp = new Map<string, number[]>()
-
-function permitirConsulta(ip: string) {
-  const agora = Date.now()
-  const recentes = (limitePorIp.get(ip) ?? []).filter((marca) => agora - marca < 60_000)
-  if (recentes.length >= 60) {
-    limitePorIp.set(ip, recentes)
-    return false
-  }
-  recentes.push(agora)
-  limitePorIp.set(ip, recentes)
-  return true
-}
-
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, "Content-Type": "application/json" },
+    headers: { ...CORS, 'Content-Type': 'application/json' },
   })
 }
 
@@ -52,14 +40,14 @@ function montarFormatted(parts: {
 }) {
   if (parts.numero && parts.rua) {
     const linha = `${parts.numero} ${parts.rua}`
-    const resto = [parts.cidade, parts.estado, parts.cep].filter(Boolean).join(", ")
+    const resto = [parts.cidade, parts.estado, parts.cep].filter(Boolean).join(', ')
     return resto ? `${linha}, ${resto}` : linha
   }
   return parts.fallback
 }
 
 function normalizarNumero(n: string) {
-  return n.trim().toUpperCase().replace(/\s+/g, "")
+  return n.trim().toUpperCase().replace(/\s+/g, '')
 }
 
 function contextoMapbox(feature: MapboxFeature, prefixo: string) {
@@ -68,17 +56,16 @@ function contextoMapbox(feature: MapboxFeature, prefixo: string) {
 
 function enderecoDeFeatureMapbox(feature: MapboxFeature) {
   const [lng, lat] = feature.center ?? [undefined, undefined]
-  if (typeof lat !== "number" || typeof lng !== "number") return null
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null
 
   const cidade =
-    contextoMapbox(feature, "place")?.text ||
-    contextoMapbox(feature, "locality")?.text ||
-    contextoMapbox(feature, "district")?.text
-  const estadoRaw = contextoMapbox(feature, "region")
-  const estado = estadoRaw?.short_code?.replace(/^US-/, "") || estadoRaw?.text
-  const cep = contextoMapbox(feature, "postcode")?.text
-  const numero =
-    feature.address?.trim() || feature.place_name.match(/^\s*(\d+[\w-]*)/)?.[1]
+    contextoMapbox(feature, 'place')?.text ||
+    contextoMapbox(feature, 'locality')?.text ||
+    contextoMapbox(feature, 'district')?.text
+  const estadoRaw = contextoMapbox(feature, 'region')
+  const estado = estadoRaw?.short_code?.replace(/^US-/, '') || estadoRaw?.text
+  const cep = contextoMapbox(feature, 'postcode')?.text
+  const numero = feature.address?.trim() || feature.place_name.match(/^\s*(\d+[\w-]*)/)?.[1]
   let rua = feature.text?.trim()
   if (numero && rua?.startsWith(numero)) {
     rua = rua.slice(numero.length).trim()
@@ -96,7 +83,7 @@ function enderecoDeFeatureMapbox(feature: MapboxFeature) {
     latitude: lat,
     longitude: lng,
     place_id: feature.id,
-    source: "mapbox",
+    source: 'mapbox',
     rua,
     numero,
     cidade,
@@ -106,16 +93,15 @@ function enderecoDeFeatureMapbox(feature: MapboxFeature) {
   }
 }
 
-async function geocodeMapbox(token: string, query: string, types = "address") {
+async function geocodeMapbox(token: string, query: string, types = 'address') {
   const url = new URL(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
   )
-  url.searchParams.set("access_token", token)
-  // Sem country/bbox: busca mundial (EUA e exterior).
-  url.searchParams.set("types", types)
-  url.searchParams.set("language", "en")
-  url.searchParams.set("limit", "6")
-  url.searchParams.set("autocomplete", "true")
+  url.searchParams.set('access_token', token)
+  url.searchParams.set('types', types)
+  url.searchParams.set('language', 'en')
+  url.searchParams.set('limit', '6')
+  url.searchParams.set('autocomplete', 'true')
 
   const resp = await fetch(url)
   const data = await resp.json()
@@ -126,127 +112,144 @@ async function geocodeMapbox(token: string, query: string, types = "address") {
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS })
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: CORS })
   }
 
-  if (req.method !== "POST") {
-    return json({ erro: "Método não permitido" }, 405)
+  if (req.method !== 'POST') {
+    return json({ erro: 'Método não permitido' }, 405)
   }
 
-  const mapboxToken = Deno.env.get("MAPBOX_ACCESS_TOKEN")
-  if (!mapboxToken) {
-    return json({ erro: "MAPBOX_ACCESS_TOKEN não configurada no Supabase" }, 500)
-  }
-
-  let payload: {
-    acao?: string
-    termo?: string
-    place_id?: string
-    numero?: string
-    rua?: string
-    cidade?: string
-    estado?: string
-    cep?: string
-    complemento?: string
-  }
   try {
-    payload = await req.json()
-  } catch {
-    return json({ erro: "JSON inválido" }, 400)
-  }
-
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("cf-connecting-ip") ||
-    "sem-ip"
-  if (!permitirConsulta(ip)) {
-    return json({ erro: "Muitas consultas de endereço. Aguarde um instante." }, 429)
-  }
-
-  const acao = payload.acao
-
-  if (acao === "autocomplete") {
-    const termo = (payload.termo ?? "").trim()
-    if (termo.length < 2) return json({ sugestoes: [] })
-    if (termo.length > 140) return json({ erro: "Endereço longo demais." }, 400)
-    try {
-      const features = await geocodeMapbox(mapboxToken, termo, "address,poi")
-      return json({
-        sugestoes: features.map((f) => ({
-          description: f.place_name,
-          place_id: f.id,
-        })),
-      })
-    } catch (e) {
-      return json({
-        erro: e instanceof Error ? e.message : "Falha no autocomplete Mapbox",
-      }, 502)
-    }
-  }
-
-  if (acao === "details") {
-    const placeId = (payload.place_id ?? "").trim()
-    const termo = (payload.termo ?? "").trim()
-    if (!placeId && !termo) return json({ erro: "place_id obrigatório" }, 400)
-    if (termo.length > 140) return json({ erro: "Endereço longo demais." }, 400)
-    try {
-      const consulta = termo || placeId
-      const features = await geocodeMapbox(mapboxToken, consulta, "address,poi")
-      const feature =
-        features.find((f) => f.id === placeId) ??
-        features.find((f) => f.place_name === termo) ??
-        features.find((f) => f.address) ??
-        features[0]
-      const endereco = feature ? enderecoDeFeatureMapbox(feature) : null
-      if (!endereco) {
-        return json({ erro: "Não foi possível obter coordenadas do endereço" }, 502)
-      }
-      return json({ endereco })
-    } catch (e) {
-      return json({
-        erro: e instanceof Error ? e.message : "Falha no details Mapbox",
-      }, 502)
-    }
-  }
-
-  if (acao === "geocode_numero") {
-    const numero = (payload.numero ?? "").trim()
-    const rua = (payload.rua ?? "").trim()
-    if (!numero || !rua) {
-      return json({ valido: false, mensagem: "Número e rua são obrigatórios." })
+    const { user } = await exigirUsuario(req)
+    // 60/min por usuário autenticado (não por IP forjável)
+    const limite = await limitarTaxa({
+      chave: `places-proxy:user:${user.id}`,
+      limite: 60,
+      janelaSegundos: 60,
+    })
+    if (!limite.ok) {
+      return resposta429(limite.retryAfterSegundos, 'Muitas consultas de endereço. Aguarde um instante.')
     }
 
-    const query = [`${numero} ${rua}`, payload.cidade, payload.estado, payload.cep]
-      .filter(Boolean)
-      .join(", ")
+    const mapboxToken = Deno.env.get('MAPBOX_ACCESS_TOKEN')
+    if (!mapboxToken) {
+      return json({ erro: 'MAPBOX_ACCESS_TOKEN não configurada no Supabase' }, 500)
+    }
 
+    let payload: {
+      acao?: string
+      termo?: string
+      place_id?: string
+      numero?: string
+      rua?: string
+      cidade?: string
+      estado?: string
+      cep?: string
+      complemento?: string
+    }
     try {
-      const features = await geocodeMapbox(mapboxToken, query, "address")
-      const pedido = normalizarNumero(numero)
-      const escolhido = features.find((f) => f.address && normalizarNumero(f.address) === pedido)
-      const endereco = escolhido ? enderecoDeFeatureMapbox(escolhido) : null
-      if (!endereco) {
+      payload = await req.json()
+    } catch {
+      return json({ erro: 'JSON inválido' }, 400)
+    }
+
+    const acao = payload.acao
+
+    if (acao === 'autocomplete') {
+      const termo = (payload.termo ?? '').trim()
+      if (termo.length < 2) return json({ sugestoes: [] })
+      if (termo.length > 140) return json({ erro: 'Endereço longo demais.' }, 400)
+      try {
+        const features = await geocodeMapbox(mapboxToken, termo, 'address,poi')
         return json({
-          valido: false,
-          mensagem: `O número ${numero} não existe neste endereço (${rua}).`,
+          sugestoes: features.map((f) => ({
+            description: f.place_name,
+            place_id: f.id,
+          })),
         })
+      } catch (e) {
+        return json(
+          {
+            erro: e instanceof Error ? e.message : 'Falha no autocomplete Mapbox',
+          },
+          502,
+        )
       }
-      return json({
-        valido: true,
-        endereco: {
-          ...endereco,
-          complemento: payload.complemento,
-          numero_confirmado: true,
-        },
-      })
-    } catch (e) {
-      return json({
-        valido: false,
-        mensagem: e instanceof Error ? e.message : "Falha ao validar número no Mapbox",
-      }, 502)
     }
-  }
 
-  return json({ erro: "acao inválida (use autocomplete, details ou geocode_numero)" }, 400)
+    if (acao === 'details') {
+      const placeId = (payload.place_id ?? '').trim()
+      const termo = (payload.termo ?? '').trim()
+      if (!placeId && !termo) return json({ erro: 'place_id obrigatório' }, 400)
+      if (termo.length > 140) return json({ erro: 'Endereço longo demais.' }, 400)
+      try {
+        const consulta = termo || placeId
+        const features = await geocodeMapbox(mapboxToken, consulta, 'address,poi')
+        const feature =
+          features.find((f) => f.id === placeId) ??
+          features.find((f) => f.place_name === termo) ??
+          features.find((f) => f.address) ??
+          features[0]
+        const endereco = feature ? enderecoDeFeatureMapbox(feature) : null
+        if (!endereco) {
+          return json({ erro: 'Não foi possível obter coordenadas do endereço' }, 502)
+        }
+        return json({ endereco })
+      } catch (e) {
+        return json(
+          {
+            erro: e instanceof Error ? e.message : 'Falha no details Mapbox',
+          },
+          502,
+        )
+      }
+    }
+
+    if (acao === 'geocode_numero') {
+      const numero = (payload.numero ?? '').trim()
+      const rua = (payload.rua ?? '').trim()
+      if (!numero || !rua) {
+        return json({ valido: false, mensagem: 'Número e rua são obrigatórios.' })
+      }
+
+      const query = [`${numero} ${rua}`, payload.cidade, payload.estado, payload.cep]
+        .filter(Boolean)
+        .join(', ')
+
+      try {
+        const features = await geocodeMapbox(mapboxToken, query, 'address')
+        const pedido = normalizarNumero(numero)
+        const escolhido = features.find((f) => f.address && normalizarNumero(f.address) === pedido)
+        const endereco = escolhido ? enderecoDeFeatureMapbox(escolhido) : null
+        if (!endereco) {
+          return json({
+            valido: false,
+            mensagem: `O número ${numero} não existe neste endereço (${rua}).`,
+          })
+        }
+        return json({
+          valido: true,
+          endereco: {
+            ...endereco,
+            complemento: payload.complemento,
+            numero_confirmado: true,
+          },
+        })
+      } catch (e) {
+        return json(
+          {
+            valido: false,
+            mensagem: e instanceof Error ? e.message : 'Falha ao validar número no Mapbox',
+          },
+          502,
+        )
+      }
+    }
+
+    return json({ erro: 'acao inválida (use autocomplete, details ou geocode_numero)' }, 400)
+  } catch (err) {
+    if (err instanceof RespostaAuth) return json({ erro: err.message }, err.status)
+    return json({ erro: 'Falha no places-proxy' }, 500)
+  }
 })

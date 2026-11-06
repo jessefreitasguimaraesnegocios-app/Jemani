@@ -1,12 +1,10 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { CORS, json } from '../_shared/cors.ts'
-import { criarClienteStripe } from '../_shared/stripe.ts'
+import { criarClienteStripe, valorEmCentavos } from '../_shared/stripe.ts'
 
 /**
- * Webhook Stripe (teste/produção).
- * Em DEMO local o frontend confirma via stripe-verificar-sessao;
- * este webhook atualiza o Supabase quando VITE_DEMO_MODE=false.
+ * Webhook Stripe — confirma pagamento só se valor bater com a viagem (ou metadata).
  */
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -39,6 +37,7 @@ Deno.serve(async (req: Request) => {
   const session = evento.data.object as {
     id: string
     payment_status?: string
+    amount_total?: number | null
     payment_intent?: string | { id?: string }
     metadata?: Record<string, string>
   }
@@ -58,6 +57,29 @@ Deno.serve(async (req: Request) => {
   }
 
   const admin = createClient(url, service)
+  const { data: viagem } = await admin
+    .from('trips')
+    .select('id,preco_total,payment_status')
+    .eq('id', viagemId)
+    .maybeSingle()
+
+  if (!viagem) return json({ recebido: true, aviso: 'viagem ausente' })
+
+  const esperado = valorEmCentavos(Number(viagem.preco_total))
+  const meta = session.metadata?.preco_total
+    ? valorEmCentavos(Number(session.metadata.preco_total))
+    : null
+  const alvo = meta ?? esperado
+  const pagoCentavos = Number(session.amount_total ?? 0)
+  if (Math.abs(pagoCentavos - alvo) > 1) {
+    console.warn('webhook valor divergente', { viagemId, pagoCentavos, alvo })
+    return json({ recebido: true, erro: 'valor_divergente', viagem_id: viagemId }, 200)
+  }
+
+  if (viagem.payment_status === 'paid') {
+    return json({ recebido: true, viagem_id: viagemId, ja_pago: true })
+  }
+
   const agora = new Date().toISOString()
 
   await admin

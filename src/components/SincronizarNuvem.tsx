@@ -1,4 +1,7 @@
 import { useEffect, useRef } from 'react'
+import { App } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
+import type { PluginListenerHandle } from '@capacitor/core'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from '@/contexts/AuthContext'
 import { ofertaLocalPodeSubir } from '@/services/filtroGravacaoNuvem'
@@ -6,7 +9,7 @@ import { nuvemEstaAtrasada } from '@/services/fundirViagemNuvem'
 import {
   assinarNuvem,
   buscarViagemNuvem,
-  entrarNuvem,
+  garantirSessaoNuvem,
   gravarOfertasNuvem,
   gravarViagemNuvem,
   gravarViagensNuvem,
@@ -66,6 +69,7 @@ export function SincronizarNuvem() {
     ultimaViagemSyncRef.current = null
     let relogio = 0
     let aoVoltar: (() => void) | null = null
+    let listenerApp: PluginListenerHandle | null = null
     let canalCorrida: RealtimeChannel | null = null
     let canalOperacao: RealtimeChannel | null = null
     let canalNotificacoes: RealtimeChannel | null = null
@@ -162,6 +166,7 @@ export function SincronizarNuvem() {
     async function puxarCorridasAoVivo(opcoes: {
       comPerfis?: boolean
       completo?: boolean
+      comCatalogo?: boolean
     } = {}) {
       if (!ativoRef.current) return
       if (document.visibilityState !== 'visible') return
@@ -186,9 +191,12 @@ export function SincronizarNuvem() {
         for (const mensagem of mensagensAgora) store().aplicarMensagemNuvem(mensagem, false)
         // Margem de 2s evita perder update entre o fetch e o marcador.
         ultimaViagemSyncRef.current = new Date(Date.now() - 2000).toISOString()
-        if (opcoes.comPerfis) {
+        // Preços/configs da plataforma: sempre puxar no ciclo (PC e celular precisam da mesma fonte).
+        if (opcoes.comCatalogo || opcoes.comPerfis) {
           await puxarCatalogoPlataforma()
           if (!ativoRef.current) return
+        }
+        if (opcoes.comPerfis) {
           await puxarPerfisEFotos(viagensAgora)
         }
       } finally {
@@ -198,7 +206,7 @@ export function SincronizarNuvem() {
 
     void (async () => {
       const senha = store().senhas[sessao.email]
-      const entrou = await entrarNuvem(sessao.email, senha ?? '')
+      const entrou = await garantirSessaoNuvem(sessao.email, senha ?? '')
       if (!entrou || !ativoRef.current) return
       const [viagens, ofertas, mensagens, turnos, agendamentos, historicos, frota, alertas] =
         await Promise.all([
@@ -318,12 +326,21 @@ export function SincronizarNuvem() {
 
       aoVoltar = () => {
         if (document.visibilityState === 'visible') {
-          void puxarCorridasAoVivo({ comPerfis: true, completo: true })
+          void puxarCorridasAoVivo({ comPerfis: true, completo: true, comCatalogo: true })
         }
       }
       document.addEventListener('visibilitychange', aoVoltar)
+      if (Capacitor.isNativePlatform()) {
+        void App.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) {
+            void puxarCorridasAoVivo({ comPerfis: true, completo: true, comCatalogo: true })
+          }
+        }).then((handle) => {
+          listenerApp = handle
+        })
+      }
       relogio = window.setInterval(() => {
-        void puxarCorridasAoVivo({ completo: false })
+        void puxarCorridasAoVivo({ completo: false, comCatalogo: true })
       }, INTERVALO_SEGURANCA_NUVEM_MS)
 
       const depois = store()
@@ -385,6 +402,7 @@ export function SincronizarNuvem() {
       puxandoRef.current = false
       window.clearInterval(relogio)
       if (aoVoltar) document.removeEventListener('visibilitychange', aoVoltar)
+      void listenerApp?.remove()
       void canalCorrida?.unsubscribe()
       void canalOperacao?.unsubscribe()
       void canalNotificacoes?.unsubscribe()

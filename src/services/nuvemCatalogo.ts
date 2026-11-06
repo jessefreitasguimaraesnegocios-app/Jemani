@@ -265,8 +265,46 @@ export async function listarEmpresasNuvem(): Promise<Empresa[]> {
   const db = supabase
   if (!db) return []
   const { data, error } = await db.from('companies').select(COLUNAS_EMPRESA)
-  if (error || !data) return []
-  return data.map((linha) => empresaDaLinha(linha as Record<string, unknown>))
+  const porId = new Map<string, Empresa>()
+  if (!error && data) {
+    for (const linha of data) {
+      const empresa = empresaDaLinha(linha as Record<string, unknown>)
+      porId.set(empresa.id, empresa)
+    }
+  }
+  // Cliente não lê companies completas (RLS) — marketplace sem PII/Connect.
+  const { data: mercado, error: erroMercado } = await db.rpc('empresas_marketplace')
+  if (!erroMercado && Array.isArray(mercado)) {
+    for (const linha of mercado as Record<string, unknown>[]) {
+      const id = String(linha.id)
+      if (porId.has(id)) continue
+      porId.set(id, {
+        id,
+        usuario_id: '',
+        nome_comercial: String(linha.nome_comercial ?? ''),
+        razao_social: String(linha.nome_comercial ?? ''),
+        cnpj: '',
+        telefone: '',
+        email: '',
+        cidade: String(linha.cidade ?? ''),
+        latitude: linha.latitude != null ? Number(linha.latitude) : undefined,
+        longitude: linha.longitude != null ? Number(linha.longitude) : undefined,
+        regioes_atendidas: Array.isArray(linha.regioes_atendidas)
+          ? (linha.regioes_atendidas as string[])
+          : [],
+        categorias_ids: Array.isArray(linha.categorias_ids)
+          ? (linha.categorias_ids as string[])
+          : [],
+        status: (linha.status as Empresa['status']) ?? 'ativa',
+        habilitada_receber: Boolean(linha.habilitada_receber ?? true),
+        avaliacao_media: Number(linha.avaliacao_media ?? 5),
+        comissao_percentual: 10,
+        created_at: '',
+        updated_at: '',
+      })
+    }
+  }
+  return [...porId.values()]
 }
 
 export async function gravarEmpresaNuvem(empresa: Empresa): Promise<void> {
