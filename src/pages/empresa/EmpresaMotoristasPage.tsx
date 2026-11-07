@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
+import { PlanilhaMensalCorridas } from '@/components/PlanilhaMensalCorridas'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { enviarFotoMotorista, removerFotoMotorista } from '@/services/fotoMotorista'
@@ -38,7 +39,9 @@ export function EmpresaMotoristasPage() {
   const { usuario } = useAuth()
   const empresa = useDemoStore((s) => s.obterEmpresaDoUsuario(usuario?.id ?? ''))
   const todosMotoristas = useDemoStore((s) => s.motoristas)
+  const empresas = useDemoStore((s) => s.empresas)
   const perfis = useDemoStore((s) => s.perfis)
+  const categorias = useDemoStore((s) => s.categorias)
   const viagens = useDemoStore((s) => s.viagens)
   const historicos = useDemoStore((s) => s.historicos)
   const turnos = useDemoStore((s) => s.turnos)
@@ -50,6 +53,14 @@ export function EmpresaMotoristasPage() {
   )
   const mapaPerfis = useMemo(() => new Map(perfis.map((p) => [p.id, p])), [perfis])
   const mapaVeiculos = useMemo(() => new Map(veiculos.map((v) => [v.id, v])), [veiculos])
+  const mapaCategorias = useMemo(
+    () => new Map(categorias.map((item) => [item.id, item])),
+    [categorias],
+  )
+  const mapaMotoristas = useMemo(
+    () => new Map(motoristas.map((item) => [item.id, item])),
+    [motoristas],
+  )
   const salvarMotorista = useDemoStore((s) => s.salvarMotorista)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -187,26 +198,35 @@ export function EmpresaMotoristasPage() {
       ? mapaPerfis.get(motoristaAberto.usuario_id)
       : undefined
     const resumo = historico.resumos[periodo]
+    const viagensDoMotorista = viagens.filter((item) => item.motorista_id === motoristaAberto.id)
     return (
       <div className="animar-entrada space-y-4">
-        <div>
+        <div className="motorista-detalhe-cabecalho">
           <button type="button" className="btn-secundario motorista-voltar" onClick={() => setMotoristaId(null)}>
             {t('empresa.motoristas.voltar')}
           </button>
-          <div className="motorista-detalhe-topo">
-            <FotoPerfilCliente
-              url={motoristaAberto.foto_url}
-              nome={motoristaAberto.nome}
-              tamanho="perfil"
-            />
-            <div>
-              <h1 className="fonte-display text-3xl">{motoristaAberto.nome}</h1>
-              <p className="motorista-historico-sub">
-                {perfil?.email ? `${perfil.email} · ` : ''}
-                {motoristaAberto.telefone} · CNH {motoristaAberto.categoria_cnh} ·{' '}
-                {motoristaAberto.experiencia_anos} anos
-              </p>
-            </div>
+          <PlanilhaMensalCorridas
+            viagens={viagensDoMotorista}
+            empresas={empresas}
+            mapaClientes={mapaPerfis}
+            mapaMotoristas={mapaMotoristas}
+            mapaCategorias={mapaCategorias}
+            empresaFixaId={empresa.id}
+          />
+        </div>
+        <div className="motorista-detalhe-topo">
+          <FotoPerfilCliente
+            url={motoristaAberto.foto_url}
+            nome={motoristaAberto.nome}
+            tamanho="perfil"
+          />
+          <div>
+            <h1 className="fonte-display text-3xl">{motoristaAberto.nome}</h1>
+            <p className="motorista-historico-sub">
+              {perfil?.email ? `${perfil.email} · ` : ''}
+              {motoristaAberto.telefone} · CNH {motoristaAberto.categoria_cnh} ·{' '}
+              {motoristaAberto.experiencia_anos} anos
+            </p>
           </div>
         </div>
 

@@ -40,6 +40,8 @@ const PERIODOS: Array<{ id: PeriodoMotorista; chave: ChaveTraducao }> = [
   { id: 'tudo', chave: 'motorista.historico.tudo' },
 ]
 
+const LIMITE_CORRIDAS_HISTORICO = 5
+
 export function MotoristaMenuPainel({
   aba,
   motorista,
@@ -123,6 +125,11 @@ function HistoricoMotorista({ motorista }: { motorista: Motorista }) {
     () => filtrarCorridas(historico.corridas, periodo),
     [historico.corridas, periodo],
   )
+  const listaVisivel = useMemo(
+    () => lista.slice(0, LIMITE_CORRIDAS_HISTORICO),
+    [lista],
+  )
+  const temMaisCorridas = lista.length > LIMITE_CORRIDAS_HISTORICO
   const resumo = historico.resumos[periodo]
   const agendamentosPeriodo = useMemo(
     () =>
@@ -215,11 +222,11 @@ function HistoricoMotorista({ motorista }: { motorista: Motorista }) {
 
       <section className="motorista-cartao motorista-bloco-lista">
         <p className="motorista-bloco-titulo">{t('empresa.motoristas.corridas')}</p>
-        {lista.length === 0 ? (
+        {listaVisivel.length === 0 ? (
           <p className="motorista-vazio">{t('motorista.historico.vazio')}</p>
         ) : (
           <div className="motorista-lista">
-            {lista.map((corrida) => {
+            {listaVisivel.map((corrida) => {
               const veiculo = corrida.veiculoId ? mapaVeiculos.get(corrida.veiculoId) : undefined
               const detalhes = [
                 `${formatarData(corrida.data, locale)} · ${corrida.horario}`,
@@ -252,6 +259,9 @@ function HistoricoMotorista({ motorista }: { motorista: Motorista }) {
               )
             })}
           </div>
+        )}
+        {temMaisCorridas && (
+          <p className="motorista-historico-mais">{t('motorista.historico.maisPlanilha')}</p>
         )}
       </section>
 

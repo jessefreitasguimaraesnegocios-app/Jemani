@@ -103,9 +103,9 @@ export function ReservarPage() {
   }, [])
 
   const embarqueAeroporto = enderecoEhAeroporto(origemEndereco)
-  const destinoAeroporto = !ehHourly && enderecoEhAeroporto(destinoEndereco)
+  const destinoAeroporto = enderecoEhAeroporto(destinoEndereco)
   const origemPronta = enderecoProntoParaReserva(origemEndereco).ok
-  const destinoPronto = ehHourly ? true : enderecoProntoParaReserva(destinoEndereco).ok
+  const destinoPronto = enderecoProntoParaReserva(destinoEndereco).ok
 
   useEffect(() => {
     if (!ehHourly) return
@@ -298,20 +298,27 @@ export function ReservarPage() {
         setErro(`Embarque: ${checkOrigem.mensagem}`)
         return
       }
-      if (!ehHourly) {
-        const checkDestino = enderecoProntoParaReserva(destinoEndereco)
-        if (!checkDestino.ok) {
-          setErro(`Destino: ${checkDestino.mensagem}`)
-          return
-        }
-        if (
-          origemEndereco!.latitude === destinoEndereco!.latitude &&
-          origemEndereco!.longitude === destinoEndereco!.longitude
-        ) {
-          setErro('Origem e destino precisam ser diferentes.')
-          return
-        }
-      } else if (!duracaoMinutos || !pacotesHourly.includes(duracaoMinutos)) {
+      const checkDestino = enderecoProntoParaReserva(destinoEndereco)
+      if (!checkDestino.ok) {
+        setErro(
+          ehHourly
+            ? `Desembarque: ${checkDestino.mensagem}`
+            : `Destino: ${checkDestino.mensagem}`,
+        )
+        return
+      }
+      if (
+        origemEndereco!.latitude === destinoEndereco!.latitude &&
+        origemEndereco!.longitude === destinoEndereco!.longitude
+      ) {
+        setErro(
+          ehHourly
+            ? 'Embarque e desembarque precisam ser diferentes.'
+            : 'Origem e destino precisam ser diferentes.',
+        )
+        return
+      }
+      if (ehHourly && (!duracaoMinutos || !pacotesHourly.includes(duracaoMinutos))) {
         setErro('Selecione a duração contratada (mínimo 2 horas).')
         return
       }
@@ -383,8 +390,8 @@ export function ReservarPage() {
 
   function confirmar(e: FormEvent) {
     e.preventDefault()
-    if (!usuario || !preco || !origemEndereco) return
-    if (!ehHourly && (!destinoEndereco || !rota)) return
+    if (!usuario || !preco || !origemEndereco || !destinoEndereco) return
+    if (!ehHourly && !rota) return
     if (ehHourly && !hourlyOk) {
       setErro('Hourly Chauffeur sem preço configurado.')
       return
@@ -415,7 +422,7 @@ export function ReservarPage() {
       const viagem = criarViagem(usuario.id, {
         modalidade,
         origemEndereco,
-        destinoEndereco: ehHourly ? null : destinoEndereco,
+        destinoEndereco,
         data_viagem: dataViagem,
         horario,
         passageiros,
@@ -518,6 +525,31 @@ export function ReservarPage() {
               placeholder="Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU..."
               papel="origem"
             />
+            {embarqueAeroporto && (
+              <p className="text-xs text-[var(--color-success)]">
+                Embarque no aeroporto: o carro busca no nível de desembarque (chegadas) do terminal.
+                Os dados do voo entram na próxima etapa.
+              </p>
+            )}
+            <CampoEndereco
+              rotulo={ehHourly ? 'Desembarque (onde deixar o passageiro)' : 'Destino'}
+              valor={destinoEndereco}
+              onChange={definirDestino}
+              placeholder="Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU..."
+              papel="destino"
+            />
+            {ehHourly && (
+              <p className="reserva-horario-dica">
+                Informe onde o passageiro será deixado. Paradas extras você adiciona depois na
+                viagem.
+              </p>
+            )}
+            {destinoAeroporto && !embarqueAeroporto && (
+              <p className="text-xs text-[var(--color-slate)]">
+                Destino no aeroporto: o desembarque do carro fica no nível de embarque (saídas) do
+                terminal escolhido.
+              </p>
+            )}
             {ehHourly && (
               <div>
                 <label className="rotulo" htmlFor="reserva-duracao">
@@ -535,32 +567,7 @@ export function ReservarPage() {
                     </option>
                   ))}
                 </select>
-                <p className="reserva-horario-dica">
-                  Destino final não é exigido — o motorista fica à disposição pelo período
-                  contratado (as directed).
-                </p>
               </div>
-            )}
-            {embarqueAeroporto && (
-              <p className="text-xs text-[var(--color-success)]">
-                Embarque no aeroporto: o carro busca no nível de desembarque (chegadas) do terminal.
-                Os dados do voo entram na próxima etapa.
-              </p>
-            )}
-            {!ehHourly && (
-              <CampoEndereco
-                rotulo="Destino"
-                valor={destinoEndereco}
-                onChange={definirDestino}
-                placeholder="Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU..."
-                papel="destino"
-              />
-            )}
-            {!ehHourly && destinoAeroporto && !embarqueAeroporto && (
-              <p className="text-xs text-[var(--color-slate)]">
-                Destino no aeroporto: o desembarque do carro fica no nível de embarque (saídas) do
-                terminal escolhido.
-              </p>
             )}
             {aguardandoRota && (
               <p className="text-sm text-[var(--color-slate)]">Calculando a rota pelas ruas...</p>
@@ -816,7 +823,10 @@ export function ReservarPage() {
               valor={ehHourly ? 'HOURLY CHAUFFEUR' : 'ONE-WAY RIDE'}
             />
             <Linha label="Embarque" valor={origemEndereco?.formatted ?? '—'} />
-            {!ehHourly && <Linha label="Destino" valor={destinoEndereco?.formatted ?? '—'} />}
+            <Linha
+              label={ehHourly ? 'Desembarque' : 'Destino'}
+              valor={destinoEndereco?.formatted ?? '—'}
+            />
             <Linha label="Data" valor={dataViagem.split('-').reverse().join('/')} />
             <Linha label={ehHourly ? 'Início' : 'Horário'} valor={horario} />
             {ehHourly && (

@@ -437,8 +437,10 @@ const pt = {
     'A foto de perfil é definida pela empresa responsável. Você só visualiza aqui.',
   'motorista.historico.titulo': 'Histórico',
   'motorista.historico.sub':
-    'Horas, quilômetros, serviços e corridas — do mais recente ao mais antigo. Use a planilha mensal para conferência.',
+    'Horas, quilômetros e as 5 corridas mais recentes. Para ver o restante, use a planilha mensal.',
   'motorista.historico.vazio': 'Nenhuma corrida neste período.',
+  'motorista.historico.maisPlanilha':
+    'Mostrando só as 5 mais recentes. Abra a planilha mensal para ver todas as corridas.',
   'motorista.historico.dia': 'Hoje',
   'motorista.historico.semana': 'Semana',
   'motorista.historico.mes': 'Mês',
@@ -999,8 +1001,10 @@ const en: Record<ChaveTraducao, string> = {
     'Your profile photo is set by your company. You can only view it here.',
   'motorista.historico.titulo': 'History',
   'motorista.historico.sub':
-    'Hours, kilometers, services and trips — newest first. Use the monthly sheet for review.',
+    'Hours, kilometers and your 5 most recent trips. Use the monthly sheet to see the rest.',
   'motorista.historico.vazio': 'No trips in this period.',
+  'motorista.historico.maisPlanilha':
+    'Showing only the 5 most recent. Open the monthly sheet to see all trips.',
   'motorista.historico.dia': 'Today',
   'motorista.historico.semana': 'Week',
   'motorista.historico.mes': 'Month',
@@ -1559,8 +1563,10 @@ const es: Record<ChaveTraducao, string> = {
     'La foto de perfil la define la empresa responsable. Aquí solo puedes verla.',
   'motorista.historico.titulo': 'Historial',
   'motorista.historico.sub':
-    'Horas, kilómetros, servicios y viajes — del más reciente al más antiguo. Use la planilla mensual para revisión.',
+    'Horas, kilómetros y los 5 viajes más recientes. Para ver el resto, use la planilla mensual.',
   'motorista.historico.vazio': 'Ningún viaje en este período.',
+  'motorista.historico.maisPlanilha':
+    'Mostrando solo los 5 más recientes. Abra la planilla mensual para ver todos los viajes.',
   'motorista.historico.dia': 'Hoy',
   'motorista.historico.semana': 'Semana',
   'motorista.historico.mes': 'Mes',

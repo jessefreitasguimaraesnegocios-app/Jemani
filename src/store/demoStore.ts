@@ -74,7 +74,6 @@ import {
 import {
   calcularPrecoExtensao,
   calcularPrecoHourly,
-  DESTINO_HOURLY,
   ehHourly,
   formatarExtensaoConfirmada,
   hourlyConfigurado,
@@ -625,15 +624,37 @@ export const useDemoStore = create<EstadoDemo>()(
           throw new Error('Selecione um endereço de origem válido com coordenadas.')
         }
 
-        if (modalidade === 'one_way') {
-          if (!dados.destinoEndereco) throw new Error('Informe o destino.')
-          const checkDestino = enderecoProntoParaReserva(dados.destinoEndereco)
-          if (!checkDestino.ok) {
-            throw new Error(`Destino: ${checkDestino.mensagem}`)
-          }
-          if (!enderecoTemCoordenadas(dados.destinoEndereco)) {
-            throw new Error('Selecione um endereço de destino válido com coordenadas.')
-          }
+        if (!dados.destinoEndereco) {
+          throw new Error(
+            modalidade === 'hourly'
+              ? 'Informe onde o passageiro será deixado.'
+              : 'Informe o destino.',
+          )
+        }
+        const checkDestino = enderecoProntoParaReserva(dados.destinoEndereco)
+        if (!checkDestino.ok) {
+          throw new Error(
+            modalidade === 'hourly'
+              ? `Desembarque: ${checkDestino.mensagem}`
+              : `Destino: ${checkDestino.mensagem}`,
+          )
+        }
+        if (!enderecoTemCoordenadas(dados.destinoEndereco)) {
+          throw new Error(
+            modalidade === 'hourly'
+              ? 'Selecione um endereço de desembarque válido com coordenadas.'
+              : 'Selecione um endereço de destino válido com coordenadas.',
+          )
+        }
+        if (
+          dados.origemEndereco.latitude === dados.destinoEndereco.latitude &&
+          dados.origemEndereco.longitude === dados.destinoEndereco.longitude
+        ) {
+          throw new Error(
+            modalidade === 'hourly'
+              ? 'Embarque e desembarque precisam ser diferentes.'
+              : 'Origem e destino precisam ser diferentes.',
+          )
         }
 
         const validacao = validarAntecedenciaMinima(dados.data_viagem, dados.horario)
@@ -655,6 +676,13 @@ export const useDemoStore = create<EstadoDemo>()(
         let duracaoMinutos: number | undefined
         let franquiaMilhas: number | undefined
 
+        const destino = dados.destinoEndereco!
+        destinoTexto = destino.formatted
+        destinoEndereco = destino
+        destinoLat = destino.latitude
+        destinoLng = destino.longitude
+        destinoPlaceId = destino.place_id
+
         if (modalidade === 'hourly') {
           duracaoMinutos = dados.duracao_minutos
           if (!duracaoMinutos) throw new Error('Selecione a duração contratada.')
@@ -666,9 +694,7 @@ export const useDemoStore = create<EstadoDemo>()(
           precoTotal = calc
           franquiaMilhas = calc.franquia_milhas
           janela = montarJanelaHourly(dados.data_viagem, dados.horario, duracaoMinutos)
-          destinoTexto = DESTINO_HOURLY
         } else {
-          const destino = dados.destinoEndereco!
           const distancia =
             dados.distancia_km ??
             calcularDistanciaKm(
@@ -678,11 +704,6 @@ export const useDemoStore = create<EstadoDemo>()(
               destino.longitude,
             )
           precoTotal = get().calcularPreco(dados.categoria_id, dados.horario, distancia)
-          destinoTexto = destino.formatted
-          destinoEndereco = destino
-          destinoLat = destino.latitude
-          destinoLng = destino.longitude
-          destinoPlaceId = destino.place_id
         }
 
         const viagem: Viagem = {
