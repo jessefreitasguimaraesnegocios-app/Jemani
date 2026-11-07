@@ -91,11 +91,16 @@ export function PlanilhaMensalCorridas({
 
   useEffect(() => {
     if (!aberta) return
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     function aoTecla(evento: KeyboardEvent) {
       if (evento.key === 'Escape') fechar()
     }
     window.addEventListener('keydown', aoTecla)
-    return () => window.removeEventListener('keydown', aoTecla)
+    return () => {
+      document.body.style.overflow = anterior
+      window.removeEventListener('keydown', aoTecla)
+    }
   }, [aberta])
 
   function abrir() {

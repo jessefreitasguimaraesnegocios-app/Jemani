@@ -203,3 +203,60 @@ html[data-tema='escuro'] .admin-ranking-item {
   background: #000000;
   border-color: #2f2f2f;
 }
+
+.admin-empresa-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(12, 14, 18, 0.55);
+}
+
+.admin-empresa-popup-painel {
+  width: min(100%, 28rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 0.9rem;
+  background: var(--color-surface, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.admin-empresa-popup-painel p {
+  margin: 0;
+  font-size: 0.925rem;
+  color: var(--color-slate);
+  line-height: 1.45;
+}
+
+.admin-empresa-popup-dica strong {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.admin-empresa-popup-erro {
+  color: var(--color-danger) !important;
+  font-size: 0.875rem !important;
+}
+
+.admin-empresa-popup-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+html[data-tema='escuro'] .admin-empresa-popup-painel {
+  background: #1a1a1a;
+  color: #f6f1e8;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-tema='escuro'] .admin-empresa-popup-dica strong {
+  color: #ffffff;
+}

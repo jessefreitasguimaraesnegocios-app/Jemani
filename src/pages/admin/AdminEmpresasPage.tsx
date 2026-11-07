@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { FormularioEditarEmpresa } from '@/components/FormularioEditarEmpresa'
 import { FormularioNovaEmpresa } from '@/components/FormularioNovaEmpresa'
@@ -6,11 +7,20 @@ import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { AdminCatalogoVeiculos } from '@/pages/admin/AdminCatalogoVeiculos'
 import { AdminFrotaVeiculos } from '@/pages/admin/AdminFrotaVeiculos'
+import { excluirEmpresaAdmin } from '@/services/adminUsuarios'
 import { ordenarEmpresasPorProximidade } from '@/services/distribuicaoService'
 import { useDemoStore } from '@/store/demoStore'
 import type { Empresa, Viagem } from '@/types'
 import { formatarData, formatarMoeda } from '@/utils/format'
 import './AdminEmpresasPage.css'
+
+function fraseConfirmacaoExclusao(nome: string) {
+  return `excluir ${nome.trim()}`.replace(/\s+/g, ' ').trim()
+}
+
+function normalizarFrase(texto: string) {
+  return texto.trim().replace(/\s+/g, ' ').toLowerCase()
+}
 
 type AbaAdminEmpresas = 'empresas' | 'veiculos'
 
@@ -22,6 +32,7 @@ export function AdminEmpresasPage() {
   const salvarEmpresa = useDemoStore((s) => s.salvarEmpresa)
   const criarEmpresa = useDemoStore((s) => s.criarEmpresa)
   const enviarOfertaEmailEmpresa = useDemoStore((s) => s.enviarOfertaEmailEmpresa)
+  const removerEmpresaLocal = useDemoStore((s) => s.removerEmpresaLocal)
   const motoristas = useDemoStore((s) => s.motoristas)
   const veiculos = useDemoStore((s) => s.veiculos)
   const viagens = useDemoStore((s) => s.viagens)
@@ -31,6 +42,10 @@ export function AdminEmpresasPage() {
   const [msg, setMsg] = useState('')
   const [erro, setErro] = useState('')
   const [mostrarForm, setMostrarForm] = useState(false)
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
+  const [fraseExclusao, setFraseExclusao] = useState('')
+  const [excluindo, setExcluindo] = useState(false)
+  const [erroExclusao, setErroExclusao] = useState('')
 
   const empresaAberta = useMemo(
     () => empresas.find((e) => e.id === empresaAbertaId) ?? null,
@@ -118,6 +133,40 @@ export function AdminEmpresasPage() {
       })
     }
     return itens.sort((a, b) => a.distancia_km - b.distancia_km)
+  }
+
+  async function confirmarExclusaoEmpresa() {
+    if (!empresaAberta || excluindo) return
+    const esperada = fraseConfirmacaoExclusao(empresaAberta.nome_comercial)
+    if (normalizarFrase(fraseExclusao) !== normalizarFrase(esperada)) {
+      setErroExclusao(t('admin.empresas.fraseIncorreta'))
+      return
+    }
+    setErroExclusao('')
+    setExcluindo(true)
+    try {
+      await excluirEmpresaAdmin(empresaAberta.id)
+      removerEmpresaLocal(empresaAberta.id)
+      setConfirmandoExclusao(false)
+      setFraseExclusao('')
+      setEmpresaAbertaId(null)
+      setMsg(t('admin.empresas.excluido'))
+      setErro('')
+    } catch (e) {
+      const texto = e instanceof Error ? e.message.toLowerCase() : ''
+      if (texto.includes('encontrado') || texto.includes('not found')) {
+        removerEmpresaLocal(empresaAberta.id)
+        setConfirmandoExclusao(false)
+        setFraseExclusao('')
+        setEmpresaAbertaId(null)
+        setMsg(t('admin.empresas.excluido'))
+        setErro('')
+        return
+      }
+      setErroExclusao(e instanceof Error ? e.message : t('admin.empresas.erroExcluir'))
+    } finally {
+      setExcluindo(false)
+    }
   }
 
   return (
@@ -436,6 +485,17 @@ export function AdminEmpresasPage() {
                         >
                           Bloquear
                         </button>
+                        <button
+                          type="button"
+                          className="btn-perigo !py-2"
+                          onClick={() => {
+                            setErroExclusao('')
+                            setFraseExclusao('')
+                            setConfirmandoExclusao(true)
+                          }}
+                        >
+                          {t('admin.empresas.excluir')}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -445,6 +505,79 @@ export function AdminEmpresasPage() {
           )}
         </>
       )}
+
+      {confirmandoExclusao &&
+        empresaAberta &&
+        createPortal(
+          <div
+            className="admin-empresa-popup"
+            role="presentation"
+            onClick={() => {
+              if (!excluindo) setConfirmandoExclusao(false)
+            }}
+          >
+            <div
+              className="admin-empresa-popup-painel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-excluir-empresa-titulo"
+              onClick={(evento) => evento.stopPropagation()}
+            >
+              <h2 id="admin-excluir-empresa-titulo" className="fonte-display text-2xl">
+                {t('admin.empresas.excluirTitulo')}
+              </h2>
+              <p>
+                {t('admin.empresas.excluirAviso', {
+                  nome: empresaAberta.nome_comercial,
+                  email: empresaAberta.email,
+                })}
+              </p>
+              <p className="admin-empresa-popup-dica">
+                {t('admin.empresas.excluirDigite')}
+                <strong> {fraseConfirmacaoExclusao(empresaAberta.nome_comercial)}</strong>
+              </p>
+              <input
+                className="campo"
+                autoFocus
+                value={fraseExclusao}
+                disabled={excluindo}
+                placeholder={t('admin.empresas.excluirPlaceholder', {
+                  nome: empresaAberta.nome_comercial,
+                })}
+                onChange={(evento) => {
+                  setFraseExclusao(evento.target.value)
+                  if (erroExclusao) setErroExclusao('')
+                }}
+                onKeyDown={(evento) => {
+                  if (evento.key === 'Enter') {
+                    evento.preventDefault()
+                    void confirmarExclusaoEmpresa()
+                  }
+                }}
+              />
+              {erroExclusao && <p className="admin-empresa-popup-erro">{erroExclusao}</p>}
+              <div className="admin-empresa-popup-acoes">
+                <button
+                  type="button"
+                  className="btn-secundario"
+                  disabled={excluindo}
+                  onClick={() => setConfirmandoExclusao(false)}
+                >
+                  {t('comum.cancelar')}
+                </button>
+                <button
+                  type="button"
+                  className="btn-perigo"
+                  disabled={excluindo || !fraseExclusao.trim()}
+                  onClick={() => void confirmarExclusaoEmpresa()}
+                >
+                  {excluindo ? t('admin.empresas.excluindo') : t('admin.empresas.excluir')}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

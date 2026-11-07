@@ -9,9 +9,12 @@
   position: fixed;
   inset: 0;
   z-index: 70;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.85rem 1rem 1.5rem;
   background:
     radial-gradient(circle at top right, rgba(184, 149, 108, 0.18), transparent 42%),
     rgba(18, 24, 38, 0.52);
@@ -20,7 +23,8 @@
 
 .planilha-mensal-painel {
   width: min(1120px, 100%);
-  max-height: min(92vh, 920px);
+  max-height: min(96vh, 920px);
+  margin-top: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
