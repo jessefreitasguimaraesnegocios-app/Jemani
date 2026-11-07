@@ -4,6 +4,26 @@ Marketplace de transporte executivo nos **Estados Unidos** e no **mundo** — en
 
 A plataforma capta clientes, distribui solicitações para empresas parceiras e registra a comissão.
 
+## Novidades — 07/11/2026
+
+### Admin, planilha e solicitações
+
+- Aba **Novas solicitações** (abaixo do Dashboard): corridas pagas, ranking de empresas e envio de e-mail, com alerta pulsante na lateral.
+- **Planilha mensal** no admin, na empresa, na ficha do motorista e no Histórico do motorista (CSV).
+- Empresas: só gestão de parceiras/frota; exclusão com confirmação digitada.
+
+### Motorista e Hourly
+
+- Histórico do motorista com métricas (horas, km, serviços) e **só as 5 corridas mais recentes**.
+- Reserva Hourly pede **desembarque** (onde deixar o passageiro); paradas extras entram depois na viagem.
+
+### Entre aparelhos (site + APK)
+
+- Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens, notificações e comissões.
+- APK atual: **1.0.57** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
+
+Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Novidades — 26/10/2026
 
 ### Hourly Chauffeur (roteiro + auditoria)
@@ -14,11 +34,6 @@ A plataforma capta clientes, distribui solicitações para empresas parceiras e 
 - Minimizar Hourly no motorista; histórico do cliente com minimizar + Ver mais (10 em 10).
 - Cancelamento avisa empresa/motorista e bloqueia depois do embarque; GPS não marca “a caminho” sozinho.
 - Migrations: `20261026120000_hourly_paradas.sql` e `20261026190000_auditoria_correcoes.sql` (colar no SQL Editor do Jemani se ainda não rodou).
-
-### Entre aparelhos (site + APK)
-
-- Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens, notificações e comissões.
-- APK atual: **1.0.38** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
 
 Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -97,7 +112,7 @@ Outras empresas: `empresa@pacificexec.app`, `empresa@westcoastmobility.app`
 3. Confirme e pague com **Pagar com Stripe (teste)** (`4242 4242 4242 4242`)
 4. Entre como **empresa** (`empresa@lapremier.app`)
 5. Aceite a solicitação e atribua motorista/veículo
-6. Acompanhe status como cliente / motorista (no hourly, cliente adiciona endereços e motorista marca “Cheguei”)
+6. Acompanhe status como cliente / motorista (no hourly, informe desembarque na reserva; depois o cliente adiciona paradas e o motorista marca “Cheguei”)
 7. Finalize e confira comissão no **admin**
 
 ## 5. Supabase / Deploy
