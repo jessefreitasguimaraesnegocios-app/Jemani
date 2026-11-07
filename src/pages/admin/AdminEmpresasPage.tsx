@@ -1,17 +1,12 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { BadgeStatus } from '@/components/BadgeStatus'
 import { FormularioEditarEmpresa } from '@/components/FormularioEditarEmpresa'
 import { FormularioNovaEmpresa } from '@/components/FormularioNovaEmpresa'
-import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { AdminCatalogoVeiculos } from '@/pages/admin/AdminCatalogoVeiculos'
 import { AdminFrotaVeiculos } from '@/pages/admin/AdminFrotaVeiculos'
 import { excluirEmpresaAdmin } from '@/services/adminUsuarios'
-import { ordenarEmpresasPorProximidade } from '@/services/distribuicaoService'
 import { useDemoStore } from '@/store/demoStore'
-import type { Empresa, Viagem } from '@/types'
-import { formatarData, formatarMoeda } from '@/utils/format'
 import './AdminEmpresasPage.css'
 
 function fraseConfirmacaoExclusao(nome: string) {
@@ -26,17 +21,13 @@ type AbaAdminEmpresas = 'empresas' | 'veiculos'
 
 export function AdminEmpresasPage() {
   const { t } = usarIdioma()
-  const { usuario } = useAuth()
   const empresas = useDemoStore((s) => s.empresas)
   const categorias = useDemoStore((s) => s.categorias)
   const salvarEmpresa = useDemoStore((s) => s.salvarEmpresa)
   const criarEmpresa = useDemoStore((s) => s.criarEmpresa)
-  const enviarOfertaEmailEmpresa = useDemoStore((s) => s.enviarOfertaEmailEmpresa)
   const removerEmpresaLocal = useDemoStore((s) => s.removerEmpresaLocal)
   const motoristas = useDemoStore((s) => s.motoristas)
   const veiculos = useDemoStore((s) => s.veiculos)
-  const viagens = useDemoStore((s) => s.viagens)
-  const atribuicoes = useDemoStore((s) => s.atribuicoes)
   const [aba, setAba] = useState<AbaAdminEmpresas>('empresas')
   const [empresaAbertaId, setEmpresaAbertaId] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
@@ -51,89 +42,6 @@ export function AdminEmpresasPage() {
     () => empresas.find((e) => e.id === empresaAbertaId) ?? null,
     [empresas, empresaAbertaId],
   )
-
-  const corridasDisponiveis = useMemo(
-    () =>
-      viagens
-        .filter(
-          (v) =>
-            v.payment_status === 'paid' &&
-            ['aguardando_empresa', 'oferta_enviada', 'paid'].includes(v.status) &&
-            !v.empresa_id,
-        )
-        .sort((a, b) => b.created_at.localeCompare(a.created_at)),
-    [viagens],
-  )
-
-  const rankingPorViagem = useMemo(() => {
-    const mapa = new Map<
-      string,
-      Array<{ empresa: Empresa; distancia_km: number; emailEnviado: boolean }>
-    >()
-    for (const viagem of corridasDisponiveis) {
-      if (typeof viagem.origem_lat !== 'number' || typeof viagem.origem_lng !== 'number') {
-        mapa.set(viagem.id, [])
-        continue
-      }
-      const { ordenadas } = ordenarEmpresasPorProximidade(
-        empresas,
-        viagem.origem_lat,
-        viagem.origem_lng,
-        viagem.categoria_id,
-        veiculos,
-      )
-      mapa.set(
-        viagem.id,
-        ordenadas.slice(0, 5).map((o) => ({
-          empresa: o.empresa,
-          distancia_km: o.distancia_km,
-          emailEnviado: Boolean(
-            atribuicoes.find(
-              (a) =>
-                a.viagem_id === viagem.id &&
-                a.empresa_id === o.empresa.id &&
-                a.email_enviado_em,
-            ),
-          ),
-        })),
-      )
-    }
-    return mapa
-  }, [corridasDisponiveis, empresas, atribuicoes, veiculos])
-
-  function enviarOferta(viagemId: string, empresaId: string) {
-    setErro('')
-    setMsg('')
-    try {
-      const { viagem } = enviarOfertaEmailEmpresa(viagemId, empresaId, usuario?.id)
-      setMsg(
-        `Gmail aberto · oferta marcada como enviada · ${viagem.codigo} agora está “Oferta enviada por e-mail”.`,
-      )
-    } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Falha ao enviar oferta')
-    }
-  }
-
-  function corridasProximasDaEmpresa(empresa: Empresa) {
-    const itens: Array<{
-      viagem: Viagem
-      distancia_km: number
-      emailEnviado: boolean
-      posicao: number
-    }> = []
-    for (const viagem of corridasDisponiveis) {
-      const ranking = rankingPorViagem.get(viagem.id) ?? []
-      const idx = ranking.findIndex((r) => r.empresa.id === empresa.id)
-      if (idx < 0) continue
-      itens.push({
-        viagem,
-        distancia_km: ranking[idx].distancia_km,
-        emailEnviado: ranking[idx].emailEnviado,
-        posicao: idx + 1,
-      })
-    }
-    return itens.sort((a, b) => a.distancia_km - b.distancia_km)
-  }
 
   async function confirmarExclusaoEmpresa() {
     if (!empresaAberta || excluindo) return
@@ -230,99 +138,12 @@ export function AdminEmpresasPage() {
 
           {!empresaAberta && (
             <>
-              <div className="admin-empresas-intro">
-                <p className="font-medium text-[var(--color-ink)]">Como funciona</p>
-                <p>
-                  Corridas pagas entram na fila. O sistema ordena empresas pela distância até o local
-                  de embarque. Você envia o e-mail (Gmail) à mais próxima; a corrida muda para{' '}
-                  <strong>Oferta enviada por e-mail</strong> e a empresa vê a solicitação no painel.
-                </p>
-                <p>
-                  O Jemani abre o Gmail para você revisar — não confirma entrega automática no
-                  servidor de e-mail.
-                </p>
-              </div>
-
               {(msg || erro) && (
                 <div className="cartao">
                   {msg && <p className="text-sm text-[var(--color-success)]">{msg}</p>}
                   {erro && <p className="text-sm text-[var(--color-danger)]">{erro}</p>}
                 </div>
               )}
-
-              <section className="admin-empresas-secao">
-                <h2 className="fonte-display text-2xl">
-                  Corridas disponíveis ({corridasDisponiveis.length})
-                </h2>
-                {corridasDisponiveis.length === 0 ? (
-                  <p className="admin-empresas-vazio">
-                    Nenhuma corrida paga aguardando oferta no momento.
-                  </p>
-                ) : (
-                  corridasDisponiveis.map((viagem) => {
-                    const ranking = rankingPorViagem.get(viagem.id) ?? []
-                    return (
-                      <div key={viagem.id} className="cartao admin-corrida-card">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <p className="font-medium">{viagem.codigo}</p>
-                            <p className="admin-corrida-meta">
-                              {viagem.origem} → {viagem.destino}
-                            </p>
-                            <p className="admin-corrida-meta">
-                              {formatarData(viagem.data_viagem)} · {viagem.horario} ·{' '}
-                              {formatarMoeda(viagem.preco_total)}
-                            </p>
-                          </div>
-                          <BadgeStatus status={viagem.status} />
-                        </div>
-
-                        {ranking.length === 0 ? (
-                          <p className="admin-empresas-vazio">
-                            Sem empresas elegíveis com coordenadas para este trecho.
-                          </p>
-                        ) : (
-                          <ul className="admin-ranking">
-                            {ranking.map((item, idx) => (
-                              <li
-                                key={item.empresa.id}
-                                className={`admin-ranking-item ${
-                                  item.emailEnviado
-                                    ? 'admin-ranking-item--enviado'
-                                    : idx === 0
-                                      ? 'admin-ranking-item--topo'
-                                      : ''
-                                }`}
-                              >
-                                <div className="admin-ranking-info">
-                                  <strong>
-                                    {idx === 0 ? '1ª mais próxima · ' : `${idx + 1}ª · `}
-                                    {item.empresa.nome_comercial}
-                                  </strong>
-                                  <span>
-                                    {item.distancia_km} km do embarque · {item.empresa.email}
-                                  </span>
-                                </div>
-                                {item.emailEnviado ? (
-                                  <span className="admin-badge-enviado">E-mail enviado</span>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className="btn-ouro !py-2"
-                                    onClick={() => enviarOferta(viagem.id, item.empresa.id)}
-                                  >
-                                    Enviar e-mail
-                                  </button>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    )
-                  })
-                )}
-              </section>
 
               <section className="admin-empresas-secao">
                 <h2 className="fonte-display text-2xl">
@@ -362,7 +183,6 @@ export function AdminEmpresasPage() {
               )}
               {(() => {
                 const e = empresaAberta
-                const proximas = corridasProximasDaEmpresa(e)
                 return (
                   <div className="cartao admin-empresa-card">
                     <div className="admin-empresa-topo">
@@ -383,43 +203,6 @@ export function AdminEmpresasPage() {
                         </p>
                       </div>
                       <span className="badge-status">{e.status}</span>
-                    </div>
-
-                    <div className="admin-empresa-bloco">
-                      <h3>
-                        Corridas próximas desta base
-                        {proximas.length > 0 ? ` (${proximas.length})` : ''}
-                      </h3>
-                      {proximas.length === 0 ? (
-                        <p className="admin-empresas-vazio">
-                          Nenhuma corrida aberta ranqueada para esta empresa agora.
-                        </p>
-                      ) : (
-                        proximas.map(({ viagem, distancia_km, emailEnviado, posicao }) => (
-                          <div key={viagem.id} className="admin-corrida-empresa">
-                            <div>
-                              <p className="text-sm font-medium">
-                                {viagem.codigo} · {posicao}ª mais próxima ({distancia_km} km)
-                              </p>
-                              <p className="text-xs text-[var(--color-slate)]">
-                                {viagem.origem} → {viagem.destino}
-                              </p>
-                              {emailEnviado && (
-                                <span className="admin-badge-enviado mt-1">E-mail já enviado</span>
-                              )}
-                            </div>
-                            {!emailEnviado && (
-                              <button
-                                type="button"
-                                className="btn-ouro !py-2"
-                                onClick={() => enviarOferta(viagem.id, e.id)}
-                              >
-                                Enviar e-mail
-                              </button>
-                            )}
-                          </div>
-                        ))
-                      )}
                     </div>
 
                     <div className="admin-empresa-bloco">

@@ -37,6 +37,7 @@ import { AdminViagensPage } from '@/pages/admin/AdminViagensPage'
 import { AdminClientesPage } from '@/pages/admin/AdminClientesPage'
 import { AdminClienteHistoricoPage } from '@/pages/admin/AdminClienteHistoricoPage'
 import { AdminEmpresasPage } from '@/pages/admin/AdminEmpresasPage'
+import { AdminSolicitacoesPage } from '@/pages/admin/AdminSolicitacoesPage'
 import { AdminEmpresaHistoricoPage } from '@/pages/admin/AdminEmpresaHistoricoPage'
 import { AdminFinanceiroPage } from '@/pages/admin/AdminFinanceiroPage'
 import { AdminComissoesPage } from '@/pages/admin/AdminComissoesPage'
@@ -96,6 +97,7 @@ export default function App() {
           <Route element={<RotaProtegida tipos={['admin']} />}>
             <Route path="/admin" element={<LayoutAdmin />}>
               <Route index element={<AdminDashboardPage />} />
+              <Route path="solicitacoes" element={<AdminSolicitacoesPage />} />
               <Route path="viagens" element={<AdminViagensPage />} />
               <Route path="clientes" element={<AdminClientesPage />} />
               <Route path="clientes/:id" element={<AdminClienteHistoricoPage />} />

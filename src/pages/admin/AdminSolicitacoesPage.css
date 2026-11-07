@@ -1,0 +1,101 @@
+.admin-solicitacoes-intro {
+  border: 1px solid var(--color-line);
+  border-radius: 1.25rem;
+  padding: 1rem 1.15rem;
+  background: rgba(184, 149, 108, 0.1);
+}
+
+.admin-solicitacoes-intro p {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.admin-solicitacoes-secao {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-solicitacoes-secao h2 {
+  margin: 0;
+}
+
+.admin-solicitacoes-vazio {
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.admin-solicitacao-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-solicitacao-meta {
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.admin-solicitacao-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-solicitacao-ranking-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.admin-solicitacao-ranking-item--enviado {
+  border-color: rgba(47, 107, 79, 0.35);
+  background: rgba(47, 107, 79, 0.08);
+}
+
+.admin-solicitacao-ranking-item--topo {
+  border-color: rgba(184, 149, 108, 0.55);
+}
+
+.admin-solicitacao-ranking-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.admin-solicitacao-ranking-info strong {
+  font-size: 0.9rem;
+}
+
+.admin-solicitacao-ranking-info span {
+  font-size: 0.75rem;
+  color: var(--color-slate);
+}
+
+.admin-solicitacao-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(47, 107, 79, 0.15);
+  color: var(--color-success);
+}
+
+html[data-tema='escuro'] .admin-solicitacao-ranking-item {
+  background: #000000;
+  border-color: #2f2f2f;
+}

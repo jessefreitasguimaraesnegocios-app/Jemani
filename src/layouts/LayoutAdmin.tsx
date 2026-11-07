@@ -1,7 +1,9 @@
+import { useMemo } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Building2,
   Car,
+  Inbox,
   LayoutDashboard,
   LogOut,
   Settings,
@@ -14,10 +16,14 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { ChaveTraducao } from '@/i18n/mensagens'
+import { listarCorridasAguardandoOferta } from '@/services/distribuicaoService'
+import { useDemoStore } from '@/store/demoStore'
 import { cn } from '@/utils/format'
+import './LayoutAdmin.css'
 
 const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Car; end?: boolean }> = [
   { to: '/admin', chave: 'nav.admin.dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/solicitacoes', chave: 'nav.admin.solicitacoes', icon: Inbox },
   { to: '/admin/viagens', chave: 'nav.admin.viagens', icon: Car },
   { to: '/admin/clientes', chave: 'nav.admin.clientes', icon: Users },
   { to: '/admin/empresas', chave: 'nav.admin.empresas', icon: Building2 },
@@ -33,7 +39,12 @@ export function LayoutAdmin() {
   const navigate = useNavigate()
   const caminho = useLocation()
   const { t } = usarIdioma()
+  const viagens = useDemoStore((s) => s.viagens)
   const quadroAmplo = caminho.pathname.startsWith('/admin/viagens')
+  const qtdSolicitacoes = useMemo(
+    () => listarCorridasAguardandoOferta(viagens).length,
+    [viagens],
+  )
 
   async function handleSair() {
     await sair()
@@ -53,19 +64,38 @@ export function LayoutAdmin() {
           </button>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:px-6">
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.end}
-              className={({ isActive }) =>
-                cn('sidebar-link whitespace-nowrap', isActive && 'ativo')
-              }
-            >
-              <l.icon size={18} />
-              {t(l.chave)}
-            </NavLink>
-          ))}
+          {links.map((l) => {
+            const alertaSolicitacoes = l.to === '/admin/solicitacoes' && qtdSolicitacoes > 0
+            return (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                end={l.end}
+                className={({ isActive }) =>
+                  cn(
+                    'sidebar-link layout-admin-link whitespace-nowrap',
+                    isActive && 'ativo',
+                  )
+                }
+              >
+                <span className="layout-admin-link-linha">
+                  <l.icon size={18} />
+                  {t(l.chave)}
+                </span>
+                {alertaSolicitacoes && (
+                  <i
+                    className={cn(
+                      'layout-admin-alerta',
+                      qtdSolicitacoes > 1 && 'layout-admin-alerta--contagem',
+                    )}
+                    aria-label={t('admin.solicitacoes.alerta', { n: qtdSolicitacoes })}
+                  >
+                    {qtdSolicitacoes > 9 ? '9+' : qtdSolicitacoes === 1 ? '!' : qtdSolicitacoes}
+                  </i>
+                )}
+              </NavLink>
+            )
+          })}
         </nav>
         <button
           type="button"

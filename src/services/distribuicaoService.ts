@@ -1,6 +1,20 @@
 import { calcularDistanciaKm } from '@/services/mapasService'
-import type { Empresa, HistoricoDistribuicao, Veiculo } from '@/types'
+import type { Empresa, HistoricoDistribuicao, Veiculo, Viagem } from '@/types'
 import { gerarId, agoraIso } from '@/utils/format'
+
+const STATUS_AGUARDANDO_OFERTA = new Set(['aguardando_empresa', 'oferta_enviada', 'paid'])
+
+/** Corridas pagas ainda sem empresa, prontas para oferta por e-mail. */
+export function listarCorridasAguardandoOferta(viagens: Viagem[]): Viagem[] {
+  return viagens
+    .filter(
+      (viagem) =>
+        viagem.payment_status === 'paid' &&
+        STATUS_AGUARDANDO_OFERTA.has(viagem.status) &&
+        !viagem.empresa_id,
+    )
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+}
 
 export interface EmpresaComDistancia {
   empresa: Empresa

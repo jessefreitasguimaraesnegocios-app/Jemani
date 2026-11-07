@@ -38,6 +38,7 @@ const pt = {
 
   'nav.admin.subtitle': 'Painel administrador',
   'nav.admin.dashboard': 'Dashboard',
+  'nav.admin.solicitacoes': 'Novas solicitações',
   'nav.admin.viagens': 'Viagens',
   'nav.admin.clientes': 'Clientes',
   'nav.admin.empresas': 'Empresas',
@@ -245,8 +246,29 @@ const pt = {
   'admin.clientes.excluido': 'Cliente excluído.',
   'admin.clientes.erroExcluir': 'Não foi possível excluir o cliente.',
 
+  'admin.solicitacoes.titulo': 'Novas solicitações',
+  'admin.solicitacoes.sub':
+    'Corridas pagas aguardando oferta por e-mail às empresas mais próximas do embarque.',
+  'admin.solicitacoes.comoTitulo': 'Como funciona',
+  'admin.solicitacoes.como1':
+    'Corridas pagas entram na fila. O sistema ordena empresas pela distância até o local de embarque. Você envia o e-mail (Gmail) à mais próxima; a corrida muda para Oferta enviada por e-mail e a empresa vê a solicitação no painel.',
+  'admin.solicitacoes.como2':
+    'O Jemani abre o Gmail para você revisar — não confirma entrega automática no servidor de e-mail.',
+  'admin.solicitacoes.corridas': 'Corridas disponíveis ({n})',
+  'admin.solicitacoes.vazio': 'Nenhuma corrida paga aguardando oferta no momento.',
+  'admin.solicitacoes.semEmpresas': 'Sem empresas elegíveis com coordenadas para este trecho.',
+  'admin.solicitacoes.maisProxima': '1ª mais próxima · {nome}',
+  'admin.solicitacoes.posicao': '{n}ª · {nome}',
+  'admin.solicitacoes.distanciaEmail': '{km} km do embarque · {email}',
+  'admin.solicitacoes.emailEnviado': 'E-mail enviado',
+  'admin.solicitacoes.enviarEmail': 'Enviar e-mail',
+  'admin.solicitacoes.msgEnviado':
+    'Gmail aberto · oferta marcada como enviada · {codigo} agora está “Oferta enviada por e-mail”.',
+  'admin.solicitacoes.erroEnviar': 'Falha ao enviar oferta',
+  'admin.solicitacoes.alerta': '{n} novas solicitações',
+
   'admin.empresas.titulo': 'Empresas',
-  'admin.empresas.sub': 'Ofertas por proximidade do embarque + gestão de status das parceiras.',
+  'admin.empresas.sub': 'Cadastro, status e frota das parceiras.',
   'admin.empresas.add': '+ Adicionar empresa',
   'admin.empresas.historico': 'Ver histórico completo',
   'admin.empresas.parceiras': 'Parceiras ({n})',
@@ -580,6 +602,7 @@ const en: Record<ChaveTraducao, string> = {
 
   'nav.admin.subtitle': 'Admin panel',
   'nav.admin.dashboard': 'Dashboard',
+  'nav.admin.solicitacoes': 'New requests',
   'nav.admin.viagens': 'Trips',
   'nav.admin.clientes': 'Clients',
   'nav.admin.empresas': 'Companies',
@@ -787,8 +810,29 @@ const en: Record<ChaveTraducao, string> = {
   'admin.clientes.excluido': 'Client deleted.',
   'admin.clientes.erroExcluir': 'Could not delete the client.',
 
+  'admin.solicitacoes.titulo': 'New requests',
+  'admin.solicitacoes.sub':
+    'Paid trips waiting for an email offer to the companies closest to pickup.',
+  'admin.solicitacoes.comoTitulo': 'How it works',
+  'admin.solicitacoes.como1':
+    'Paid trips enter the queue. The system ranks companies by distance to pickup. You send the email (Gmail) to the nearest one; the trip becomes Offer emailed and the company sees the request in its panel.',
+  'admin.solicitacoes.como2':
+    'Jemani opens Gmail for you to review — it does not confirm automatic delivery on the mail server.',
+  'admin.solicitacoes.corridas': 'Available trips ({n})',
+  'admin.solicitacoes.vazio': 'No paid trips waiting for an offer right now.',
+  'admin.solicitacoes.semEmpresas': 'No eligible companies with coordinates for this route.',
+  'admin.solicitacoes.maisProxima': '1st closest · {nome}',
+  'admin.solicitacoes.posicao': '{n}th · {nome}',
+  'admin.solicitacoes.distanciaEmail': '{km} km from pickup · {email}',
+  'admin.solicitacoes.emailEnviado': 'Email sent',
+  'admin.solicitacoes.enviarEmail': 'Send email',
+  'admin.solicitacoes.msgEnviado':
+    'Gmail opened · offer marked as sent · {codigo} is now “Offer emailed”.',
+  'admin.solicitacoes.erroEnviar': 'Failed to send offer',
+  'admin.solicitacoes.alerta': '{n} new requests',
+
   'admin.empresas.titulo': 'Companies',
-  'admin.empresas.sub': 'Offers by pickup proximity + partner status management.',
+  'admin.empresas.sub': 'Partner registration, status and fleet.',
   'admin.empresas.add': '+ Add company',
   'admin.empresas.historico': 'View full history',
   'admin.empresas.parceiras': 'Partners ({n})',
@@ -1117,6 +1161,7 @@ const es: Record<ChaveTraducao, string> = {
 
   'nav.admin.subtitle': 'Panel de administración',
   'nav.admin.dashboard': 'Dashboard',
+  'nav.admin.solicitacoes': 'Nuevas solicitudes',
   'nav.admin.viagens': 'Viajes',
   'nav.admin.clientes': 'Clientes',
   'nav.admin.empresas': 'Empresas',
@@ -1325,8 +1370,29 @@ const es: Record<ChaveTraducao, string> = {
   'admin.clientes.excluido': 'Cliente eliminado.',
   'admin.clientes.erroExcluir': 'No se pudo eliminar el cliente.',
 
+  'admin.solicitacoes.titulo': 'Nuevas solicitudes',
+  'admin.solicitacoes.sub':
+    'Viajes pagados esperando oferta por correo a las empresas más cercanas al embarque.',
+  'admin.solicitacoes.comoTitulo': 'Cómo funciona',
+  'admin.solicitacoes.como1':
+    'Los viajes pagados entran en la cola. El sistema ordena empresas por distancia al embarque. Envías el correo (Gmail) a la más cercana; el viaje pasa a Oferta enviada por correo y la empresa ve la solicitud en su panel.',
+  'admin.solicitacoes.como2':
+    'Jemani abre Gmail para que revises — no confirma la entrega automática en el servidor de correo.',
+  'admin.solicitacoes.corridas': 'Viajes disponibles ({n})',
+  'admin.solicitacoes.vazio': 'Ningún viaje pagado esperando oferta por ahora.',
+  'admin.solicitacoes.semEmpresas': 'Sin empresas elegibles con coordenadas para este tramo.',
+  'admin.solicitacoes.maisProxima': '1ª más cercana · {nome}',
+  'admin.solicitacoes.posicao': '{n}ª · {nome}',
+  'admin.solicitacoes.distanciaEmail': '{km} km del embarque · {email}',
+  'admin.solicitacoes.emailEnviado': 'Correo enviado',
+  'admin.solicitacoes.enviarEmail': 'Enviar correo',
+  'admin.solicitacoes.msgEnviado':
+    'Gmail abierto · oferta marcada como enviada · {codigo} ahora está “Oferta enviada por correo”.',
+  'admin.solicitacoes.erroEnviar': 'Error al enviar la oferta',
+  'admin.solicitacoes.alerta': '{n} nuevas solicitudes',
+
   'admin.empresas.titulo': 'Empresas',
-  'admin.empresas.sub': 'Ofertas por proximidad del embarque + gestión de estado de socias.',
+  'admin.empresas.sub': 'Registro, estado y flota de las socias.',
   'admin.empresas.add': '+ Agregar empresa',
   'admin.empresas.historico': 'Ver historial completo',
   'admin.empresas.parceiras': 'Socias ({n})',
