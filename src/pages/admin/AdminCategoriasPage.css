@@ -1,0 +1,55 @@
+.admin-categorias-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.admin-categorias-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-categorias-rotulo {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.admin-categorias-dica {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--color-slate);
+}
+
+.admin-categorias-assentos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.admin-categorias-assento {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.admin-categorias-assento span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-slate);
+}
+
+.admin-categorias-erro {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-danger);
+}
+
+@media (max-width: 560px) {
+  .admin-categorias-assentos {
+    grid-template-columns: 1fr;
+  }
+}

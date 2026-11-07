@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
+import { PlanilhaMensalCorridas } from '@/components/PlanilhaMensalCorridas'
 import { useAuth } from '@/contexts/AuthContext'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import type { IdiomaApp } from '@/i18n/tipos'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { dispararFeedbackAlerta } from '@/utils/feedbackAlerta'
 import {
+  dataEstaNoPeriodo,
   filtrarCorridas,
   montarHistoricoMotorista,
   type PeriodoMotorista,
@@ -15,6 +17,15 @@ import { useDemoStore } from '@/store/demoStore'
 import type { Motorista } from '@/types'
 import { formatarData, formatarDuracao, formatarMoeda } from '@/utils/format'
 import './MotoristaMenuPainel.css'
+
+function textoKm(km: number | null, locale: string) {
+  if (km == null) return '—'
+  const numero = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: Number.isInteger(km) ? 0 : 1,
+  }).format(km)
+  return `${numero} km`
+}
 
 const IDIOMAS: Array<{ valor: IdiomaApp; rotulo: string }> = [
   { valor: 'pt-BR', rotulo: 'Português (Brasil)' },
@@ -90,6 +101,11 @@ function HistoricoMotorista({ motorista }: { motorista: Motorista }) {
   const viagens = useDemoStore((s) => s.viagens)
   const historicos = useDemoStore((s) => s.historicos)
   const turnos = useDemoStore((s) => s.turnos)
+  const veiculos = useDemoStore((s) => s.veiculos)
+  const empresas = useDemoStore((s) => s.empresas)
+  const perfis = useDemoStore((s) => s.perfis)
+  const categorias = useDemoStore((s) => s.categorias)
+  const agendamentos = useDemoStore((s) => s.agendamentosVeiculo)
   const [periodo, setPeriodo] = useState<PeriodoMotorista>('tudo')
 
   const historico = useMemo(
@@ -107,56 +123,170 @@ function HistoricoMotorista({ motorista }: { motorista: Motorista }) {
     () => filtrarCorridas(historico.corridas, periodo),
     [historico.corridas, periodo],
   )
-  const kmVisivel = lista.reduce((soma, corrida) => soma + (corrida.km ?? 0), 0)
-  const temKm = lista.some((corrida) => corrida.km != null)
+  const resumo = historico.resumos[periodo]
+  const agendamentosPeriodo = useMemo(
+    () =>
+      (agendamentos ?? [])
+        .filter(
+          (item) =>
+            item.motorista_id === motorista.id &&
+            item.empresa_id === motorista.empresa_id &&
+            dataEstaNoPeriodo(item.data, periodo),
+        )
+        .sort((a, b) => `${b.data}T${b.horario}`.localeCompare(`${a.data}T${a.horario}`)),
+    [agendamentos, motorista.id, motorista.empresa_id, periodo],
+  )
+  const viagensDoMotorista = useMemo(
+    () => viagens.filter((item) => item.motorista_id === motorista.id),
+    [viagens, motorista.id],
+  )
+  const mapaVeiculos = useMemo(() => new Map(veiculos.map((item) => [item.id, item])), [veiculos])
+  const mapaClientes = useMemo(() => new Map(perfis.map((item) => [item.id, item])), [perfis])
+  const mapaCategorias = useMemo(
+    () => new Map(categorias.map((item) => [item.id, item])),
+    [categorias],
+  )
+  const mapaMotoristas = useMemo(
+    () => new Map([[motorista.id, motorista]]),
+    [motorista],
+  )
 
   return (
     <div className="motorista-painel">
-      <div>
-        <h1 className="fonte-display">{t('motorista.historico.titulo')}</h1>
-        <p className="motorista-sub">{t('motorista.historico.sub')}</p>
+      <div className="motorista-historico-topo">
+        <div>
+          <h1 className="fonte-display">{t('motorista.historico.titulo')}</h1>
+          <p className="motorista-sub">{t('motorista.historico.sub')}</p>
+        </div>
+        <PlanilhaMensalCorridas
+          viagens={viagensDoMotorista}
+          empresas={empresas}
+          mapaClientes={mapaClientes}
+          mapaMotoristas={mapaMotoristas}
+          mapaCategorias={mapaCategorias}
+          empresaFixaId={motorista.empresa_id}
+        />
       </div>
-      <div className="motorista-periodos">
+
+      <div className="motorista-periodos motorista-periodos--grade">
         {PERIODOS.map((item) => (
           <button
             key={item.id}
             type="button"
-            className={`motorista-periodo ${periodo === item.id ? 'motorista-periodo--ativo' : ''}`}
+            className={`motorista-periodo motorista-periodo--card ${periodo === item.id ? 'motorista-periodo--ativo' : ''}`}
             onClick={() => setPeriodo(item.id)}
           >
-            {t(item.chave)}
+            <span>{t(item.chave)}</span>
+            <strong>{historico.resumos[item.id].corridas}</strong>
           </button>
         ))}
       </div>
-      <p className="motorista-resumo">
-        {t(lista.length === 1 ? 'motorista.historico.resumoUm' : 'motorista.historico.resumo', {
-          n: lista.length,
-          km: temKm ? kmVisivel.toFixed(1) : '—',
-        })}
-      </p>
-      {lista.length === 0 ? (
-        <p className="motorista-vazio">{t('motorista.historico.vazio')}</p>
-      ) : (
-        <div className="motorista-lista">
-          {lista.map((corrida) => (
-            <article key={corrida.id} className="motorista-cartao motorista-corrida">
-              <div className="motorista-corrida-topo">
-                <strong>{corrida.codigo}</strong>
-                <BadgeStatus status={corrida.status} />
-              </div>
-              <p>
-                {corrida.origem} → {corrida.destino}
-              </p>
-              <p className="motorista-meta">
-                {formatarData(corrida.data, locale)} {corrida.horario}
-                {corrida.km != null ? ` · ${corrida.km.toFixed(1)} km` : ''}
-                {corrida.duracaoMs != null ? ` · ${formatarDuracao(corrida.duracaoMs)}` : ''}
-                {` · ${formatarMoeda(corrida.preco, locale)}`}
-              </p>
-            </article>
-          ))}
+
+      <div className="motorista-metricas">
+        <div className="motorista-metrica">
+          <span>{t('empresa.motoristas.horasCorrida')}</span>
+          <strong>{formatarDuracao(resumo.horasCorridaMs)}</strong>
         </div>
-      )}
+        <div className="motorista-metrica">
+          <span>{t('empresa.motoristas.km')}</span>
+          <strong>{textoKm(resumo.km, locale)}</strong>
+        </div>
+        <div className="motorista-metrica">
+          <span>{t('empresa.motoristas.horasInativo')}</span>
+          <strong>{formatarDuracao(resumo.horasInativasMs)}</strong>
+        </div>
+        <div className="motorista-metrica">
+          <span>{t('empresa.motoristas.horasTurno')}</span>
+          <strong>{formatarDuracao(resumo.horasTurnoMs)}</strong>
+        </div>
+        <div className="motorista-metrica">
+          <span>{t('empresa.veiculos.mecanica')}</span>
+          <strong>
+            {agendamentosPeriodo.filter((item) => item.tipo === 'mecanica').length}
+          </strong>
+        </div>
+        <div className="motorista-metrica">
+          <span>{t('empresa.veiculos.lavaJato')}</span>
+          <strong>
+            {agendamentosPeriodo.filter((item) => item.tipo === 'lava_jato').length}
+          </strong>
+        </div>
+      </div>
+
+      <section className="motorista-cartao motorista-bloco-lista">
+        <p className="motorista-bloco-titulo">{t('empresa.motoristas.corridas')}</p>
+        {lista.length === 0 ? (
+          <p className="motorista-vazio">{t('motorista.historico.vazio')}</p>
+        ) : (
+          <div className="motorista-lista">
+            {lista.map((corrida) => {
+              const veiculo = corrida.veiculoId ? mapaVeiculos.get(corrida.veiculoId) : undefined
+              const detalhes = [
+                `${formatarData(corrida.data, locale)} · ${corrida.horario}`,
+                textoKm(corrida.km, locale),
+                formatarDuracao(corrida.duracaoMs),
+                formatarMoeda(corrida.preco, locale),
+                t(
+                  corrida.passageiros === 1
+                    ? 'empresa.motoristas.passageiro'
+                    : 'empresa.motoristas.passageiros',
+                  { n: corrida.passageiros },
+                ),
+                veiculo ? `${veiculo.marca} ${veiculo.modelo}` : '',
+                corrida.nomePassageiro ?? '',
+                corrida.numeroVoo
+                  ? t('empresa.motoristas.voo', { codigo: corrida.numeroVoo })
+                  : '',
+              ].filter(Boolean)
+              return (
+                <article key={corrida.id} className="motorista-corrida">
+                  <div className="motorista-corrida-topo">
+                    <strong>{corrida.codigo}</strong>
+                    <BadgeStatus status={corrida.status} />
+                  </div>
+                  <p className="motorista-corrida-rota">
+                    {corrida.origem} → {corrida.destino}
+                  </p>
+                  <p className="motorista-meta">{detalhes.join(' · ')}</p>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="motorista-cartao motorista-bloco-lista">
+        <p className="motorista-bloco-titulo">{t('empresa.motoristas.agendamentos')}</p>
+        {agendamentosPeriodo.length === 0 ? (
+          <p className="motorista-vazio">{t('empresa.motoristas.semAgendamento')}</p>
+        ) : (
+          <div className="motorista-lista">
+            {agendamentosPeriodo.map((item) => {
+              const veiculo = mapaVeiculos.get(item.veiculo_id)
+              return (
+                <article key={item.id} className="motorista-corrida">
+                  <div className="motorista-corrida-topo">
+                    <strong>
+                      {item.tipo === 'mecanica'
+                        ? t('empresa.veiculos.mecanica')
+                        : t('empresa.veiculos.lavaJato')}
+                    </strong>
+                  </div>
+                  <p className="motorista-meta">
+                    {[
+                      `${formatarData(item.data, locale)} · ${item.horario.slice(0, 5)}`,
+                      veiculo ? `${veiculo.marca} ${veiculo.modelo}` : '',
+                      item.observacao ?? '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

@@ -65,9 +65,23 @@
   font-weight: 600;
 }
 
+.motorista-historico-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .motorista-periodos {
   display: flex;
   gap: 0.4rem;
+}
+
+.motorista-periodos--grade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
 }
 
 .motorista-periodo {
@@ -80,10 +94,91 @@
   cursor: pointer;
 }
 
+.motorista-periodo--card {
+  border-radius: 0.95rem;
+  border: 1px solid #2a2a2a;
+  padding: 0.8rem 0.9rem;
+  text-align: left;
+}
+
+.motorista-periodo--card span {
+  display: block;
+  font-size: 0.72rem;
+  color: #9a9a9a;
+}
+
+.motorista-periodo--card strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
 .motorista-periodo--ativo {
   background: #c9a46c;
   color: #111;
   font-weight: 700;
+}
+
+.motorista-periodo--ativo span {
+  color: rgba(17, 17, 17, 0.72);
+}
+
+.motorista-metricas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.motorista-metrica {
+  padding: 0.85rem 0.9rem;
+  border-radius: 0.95rem;
+  border: 1px solid #2a2a2a;
+  background: #121212;
+}
+
+.motorista-metrica span {
+  display: block;
+  font-size: 0.72rem;
+  color: #9a9a9a;
+}
+
+.motorista-metrica strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f6f1e8;
+}
+
+.motorista-bloco-titulo {
+  margin: 0;
+  font-weight: 700;
+}
+
+.motorista-bloco-lista .motorista-corrida {
+  padding: 0.85rem 0;
+  border-top: 1px solid #2a2a2a;
+}
+
+.motorista-bloco-lista .motorista-corrida:first-of-type {
+  border-top: 0;
+  padding-top: 0.2rem;
+}
+
+.motorista-corrida-rota {
+  margin: 0;
+  line-height: 1.4;
+}
+
+@media (min-width: 720px) {
+  .motorista-periodos--grade {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .motorista-metricas {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 .motorista-lista {

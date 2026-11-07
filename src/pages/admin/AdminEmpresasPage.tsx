@@ -210,8 +210,8 @@ export function AdminEmpresasPage() {
 
       {aba === 'veiculos' ? (
         <div className="space-y-8">
-          <AdminFrotaVeiculos />
           <AdminCatalogoVeiculos />
+          <AdminFrotaVeiculos />
         </div>
       ) : (
         <>

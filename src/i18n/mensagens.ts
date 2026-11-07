@@ -310,6 +310,22 @@ const pt = {
   'admin.categorias.ativar': 'Ativar',
   'admin.categorias.desativar': 'Desativar',
   'admin.categorias.adicionar': 'Adicionar',
+  'admin.categorias.campoNome': 'Nome da categoria',
+  'admin.categorias.dicaNome':
+    'Título que o cliente vê na reserva (ex.: JEMANI LUXE, SUV, Charter Bus).',
+  'admin.categorias.campoDescricao': 'Característica',
+  'admin.categorias.dicaDescricao':
+    'Texto curto sob o nome, explicando o padrão do veículo (ex.: Veículos de altíssimo padrão).',
+  'admin.categorias.campoValor': 'Valor adicional (US$)',
+  'admin.categorias.dicaValor':
+    'Valor extra somado ao preço base da corrida quando essa categoria é escolhida.',
+  'admin.categorias.campoAssentos': 'Assentos (mín. e máx.)',
+  'admin.categorias.dicaAssentos':
+    'Faixa de passageiros que essa categoria atende (ex.: 1 e 3, ou 14 e 40).',
+  'admin.categorias.min': 'Mínimo',
+  'admin.categorias.max': 'Máximo',
+  'admin.categorias.erroNome': 'Informe o nome da categoria.',
+  'admin.categorias.erroAssentos': 'A capacidade máxima precisa ser maior ou igual à mínima.',
 
   'admin.precos.titulo': 'Preços',
 
@@ -398,7 +414,8 @@ const pt = {
   'motorista.perfil.fotoAviso':
     'A foto de perfil é definida pela empresa responsável. Você só visualiza aqui.',
   'motorista.historico.titulo': 'Histórico',
-  'motorista.historico.sub': 'Suas corridas, do mais recente para o mais antigo.',
+  'motorista.historico.sub':
+    'Horas, quilômetros, serviços e corridas — do mais recente ao mais antigo. Use a planilha mensal para conferência.',
   'motorista.historico.vazio': 'Nenhuma corrida neste período.',
   'motorista.historico.dia': 'Hoje',
   'motorista.historico.semana': 'Semana',
@@ -835,6 +852,22 @@ const en: Record<ChaveTraducao, string> = {
   'admin.categorias.ativar': 'Activate',
   'admin.categorias.desativar': 'Deactivate',
   'admin.categorias.adicionar': 'Add',
+  'admin.categorias.campoNome': 'Category name',
+  'admin.categorias.dicaNome':
+    'Title the client sees when booking (e.g. JEMANI LUXE, SUV, Charter Bus).',
+  'admin.categorias.campoDescricao': 'Description',
+  'admin.categorias.dicaDescricao':
+    'Short line under the name describing the vehicle standard (e.g. Ultra-premium vehicles).',
+  'admin.categorias.campoValor': 'Extra price (US$)',
+  'admin.categorias.dicaValor':
+    'Amount added to the trip base price when this category is selected.',
+  'admin.categorias.campoAssentos': 'Seats (min and max)',
+  'admin.categorias.dicaAssentos':
+    'Passenger range this category supports (e.g. 1 and 3, or 14 and 40).',
+  'admin.categorias.min': 'Minimum',
+  'admin.categorias.max': 'Maximum',
+  'admin.categorias.erroNome': 'Enter the category name.',
+  'admin.categorias.erroAssentos': 'Maximum capacity must be greater than or equal to minimum.',
 
   'admin.precos.titulo': 'Pricing',
 
@@ -921,7 +954,8 @@ const en: Record<ChaveTraducao, string> = {
   'motorista.perfil.fotoAviso':
     'Your profile photo is set by your company. You can only view it here.',
   'motorista.historico.titulo': 'History',
-  'motorista.historico.sub': 'Your trips, newest first.',
+  'motorista.historico.sub':
+    'Hours, kilometers, services and trips — newest first. Use the monthly sheet for review.',
   'motorista.historico.vazio': 'No trips in this period.',
   'motorista.historico.dia': 'Today',
   'motorista.historico.semana': 'Week',
@@ -1356,6 +1390,22 @@ const es: Record<ChaveTraducao, string> = {
   'admin.categorias.ativar': 'Activar',
   'admin.categorias.desativar': 'Desactivar',
   'admin.categorias.adicionar': 'Agregar',
+  'admin.categorias.campoNome': 'Nombre de la categoría',
+  'admin.categorias.dicaNome':
+    'Título que ve el cliente al reservar (ej.: JEMANI LUXE, SUV, Charter Bus).',
+  'admin.categorias.campoDescricao': 'Característica',
+  'admin.categorias.dicaDescricao':
+    'Texto corto bajo el nombre que describe el estándar del vehículo.',
+  'admin.categorias.campoValor': 'Valor adicional (US$)',
+  'admin.categorias.dicaValor':
+    'Monto extra sumado al precio base del viaje al elegir esta categoría.',
+  'admin.categorias.campoAssentos': 'Asientos (mín. y máx.)',
+  'admin.categorias.dicaAssentos':
+    'Rango de pasajeros que atiende esta categoría (ej.: 1 y 3, o 14 y 40).',
+  'admin.categorias.min': 'Mínimo',
+  'admin.categorias.max': 'Máximo',
+  'admin.categorias.erroNome': 'Ingresa el nombre de la categoría.',
+  'admin.categorias.erroAssentos': 'La capacidad máxima debe ser mayor o igual a la mínima.',
 
   'admin.precos.titulo': 'Precios',
 
@@ -1442,7 +1492,8 @@ const es: Record<ChaveTraducao, string> = {
   'motorista.perfil.fotoAviso':
     'La foto de perfil la define la empresa responsable. Aquí solo puedes verla.',
   'motorista.historico.titulo': 'Historial',
-  'motorista.historico.sub': 'Sus viajes, del más reciente al más antiguo.',
+  'motorista.historico.sub':
+    'Horas, kilómetros, servicios y viajes — del más reciente al más antiguo. Use la planilla mensual para revisión.',
   'motorista.historico.vazio': 'Ningún viaje en este período.',
   'motorista.historico.dia': 'Hoy',
   'motorista.historico.semana': 'Semana',
