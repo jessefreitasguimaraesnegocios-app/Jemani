@@ -1,0 +1,209 @@
+.convite-pagina {
+  min-height: 100dvh;
+  background: #0a0a0a;
+  color: #f6f1e8;
+  padding: 1.25rem 1rem 2.5rem;
+}
+
+.convite-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: 28rem;
+  margin: 0 auto 1.25rem;
+}
+
+.convite-marca {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.convite-topo-sub {
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(246, 241, 232, 0.55);
+}
+
+.convite-conteudo {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.convite-status {
+  text-align: center;
+  color: rgba(246, 241, 232, 0.65);
+}
+
+.convite-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.15rem 1.1rem 1.25rem;
+  border-radius: 1.1rem;
+  background: #141414;
+  border: 1px solid #2a2a2a;
+}
+
+.convite-etapa {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.convite-etapa span {
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  background: #2f6b4f;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.convite-banner-info,
+.convite-banner-ok {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.75rem;
+  background: rgba(47, 107, 79, 0.18);
+  color: #b7e0c8;
+  font-size: 0.85rem;
+}
+
+.convite-banner-ok {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.convite-banner-ok strong {
+  color: #dff5e8;
+}
+
+.convite-titulo {
+  margin: 0;
+  font-size: 1.65rem;
+  line-height: 1.15;
+}
+
+.convite-sub {
+  margin: 0;
+  color: rgba(246, 241, 232, 0.65);
+  font-size: 0.9rem;
+}
+
+.convite-dados {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.convite-dados--caixa {
+  padding: 0.85rem 0.9rem;
+  border-radius: 0.9rem;
+  background: #f6f1e8;
+  color: #111;
+}
+
+.convite-dados dt {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.convite-dados--caixa dt {
+  color: #777;
+}
+
+.convite-dados dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.convite-compromisso {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.82rem;
+  color: rgba(246, 241, 232, 0.75);
+}
+
+.convite-botao {
+  border: 0;
+  border-radius: 0.85rem;
+  padding: 0.95rem 1rem;
+  background: #2f6b4f;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.convite-botao:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.convite-rodape {
+  margin: 0;
+  font-size: 0.75rem;
+  color: rgba(246, 241, 232, 0.5);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.convite-alerta {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.75rem;
+  font-size: 0.88rem;
+}
+
+.convite-alerta--erro {
+  background: rgba(180, 60, 60, 0.18);
+  color: #f0b4b4;
+}
+
+.convite-corrida-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.convite-codigo {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(246, 241, 232, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.convite-badge {
+  display: inline-flex;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(47, 107, 79, 0.25);
+  color: #b7e0c8;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.convite-empresa {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}

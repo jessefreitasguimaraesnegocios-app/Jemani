@@ -14,6 +14,7 @@ import { LayoutMotorista } from '@/layouts/LayoutMotorista'
 import { LandingPage } from '@/pages/LandingPage'
 import { EntrarPage } from '@/pages/EntrarPage'
 import { CadastrarPage } from '@/pages/CadastrarPage'
+import { ConviteOfertaPage } from '@/pages/ConviteOfertaPage'
 import { ClienteInicioPage } from '@/pages/cliente/ClienteInicioPage'
 import { ReservarPage } from '@/pages/cliente/ReservarPage'
 import { ClienteViagensPage } from '@/pages/cliente/ClienteViagensPage'
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/entrar" element={<EntrarPage />} />
           <Route path="/cadastrar" element={<CadastrarPage />} />
+          <Route path="/convite/:token" element={<ConviteOfertaPage />} />
 
           <Route element={<RotaProtegida tipos={['cliente']} />}>
             <Route path="/app" element={<LayoutCliente />}>

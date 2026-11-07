@@ -7,6 +7,7 @@ export type StatusViagem =
   | 'aguardando_empresa'
   | 'oferta_enviada'
   | 'empresa_confirmada'
+  | 'parceiro_externo'
   | 'motorista_atribuido'
   | 'motorista_a_caminho'
   | 'motorista_chegou'
@@ -341,6 +342,18 @@ export interface AtribuicaoViagem {
   created_at: string
 }
 
+/** Convite de oferta por e-mail (só hash do token no store). */
+export interface ConviteOferta {
+  id: string
+  viagem_id: string
+  empresa_id: string
+  token_hash: string
+  expires_at: string
+  accepted_at?: string
+  revoked_at?: string
+  created_at: string
+}
+
 export interface HistoricoDistribuicao {
   id: string
   viagem_id: string
@@ -433,6 +446,7 @@ export const ROTULOS_STATUS: Record<StatusViagem, string> = {
   aguardando_empresa: 'Aguardando empresa',
   oferta_enviada: 'Oferta enviada por e-mail',
   empresa_confirmada: 'Empresa confirmada',
+  parceiro_externo: 'Parceiro externo',
   motorista_atribuido: 'Motorista atribuído',
   motorista_a_caminho: 'Motorista a caminho',
   motorista_chegou: 'Motorista chegou',
@@ -447,9 +461,10 @@ export const TRANSICOES_STATUS: Partial<Record<StatusViagem, StatusViagem[]>> = 
   pending_payment: ['paid', 'cancelada', 'expired'],
   paid: ['aguardando_empresa', 'cancelada'],
   solicitada: ['aguardando_empresa', 'cancelada'],
-  aguardando_empresa: ['oferta_enviada', 'empresa_confirmada', 'cancelada'],
-  oferta_enviada: ['empresa_confirmada', 'cancelada'],
+  aguardando_empresa: ['oferta_enviada', 'empresa_confirmada', 'parceiro_externo', 'cancelada'],
+  oferta_enviada: ['empresa_confirmada', 'parceiro_externo', 'cancelada'],
   empresa_confirmada: ['motorista_atribuido', 'cancelada'],
+  parceiro_externo: ['cancelada'],
   motorista_atribuido: ['motorista_a_caminho', 'cancelada'],
   motorista_a_caminho: ['motorista_chegou', 'cancelada'],
   motorista_chegou: ['passageiro_embarcou', 'cancelada'],

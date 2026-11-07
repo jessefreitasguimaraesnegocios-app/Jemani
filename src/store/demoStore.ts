@@ -101,6 +101,7 @@ import type {
   EnderecoLocal,
   ExtensaoViagem,
   FotoCatalogoVeiculo,
+  ConviteOferta,
   HistoricoDistribuicao,
   HistoricoStatus,
   MensagemEmpresa,
@@ -119,10 +120,38 @@ import type {
   Viagem,
 } from '@/types'
 import { supabase } from '@/lib/supabase'
+import {
+  calcularExpiracaoConvite,
+  gerarTokenConvite,
+  hashearTokenConvite,
+  montarUrlConvite,
+  situacaoConvite,
+  type SituacaoConvite,
+} from '@/services/conviteOferta'
+import {
+  aceitarConviteNuvem,
+  consultarConviteNuvem,
+  gravarConviteNuvem,
+  type RespostaConsultaConvite,
+} from '@/services/nuvemConvite'
 import { enderecoProntoParaReserva } from '@/utils/endereco'
 import { dispararFeedbackAlerta } from '@/utils/feedbackAlerta'
 import { agoraIso, gerarCodigoViagem, gerarId } from '@/utils/format'
 import { abrirGmailCompose, corpoOfertaCorrida } from '@/utils/gmailCompose'
+
+export type VisaoConvitePublico = {
+  situacao: SituacaoConvite
+  codigo: string
+  origem: string
+  destino: string
+  data_viagem: string
+  horario: string
+  valor_empresa?: number
+  passageiros?: number
+  empresa_nome?: string
+  expires_at?: string
+  accepted_at?: string
+}
 
 export interface DadosReserva {
   modalidade?: ModalidadeViagem
@@ -153,6 +182,7 @@ interface EstadoDemo {
   viagens: Viagem[]
   historicos: HistoricoStatus[]
   atribuicoes: AtribuicaoViagem[]
+  convitesOferta: ConviteOferta[]
   pagamentos: Pagamento[]
   comissoes: Comissao[]
   notificacoes: Notificacao[]
@@ -219,7 +249,9 @@ interface EstadoDemo {
     viagemId: string,
     empresaId: string,
     adminId?: string,
-  ) => { viagem: Viagem; urlAberta: boolean }
+  ) => Promise<{ viagem: Viagem; urlAberta: boolean; urlConvite: string }>
+  consultarConvitePublico: (token: string) => Promise<VisaoConvitePublico>
+  aceitarConvitePublico: (token: string) => Promise<VisaoConvitePublico>
   aceitarViagem: (viagemId: string, empresaId: string) => Viagem
   recusarViagem: (viagemId: string, empresaId: string) => void
   atribuirEquipe: (viagemId: string, motoristaId: string, veiculoId: string) => Viagem
@@ -313,8 +345,27 @@ function estadoInicial() {
     fotosCatalogoVeiculo: fundirCatalogoComFrota([]),
     ...dados,
     viagens: (dados.viagens ?? []).map(normalizarViagem),
+    convitesOferta: [] as ConviteOferta[],
     extensoesViagem: dados.extensoesViagem ?? [],
     avisosHourly: dados.avisosHourly ?? [],
+  }
+}
+
+function visaoDeRespostaNuvem(resposta: RespostaConsultaConvite): VisaoConvitePublico {
+  const situacao = (resposta.situacao ?? 'indisponivel') as SituacaoConvite
+  return {
+    situacao,
+    codigo: resposta.codigo ?? '—',
+    origem: resposta.origem ?? '—',
+    destino: resposta.destino ?? '—',
+    data_viagem: String(resposta.data_viagem ?? '').slice(0, 10),
+    horario: String(resposta.horario ?? '').slice(0, 5),
+    valor_empresa:
+      typeof resposta.valor_empresa === 'number' ? Number(resposta.valor_empresa) : undefined,
+    passageiros: resposta.passageiros,
+    empresa_nome: resposta.empresa_nome,
+    expires_at: resposta.expires_at,
+    accepted_at: resposta.accepted_at,
   }
 }
 
@@ -1716,7 +1767,7 @@ export const useDemoStore = create<EstadoDemo>()(
         }
       },
 
-      enviarOfertaEmailEmpresa: (viagemId, empresaId, adminId) => {
+      enviarOfertaEmailEmpresa: async (viagemId, empresaId, adminId) => {
         const state = get()
         const viagem = state.viagens.find((v) => v.id === viagemId)
         const empresa = state.empresas.find((e) => e.id === empresaId)
@@ -1765,6 +1816,25 @@ export const useDemoStore = create<EstadoDemo>()(
           atribuicoes = [atribuicao, ...atribuicoes]
         }
 
+        const token = gerarTokenConvite()
+        const tokenHash = await hashearTokenConvite(token)
+        const expiresAt = calcularExpiracaoConvite(viagem)
+        const urlConvite = montarUrlConvite(token)
+        const convite: ConviteOferta = {
+          id: gerarId(),
+          viagem_id: viagemId,
+          empresa_id: empresaId,
+          token_hash: tokenHash,
+          expires_at: expiresAt,
+          created_at: agora,
+        }
+        const validoAte = new Date(expiresAt).toLocaleString('pt-BR', {
+          day: '2-digit',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+
         abrirGmailCompose({
           para: empresa.email,
           assunto: `Jemani — nova corrida ${viagem.codigo} (próxima da sua base)`,
@@ -1778,6 +1848,8 @@ export const useDemoStore = create<EstadoDemo>()(
             distanciaKm: distancia,
             passageiros: viagem.passageiros,
             valorEmpresa: viagem.valor_empresa,
+            urlRevisao: urlConvite,
+            validoAte,
           }),
         })
 
@@ -1802,6 +1874,17 @@ export const useDemoStore = create<EstadoDemo>()(
                 }
               : a,
           ),
+          convitesOferta: [
+            convite,
+            ...state.convitesOferta.map((item) =>
+              item.viagem_id === viagemId &&
+              item.empresa_id === empresaId &&
+              !item.accepted_at &&
+              !item.revoked_at
+                ? { ...item, revoked_at: agora }
+                : item,
+            ),
+          ],
           distribuicoes: [
             {
               id: gerarId(),
@@ -1826,6 +1909,7 @@ export const useDemoStore = create<EstadoDemo>()(
                 email: empresa.email,
                 distancia_km: distancia,
                 status_novo: 'oferta_enviada',
+                convite_id: convite.id,
               },
               created_at: agora,
             },
@@ -1850,7 +1934,7 @@ export const useDemoStore = create<EstadoDemo>()(
           get,
           empresa.usuario_id,
           'Nova oferta por e-mail',
-          `Corrida ${viagem.codigo} (${distancia ?? '?'} km do embarque). Confira em Solicitações.`,
+          `Corrida ${viagem.codigo} (${distancia ?? '?'} km do embarque). Use o link do e-mail para revisar.`,
           'nova_solicitacao',
           viagemId,
         )
@@ -1860,9 +1944,180 @@ export const useDemoStore = create<EstadoDemo>()(
         )
         void gravarViagemNuvem(atualizada).then((gravou) => {
           if (gravou && ofertaFinal) void gravarOfertasNuvem([ofertaFinal])
+          if (gravou) void gravarConviteNuvem(convite)
         })
 
-        return { viagem: atualizada, urlAberta: true }
+        return { viagem: atualizada, urlAberta: true, urlConvite }
+      },
+
+      consultarConvitePublico: async (token) => {
+        const remoto = await consultarConviteNuvem(token)
+        if (remoto?.ok) return visaoDeRespostaNuvem(remoto)
+        if (remoto && !remoto.ok) {
+          throw new Error(remoto.erro ?? 'nao_encontrado')
+        }
+
+        const hash = await hashearTokenConvite(token)
+        const state = get()
+        const convite = state.convitesOferta.find((item) => item.token_hash === hash)
+        if (!convite) throw new Error('nao_encontrado')
+        const viagem = state.viagens.find((item) => item.id === convite.viagem_id)
+        const empresa = state.empresas.find((item) => item.id === convite.empresa_id)
+        const situacao = situacaoConvite(convite, viagem)
+        return {
+          situacao,
+          codigo: viagem?.codigo ?? '—',
+          origem: viagem?.origem ?? '—',
+          destino: viagem?.destino ?? '—',
+          data_viagem: viagem?.data_viagem ?? '',
+          horario: viagem?.horario ?? '',
+          valor_empresa: viagem?.valor_empresa,
+          passageiros: viagem?.passageiros,
+          empresa_nome: empresa?.nome_comercial,
+          expires_at: convite.expires_at,
+          accepted_at: convite.accepted_at,
+        }
+      },
+
+      aceitarConvitePublico: async (token) => {
+        const remoto = await aceitarConviteNuvem(token)
+        if (remoto?.ok) {
+          const hash = await hashearTokenConvite(token)
+          const agora = remoto.accepted_at ?? agoraIso()
+          set((atual) => {
+            const convite = atual.convitesOferta.find((item) => item.token_hash === hash)
+            if (!convite) return atual
+            return {
+              convitesOferta: atual.convitesOferta.map((item) => {
+                if (item.id === convite.id) return { ...item, accepted_at: agora }
+                if (item.viagem_id === convite.viagem_id && !item.accepted_at && !item.revoked_at) {
+                  return { ...item, revoked_at: agora }
+                }
+                return item
+              }),
+              viagens: atual.viagens.map((viagem) =>
+                viagem.id === convite.viagem_id
+                  ? {
+                      ...viagem,
+                      empresa_id: convite.empresa_id,
+                      status: 'parceiro_externo' as StatusViagem,
+                      version: viagem.version + 1,
+                      updated_at: agora,
+                    }
+                  : viagem,
+              ),
+              atribuicoes: atual.atribuicoes.map((a) => {
+                if (a.viagem_id !== convite.viagem_id) return a
+                if (a.empresa_id === convite.empresa_id) {
+                  return { ...a, status: 'aceita' as const, respondido_em: agora }
+                }
+                if (a.status === 'oferecida') {
+                  return { ...a, status: 'expirada' as const, respondido_em: agora }
+                }
+                return a
+              }),
+            }
+          })
+          return visaoDeRespostaNuvem(remoto)
+        }
+        if (remoto && !remoto.ok) {
+          throw new Error(remoto.erro ?? 'indisponivel')
+        }
+
+        const hash = await hashearTokenConvite(token)
+        const state = get()
+        const convite = state.convitesOferta.find((item) => item.token_hash === hash)
+        if (!convite) throw new Error('nao_encontrado')
+        const viagem = state.viagens.find((item) => item.id === convite.viagem_id)
+        const empresa = state.empresas.find((item) => item.id === convite.empresa_id)
+        const situacao = situacaoConvite(convite, viagem)
+        if (situacao === 'aceita') {
+          return {
+            situacao: 'aceita',
+            codigo: viagem?.codigo ?? '—',
+            origem: viagem?.origem ?? '—',
+            destino: viagem?.destino ?? '—',
+            data_viagem: viagem?.data_viagem ?? '',
+            horario: viagem?.horario ?? '',
+            valor_empresa: viagem?.valor_empresa,
+            passageiros: viagem?.passageiros,
+            empresa_nome: empresa?.nome_comercial,
+            expires_at: convite.expires_at,
+            accepted_at: convite.accepted_at,
+          }
+        }
+        if (situacao !== 'aberta' || !viagem) {
+          throw new Error(situacao === 'expirada' ? 'expirada' : 'indisponivel')
+        }
+
+        const agora = agoraIso()
+        const atualizada: Viagem = {
+          ...viagem,
+          empresa_id: convite.empresa_id,
+          status: 'parceiro_externo',
+          version: viagem.version + 1,
+          updated_at: agora,
+        }
+        set({
+          viagens: state.viagens.map((item) => (item.id === viagem.id ? atualizada : item)),
+          convitesOferta: state.convitesOferta.map((item) => {
+            if (item.id === convite.id) return { ...item, accepted_at: agora }
+            if (item.viagem_id === viagem.id && !item.accepted_at && !item.revoked_at) {
+              return { ...item, revoked_at: agora }
+            }
+            return item
+          }),
+          atribuicoes: state.atribuicoes.map((a) => {
+            if (a.viagem_id !== viagem.id) return a
+            if (a.empresa_id === convite.empresa_id) {
+              return { ...a, status: 'aceita', respondido_em: agora }
+            }
+            if (a.status === 'oferecida') {
+              return { ...a, status: 'expirada', respondido_em: agora }
+            }
+            return a
+          }),
+          historicos: [
+            {
+              id: gerarId(),
+              viagem_id: viagem.id,
+              status_anterior: viagem.status,
+              status_novo: 'parceiro_externo',
+              observacao: 'aceite_convite_email',
+              created_at: agora,
+            },
+            ...state.historicos,
+          ],
+          distribuicoes: [
+            {
+              id: gerarId(),
+              viagem_id: viagem.id,
+              empresa_id: convite.empresa_id,
+              distancia_km:
+                state.atribuicoes.find(
+                  (a) => a.viagem_id === viagem.id && a.empresa_id === convite.empresa_id,
+                )?.distancia_km ?? -1,
+              resultado: 'aceita',
+              motivo: 'aceite_convite_email',
+              created_at: agora,
+            },
+            ...state.distribuicoes,
+          ],
+        })
+        void gravarViagemNuvem(atualizada)
+        return {
+          situacao: 'aceita',
+          codigo: atualizada.codigo,
+          origem: atualizada.origem,
+          destino: atualizada.destino,
+          data_viagem: atualizada.data_viagem,
+          horario: atualizada.horario,
+          valor_empresa: atualizada.valor_empresa,
+          passageiros: atualizada.passageiros,
+          empresa_nome: empresa?.nome_comercial,
+          expires_at: convite.expires_at,
+          accepted_at: agora,
+        }
       },
 
       aceitarViagem: (viagemId, empresaId) => {
@@ -3315,7 +3570,7 @@ export const useDemoStore = create<EstadoDemo>()(
     }),
     {
       name: 'jemani-demo-v5',
-      version: 14,
+      version: 15,
       partialize: (estado): ReturnType<typeof estadoInicial> => {
         const { senhas: _senhas, ...resto } = estado
         return { ...(resto as unknown as ReturnType<typeof estadoInicial>), senhas: {} }
@@ -3340,6 +3595,11 @@ export const useDemoStore = create<EstadoDemo>()(
             (p) => !fantasmas.has(p.id) && !fantasmas.has(p.email.toLowerCase()),
           ),
           atribuicoes: deduplicarAtribuicoes(base.atribuicoes ?? []),
+          convitesOferta: Array.isArray(
+            (persistido as { convitesOferta?: ConviteOferta[] }).convitesOferta,
+          )
+            ? (persistido as { convitesOferta: ConviteOferta[] }).convitesOferta
+            : [],
           historicos: deduplicarHistoricos(base.historicos ?? []),
           notificacoes: deduplicarNotificacoes(base.notificacoes ?? []),
           viagens: (base.viagens ?? []).map(normalizarViagem),

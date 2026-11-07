@@ -11,6 +11,7 @@ const TOM: Record<StatusViagem, string> = {
   aguardando_empresa: 'badge-status--aviso',
   oferta_enviada: 'badge-status--info',
   empresa_confirmada: 'badge-status--ok',
+  parceiro_externo: 'badge-status--ok',
   motorista_atribuido: 'badge-status--ok',
   motorista_a_caminho: 'badge-status--info',
   motorista_chegou: 'badge-status--info',

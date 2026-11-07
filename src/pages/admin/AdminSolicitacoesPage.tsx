@@ -63,11 +63,11 @@ export function AdminSolicitacoesPage() {
     return mapa
   }, [corridasDisponiveis, empresas, atribuicoes, veiculos])
 
-  function enviarOferta(viagemId: string, empresaId: string) {
+  async function enviarOferta(viagemId: string, empresaId: string) {
     setErro('')
     setMsg('')
     try {
-      const { viagem } = enviarOfertaEmailEmpresa(viagemId, empresaId, usuario?.id)
+      const { viagem } = await enviarOfertaEmailEmpresa(viagemId, empresaId, usuario?.id)
       setMsg(t('admin.solicitacoes.msgEnviado', { codigo: viagem.codigo }))
     } catch (e) {
       setErro(e instanceof Error ? e.message : t('admin.solicitacoes.erroEnviar'))
@@ -158,7 +158,7 @@ export function AdminSolicitacoesPage() {
                           <button
                             type="button"
                             className="btn-ouro !py-2"
-                            onClick={() => enviarOferta(viagem.id, item.empresa.id)}
+                                    onClick={() => void enviarOferta(viagem.id, item.empresa.id)}
                           >
                             {t('admin.solicitacoes.enviarEmail')}
                           </button>

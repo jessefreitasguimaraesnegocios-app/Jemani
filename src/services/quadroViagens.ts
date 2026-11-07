@@ -8,6 +8,7 @@ export type ColunaQuadro = {
     | 'admin.viagens.col.empresa'
     | 'admin.viagens.col.rota'
     | 'admin.viagens.col.concluidas'
+    | 'admin.viagens.col.parceiros'
     | 'admin.viagens.col.encerradas'
   status: StatusViagem[]
 }
@@ -35,6 +36,11 @@ export const COLUNAS_QUADRO: ColunaQuadro[] = [
     ],
   },
   { id: 'concluidas', chaveTitulo: 'admin.viagens.col.concluidas', status: ['viagem_finalizada'] },
+  {
+    id: 'parceiros',
+    chaveTitulo: 'admin.viagens.col.parceiros',
+    status: ['parceiro_externo'],
+  },
   { id: 'encerradas', chaveTitulo: 'admin.viagens.col.encerradas', status: ['cancelada', 'expired'] },
 ]
 

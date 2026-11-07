@@ -43,15 +43,19 @@ export function corpoOfertaCorrida(params: {
   distanciaKm?: number
   passageiros: number
   valorEmpresa?: number
+  /** Link exclusivo de revisão/aceite (não confirma sozinho ao abrir). */
+  urlRevisao?: string
+  validoAte?: string
 }): string {
   const linhas = [
     `Olá, ${params.empresaNome},`,
     '',
-    'Nova corrida Jemani disponível para sua empresa (oferta por proximidade do embarque).',
+    'Temos uma corrida disponível para sua empresa. Confira os detalhes:',
     '',
     `Código: ${params.codigo}`,
-    `Trecho: ${params.origem} → ${params.destino}`,
-    `Quando: ${params.data} às ${params.horario}`,
+    `DATA E HORÁRIO: ${params.data} às ${params.horario}`,
+    `ORIGEM: ${params.origem}`,
+    `DESTINO: ${params.destino}`,
     `Passageiros: ${params.passageiros}`,
   ]
   if (typeof params.distanciaKm === 'number') {
@@ -59,14 +63,23 @@ export function corpoOfertaCorrida(params: {
   }
   if (typeof params.valorEmpresa === 'number') {
     linhas.push(`Valor estimado para a empresa: USD ${params.valorEmpresa.toFixed(2)}`)
+  } else {
+    linhas.push('Valor / condições: conforme proposta comercial')
   }
-  linhas.push(
-    '',
-    'Responda no painel Jemani (Solicitações) para aceitar ou recusar.',
-    '',
-    'Atenciosamente,',
-    'Equipe Jemani',
-  )
+  if (params.urlRevisao) {
+    linhas.push(
+      '',
+      'Revisar corrida (link exclusivo):',
+      params.urlRevisao,
+      '',
+      params.validoAte
+        ? `Link exclusivo · válido até ${params.validoAte}. O clique abre a revisão — ainda não aceita.`
+        : 'Link exclusivo. O clique abre a revisão — ainda não aceita.',
+    )
+  } else {
+    linhas.push('', 'Responda no painel Jemani (Solicitações) para aceitar ou recusar.')
+  }
+  linhas.push('', 'Atenciosamente,', 'Equipe Jemani')
   return linhas.join('\n')
 }
 
