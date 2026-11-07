@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { PainelDetalheViagem } from '@/components/PainelDetalheViagem'
+import { PlanilhaMensalCorridas } from '@/components/PlanilhaMensalCorridas'
 import {
   agruparCorridasPorColuna,
   agruparDistribuicoesPorViagem,
@@ -115,21 +116,30 @@ export function AdminViagensPage() {
             })}
           </p>
         </div>
-        <form className="quadro-busca" onSubmit={confirmarBusca}>
-          <input
-            className="campo"
-            value={busca}
-            onChange={(e) => {
-              setBusca(e.target.value)
-              gravarParams(selecionadaId ?? undefined, e.target.value)
-            }}
-            placeholder={t('admin.viagens.busca')}
-            aria-label={t('comum.buscar')}
+        <div className="quadro-acoes">
+          <PlanilhaMensalCorridas
+            viagens={todasViagens}
+            empresas={empresas}
+            mapaClientes={mapaClientes}
+            mapaMotoristas={mapaMotoristas}
+            mapaCategorias={mapaCategorias}
           />
-          <button type="submit" className="btn-ouro !py-2">
-            {t('comum.abrir')}
-          </button>
-        </form>
+          <form className="quadro-busca" onSubmit={confirmarBusca}>
+            <input
+              className="campo"
+              value={busca}
+              onChange={(e) => {
+                setBusca(e.target.value)
+                gravarParams(selecionadaId ?? undefined, e.target.value)
+              }}
+              placeholder={t('admin.viagens.busca')}
+              aria-label={t('comum.buscar')}
+            />
+            <button type="submit" className="btn-ouro !py-2">
+              {t('comum.abrir')}
+            </button>
+          </form>
+        </div>
       </div>
 
       <div className="quadro-pills">

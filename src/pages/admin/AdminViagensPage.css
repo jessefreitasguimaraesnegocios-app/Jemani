@@ -12,11 +12,20 @@
   color: var(--color-slate);
 }
 
+.quadro-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  flex: 1 1 18rem;
+}
+
 .quadro-busca {
   display: flex;
   gap: 0.5rem;
-  min-width: min(100%, 22rem);
-  flex: 1 1 18rem;
+  min-width: min(100%, 18rem);
+  flex: 1 1 16rem;
   max-width: 28rem;
 }
 

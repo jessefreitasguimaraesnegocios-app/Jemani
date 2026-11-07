@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ListaHistoricoCorridas } from '@/components/ListaHistoricoCorridas'
+import { PlanilhaMensalCorridas } from '@/components/PlanilhaMensalCorridas'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { montarResumoHistorico } from '@/services/historicoCorridas'
 import { useDemoStore } from '@/store/demoStore'
@@ -28,9 +29,21 @@ export function EmpresaViagensPage() {
 
   return (
     <div className="animar-entrada space-y-6">
-      <div>
-        <h1 className="fonte-display text-3xl">{t('empresa.historico.titulo')}</h1>
-        <p className="empresa-historico-sub">{t('empresa.historico.sub')}</p>
+      <div className="empresa-historico-topo">
+        <div>
+          <h1 className="fonte-display text-3xl">{t('empresa.historico.titulo')}</h1>
+          <p className="empresa-historico-sub">{t('empresa.historico.sub')}</p>
+        </div>
+        {empresa && (
+          <PlanilhaMensalCorridas
+            viagens={viagens}
+            empresas={empresas}
+            mapaClientes={mapaClientes}
+            mapaMotoristas={mapaMotoristas}
+            mapaCategorias={mapaCategorias}
+            empresaFixaId={empresa.id}
+          />
+        )}
       </div>
 
       <div className="historico-resumo">

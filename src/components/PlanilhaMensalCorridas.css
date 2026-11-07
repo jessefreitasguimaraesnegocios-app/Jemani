@@ -1,0 +1,323 @@
+.planilha-mensal-gatilho {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.planilha-mensal-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at top right, rgba(184, 149, 108, 0.18), transparent 42%),
+    rgba(18, 24, 38, 0.52);
+  backdrop-filter: blur(6px);
+}
+
+.planilha-mensal-painel {
+  width: min(1120px, 100%);
+  max-height: min(92vh, 920px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(217, 210, 198, 0.85);
+  background:
+    linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(247, 241, 232, 0.96));
+  box-shadow: 0 28px 80px rgba(18, 24, 38, 0.28);
+}
+
+.planilha-mensal-cabeca {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem 0.85rem;
+  border-bottom: 1px solid rgba(217, 210, 198, 0.7);
+}
+
+.planilha-mensal-titulo {
+  margin: 0;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: clamp(1.45rem, 2vw, 1.9rem);
+  color: var(--color-ink);
+}
+
+.planilha-mensal-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+  max-width: 42rem;
+}
+
+.planilha-mensal-passos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.75rem 1.25rem 0;
+}
+
+.planilha-mensal-passo {
+  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--color-slate);
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.planilha-mensal-passo--ativo {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: #fff;
+}
+
+.planilha-mensal-passo--feito {
+  background: rgba(184, 149, 108, 0.16);
+  border-color: rgba(184, 149, 108, 0.45);
+  color: var(--color-gold-deep);
+}
+
+.planilha-mensal-corpo {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.planilha-mensal-anos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
+}
+
+.planilha-mensal-ano {
+  border: 1px solid var(--color-line);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--color-slate);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.planilha-mensal-ano--ativo {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: #fff;
+}
+
+.planilha-mensal-meses {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.7rem;
+}
+
+.planilha-mensal-mes {
+  text-align: left;
+  border: 1px solid rgba(217, 210, 198, 0.9);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(248, 242, 233, 0.88));
+  border-radius: 1rem;
+  padding: 0.9rem 0.95rem;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.planilha-mensal-mes:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(184, 149, 108, 0.7);
+  box-shadow: 0 10px 24px rgba(18, 24, 38, 0.08);
+}
+
+.planilha-mensal-mes:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.planilha-mensal-mes-nome {
+  display: block;
+  font-weight: 700;
+  color: var(--color-ink);
+  text-transform: capitalize;
+}
+
+.planilha-mensal-mes-qtd {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--color-slate);
+}
+
+.planilha-mensal-empresas {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.planilha-mensal-empresa {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(217, 210, 198, 0.9);
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 1rem;
+  padding: 0.95rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.planilha-mensal-empresa:hover {
+  border-color: rgba(184, 149, 108, 0.7);
+  transform: translateY(-1px);
+}
+
+.planilha-mensal-empresa-nome {
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.planilha-mensal-empresa-meta {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-slate);
+}
+
+.planilha-mensal-empresa-selo {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(184, 149, 108, 0.16);
+  color: var(--color-gold-deep);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.7rem;
+}
+
+.planilha-mensal-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.planilha-mensal-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.planilha-mensal-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(217, 210, 198, 0.9);
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--color-slate);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.32rem 0.7rem;
+}
+
+.planilha-mensal-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.planilha-mensal-tabela-envolve {
+  overflow: auto;
+  border: 1px solid rgba(217, 210, 198, 0.9);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.planilha-mensal-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 980px;
+}
+
+.planilha-mensal-tabela th,
+.planilha-mensal-tabela td {
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid rgba(217, 210, 198, 0.65);
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.8rem;
+}
+
+.planilha-mensal-tabela th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f4eee4;
+  color: var(--color-ink);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.planilha-mensal-tabela tbody tr:nth-child(even) td {
+  background: rgba(248, 242, 233, 0.45);
+}
+
+.planilha-mensal-tabela tbody tr:hover td {
+  background: rgba(184, 149, 108, 0.12);
+}
+
+.planilha-mensal-codigo {
+  font-weight: 700;
+  color: var(--color-ink);
+  white-space: nowrap;
+}
+
+.planilha-mensal-rota {
+  max-width: 16rem;
+  color: var(--color-slate);
+}
+
+.planilha-mensal-vazio {
+  margin: 1.5rem 0;
+  text-align: center;
+  color: var(--color-slate);
+}
+
+.planilha-mensal-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem 1.1rem;
+  border-top: 1px solid rgba(217, 210, 198, 0.7);
+  background: rgba(255, 252, 246, 0.9);
+}
+
+.planilha-mensal-dica {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-slate);
+}
+
+@media (max-width: 720px) {
+  .planilha-mensal-painel {
+    max-height: 96vh;
+    border-radius: 1rem;
+  }
+
+  .planilha-mensal-cabeca,
+  .planilha-mensal-corpo,
+  .planilha-mensal-rodape {
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+  }
+}
