@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { FormularioEditarEmpresa } from '@/components/FormularioEditarEmpresa'
 import { FormularioNovaEmpresa } from '@/components/FormularioNovaEmpresa'
@@ -8,7 +7,6 @@ import { usarIdioma } from '@/i18n/usarIdioma'
 import { AdminCatalogoVeiculos } from '@/pages/admin/AdminCatalogoVeiculos'
 import { AdminFrotaVeiculos } from '@/pages/admin/AdminFrotaVeiculos'
 import { ordenarEmpresasPorProximidade } from '@/services/distribuicaoService'
-import { agruparCorridasPorEmpresa, montarResumoHistorico } from '@/services/historicoCorridas'
 import { useDemoStore } from '@/store/demoStore'
 import type { Empresa, Viagem } from '@/types'
 import { formatarData, formatarMoeda } from '@/utils/format'
@@ -28,7 +26,6 @@ export function AdminEmpresasPage() {
   const veiculos = useDemoStore((s) => s.veiculos)
   const viagens = useDemoStore((s) => s.viagens)
   const atribuicoes = useDemoStore((s) => s.atribuicoes)
-  const corridasPorEmpresa = useMemo(() => agruparCorridasPorEmpresa(viagens), [viagens])
   const [aba, setAba] = useState<AbaAdminEmpresas>('empresas')
   const [empresaAbertaId, setEmpresaAbertaId] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
@@ -317,8 +314,6 @@ export function AdminEmpresasPage() {
               {(() => {
                 const e = empresaAberta
                 const proximas = corridasProximasDaEmpresa(e)
-                const historico = corridasPorEmpresa.get(e.id) ?? []
-                const resumo = montarResumoHistorico(historico, 'empresa')
                 return (
                   <div className="cartao admin-empresa-card">
                     <div className="admin-empresa-topo">
@@ -376,17 +371,6 @@ export function AdminEmpresasPage() {
                           </div>
                         ))
                       )}
-                    </div>
-
-                    <div className="admin-empresa-bloco">
-                      <h3>Histórico de corridas desta empresa</h3>
-                      <p className="admin-empresas-vazio">
-                        {resumo.total} aceitas · {resumo.realizadas} realizadas ·{' '}
-                        {resumo.canceladas} canceladas · {formatarMoeda(resumo.valor)}
-                      </p>
-                      <Link to={`/admin/empresas/${e.id}`} className="admin-empresa-historico-link">
-                        {t('admin.empresas.historico')}
-                      </Link>
                     </div>
 
                     <div className="admin-empresa-bloco">

@@ -499,8 +499,7 @@ html[data-tema='escuro'] .config-switch--ligado .config-switch-bola {
 }
 
 html[data-tema='escuro'] .config-toggle-texto strong,
-html[data-tema='escuro'] .config-link,
-html[data-tema='escuro'] .admin-empresa-historico-link {
+html[data-tema='escuro'] .config-link {
   color: #ffffff;
 }
 
