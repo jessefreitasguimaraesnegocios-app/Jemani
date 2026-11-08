@@ -261,24 +261,15 @@ export function ClienteViagemDetalhePage() {
           <div className="mt-4 rounded-xl border border-[var(--color-gold)] bg-[rgba(184,149,108,0.12)] p-4">
             <p className="font-medium">Aguardando pagamento</p>
             <p className="mt-1 text-sm text-[var(--color-slate)]">
-              Confirme o pagamento para liberar a corrida às empresas parceiras. Em teste, use o
-              cartão Stripe <code>4242 4242 4242 4242</code>.
+              {permitirSimulacaoPagamentoDev()
+                ? 'Modo teste: simule o pagamento para liberar a corrida às empresas (sem checkout).'
+                : 'Confirme o pagamento para liberar a corrida às empresas parceiras. Em teste Stripe, use o cartão 4242 4242 4242 4242.'}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {stripeOk && (
+              {permitirSimulacaoPagamentoDev() ? (
                 <button
                   type="button"
                   className="btn-ouro"
-                  disabled={pagando}
-                  onClick={() => void pagarComStripe()}
-                >
-                  {pagando ? 'Abrindo Stripe...' : 'Pagar com Stripe (teste)'}
-                </button>
-              )}
-              {permitirSimulacaoPagamentoDev() && (
-                <button
-                  type="button"
-                  className="btn-secundario"
                   disabled={pagando}
                   onClick={() => {
                     if (!usuario) return
@@ -286,22 +277,33 @@ export function ClienteViagemDetalhePage() {
                     setMsg('')
                     void simularPagamentoEDistribuir(viagem.id, usuario.id)
                       .then(() =>
-                        setMsg('Pagamento de teste confirmado. Corrida liberada para as empresas.'),
+                        setMsg('Pagamento simulado. Corrida liberada para as empresas.'),
                       )
                       .catch((err) =>
-                        setMsg(err instanceof Error ? err.message : 'Erro no pagamento de teste'),
+                        setMsg(err instanceof Error ? err.message : 'Erro ao simular pagamento'),
                       )
                       .finally(() => setPagando(false))
                   }}
                 >
-                  {pagando ? 'Processando...' : 'Simular pagamento (teste)'}
+                  {pagando ? 'Processando...' : 'Simular pagamento'}
                 </button>
+              ) : (
+                stripeOk && (
+                  <button
+                    type="button"
+                    className="btn-ouro"
+                    disabled={pagando}
+                    onClick={() => void pagarComStripe()}
+                  >
+                    {pagando ? 'Abrindo Stripe...' : 'Pagar com Stripe (teste)'}
+                  </button>
+                )
               )}
             </div>
-            {!stripeOk && (
+            {!permitirSimulacaoPagamentoDev() && !stripeOk && (
               <p className="mt-2 text-xs text-[var(--color-slate)]">
-                Para ativar Stripe teste: VITE_STRIPE_ENABLED=true + Edge Functions com
-                STRIPE_SECRET_KEY (sk_test_...).
+                Para ativar Stripe: VITE_STRIPE_ENABLED=true + Edge Functions com
+                STRIPE_SECRET_KEY.
               </p>
             )}
           </div>

@@ -9,7 +9,10 @@ import {
   formatarExtensaoConfirmada,
 } from '@/services/hourlyChauffeur'
 import { stripeCheckoutDisponivel } from '@/lib/stripeApi'
-import { criarIntencaoPagamento } from '@/services/pagamentoService'
+import {
+  criarIntencaoPagamento,
+  permitirSimulacaoPagamentoDev,
+} from '@/services/pagamentoService'
 import { useDemoStore } from '@/store/demoStore'
 import type { Viagem } from '@/types'
 import { formatarMoeda } from '@/utils/format'
@@ -59,13 +62,23 @@ export function HourlyResumo({
     setBusy(true)
     setMsg('')
     try {
+      const chave = `ui-${viagem.id}-${minutos}-${Math.floor(Date.now() / 5000)}`
+      const ext = solicitarExtensaoHourly(viagem.id, minutos, sessaoId, chave)
+
+      if (permitirSimulacaoPagamentoDev()) {
+        const confirmada = await confirmarExtensaoHourlyPaga(ext.id, sessaoId, {
+          provider: 'dev_simulado',
+        })
+        setMsg(formatarExtensaoConfirmada(confirmada, locale))
+        setBusy(false)
+        return
+      }
+
       if (!stripeCheckoutDisponivel()) {
         throw new Error(
           'Stripe teste indisponível. Ative VITE_STRIPE_ENABLED e as Edge Functions.',
         )
       }
-      const chave = `ui-${viagem.id}-${minutos}-${Math.floor(Date.now() / 5000)}`
-      const ext = solicitarExtensaoHourly(viagem.id, minutos, sessaoId, chave)
       const email = perfis.find((p) => p.id === sessaoId)?.email
       const intencao = await criarIntencaoPagamento({
         bookingId: viagem.id,
@@ -204,8 +217,9 @@ export function HourlyResumo({
             ))}
           </div>
           <p className="hourly-resumo-dica">
-            Extensão só entra após pagamento Stripe (cartão teste 4242…). Libera mais tempo e
-            endereços no roteiro.
+            {permitirSimulacaoPagamentoDev()
+              ? 'Modo teste: a extensão confirma na hora (sem checkout) e libera mais tempo/endereços.'
+              : 'Extensão só entra após pagamento Stripe (cartão teste 4242…). Libera mais tempo e endereços no roteiro.'}
           </p>
         </div>
       )}

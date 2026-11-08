@@ -993,11 +993,21 @@ export const useDemoStore = create<EstadoDemo>()(
         if (ext.status !== 'pendente') throw new Error('Extensão não está pendente.')
         const viagem = state.viagens.find((v) => v.id === ext.viagem_id)
         if (!viagem || viagem.cliente_id !== usuarioId) throw new Error('Sem permissão.')
-        if (opcoes?.provider !== 'stripe' || !opcoes.sessionId) {
-          throw new Error('Extensão só confirma após pagamento Stripe (teste).')
+        const simulando =
+          opcoes?.provider === 'dev_simulado' && permitirSimulacaoPagamentoDev()
+        if (!simulando && (opcoes?.provider !== 'stripe' || !opcoes.sessionId)) {
+          throw new Error('Extensão só confirma após pagamento.')
         }
-        const sessao = await confirmarSessaoCheckoutStripe(opcoes.sessionId, viagem.id)
-        if (sessao.status !== 'pago') throw new Error('Pagamento Stripe da extensão não confirmado.')
+        let paymentId = `dev_ext_${extensaoId.slice(0, 8)}_${Date.now()}`
+        let sessionIdStripe: string | undefined
+        if (!simulando) {
+          const sessao = await confirmarSessaoCheckoutStripe(opcoes!.sessionId!, viagem.id)
+          if (sessao.status !== 'pago') {
+            throw new Error('Pagamento Stripe da extensão não confirmado.')
+          }
+          paymentId = sessao.paymentId
+          sessionIdStripe = opcoes!.sessionId
+        }
         if (
           viagem.motorista_id &&
           motoristaTemConflito({
@@ -1022,14 +1032,14 @@ export const useDemoStore = create<EstadoDemo>()(
         const pagamento: Pagamento = {
           id: gerarId(),
           booking_id: viagem.id,
-          payment_id: sessao.paymentId,
+          payment_id: paymentId,
           amount: ext.preco_adicional,
           platform_fee: ext.valor_plataforma,
           company_amount: ext.valor_empresa,
           status: 'pago',
-          payment_method: 'stripe_checkout',
-          provider: 'stripe',
-          stripe_checkout_session_id: opcoes.sessionId,
+          payment_method: simulando ? 'dev_simulado' : 'stripe_checkout',
+          provider: simulando ? 'dev_simulado' : 'stripe',
+          stripe_checkout_session_id: sessionIdStripe,
           created_at: agora,
           updated_at: agora,
         }
@@ -1337,10 +1347,17 @@ export const useDemoStore = create<EstadoDemo>()(
           platformFee: viagem.valor_plataforma,
           companyAmount: viagem.valor_empresa,
         })
-        // Grava "pago" no banco (service role). Se a function ainda não estiver publicada, segue local.
+        // Preferência: Edge Function com service role. Se falhar, ainda grava via sync da viagem.
         await marcarPagamentoSimulado(viagem.id).catch(() => undefined)
 
         const agora = agoraIso()
+        const viagemPaga: Viagem = {
+          ...viagem,
+          status: 'paid',
+          payment_status: 'paid',
+          version: viagem.version + 1,
+          updated_at: agora,
+        }
         set({
           pagamentos: state.pagamentos.map((p) =>
             p.booking_id === viagemId
@@ -1354,17 +1371,7 @@ export const useDemoStore = create<EstadoDemo>()(
                 }
               : p,
           ),
-          viagens: state.viagens.map((v) =>
-            v.id === viagemId
-              ? {
-                  ...v,
-                  status: 'paid',
-                  payment_status: 'paid',
-                  version: v.version + 1,
-                  updated_at: agora,
-                }
-              : v,
-          ),
+          viagens: state.viagens.map((v) => (v.id === viagemId ? viagemPaga : v)),
           auditLogs: [
             {
               id: gerarId(),
@@ -1380,6 +1387,7 @@ export const useDemoStore = create<EstadoDemo>()(
         })
 
         registrarHistorico(set, get, viagemId, 'pending_payment', 'paid', usuarioId, 'DEV simulado')
+        void gravarViagemNuvem(viagemPaga)
         return get().iniciarDistribuicaoAposPagamento(viagemId)
       },
 

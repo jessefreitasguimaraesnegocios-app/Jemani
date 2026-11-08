@@ -79,7 +79,7 @@ Quando for ao ar de verdade (dinheiro real), faça esta lista:
 4. **Republicar** as Edge Functions depois de mudar secrets.
 5. **Connect em modo live** — empresas precisam completar onboarding de novo no live se só tinham conta de teste.
 6. **Remover / não usar** `VITE_STRIPE_API_URL` e o `npm run stripe:local` em produção.
-7. Revisar se `VITE_ALLOW_DEV_PAYMENT` está **off** no build de produção (o `android:apk` já força `false`).
+7. Revisar se `VITE_ALLOW_DEV_PAYMENT=false` no build de produção (e secret `ALLOW_DEV_PAYMENT` no Supabase). Hoje o botão **Simular pagamento** fica ligado por padrão para QA; em produção ele deve sumir e voltar o Stripe + webhook.
 8. Testar um pagamento live pequeno e um Transfer Connect antes de liberar clientes.
 
 Detalhes extras: ver também `docs/STRIPE_PRODUCAO.md`.

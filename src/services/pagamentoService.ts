@@ -58,9 +58,14 @@ export async function criarIntencaoPagamento(
   }
 }
 
-/** Simulação sem Stripe fica desligada. O teste é o checkout Stripe (cartão 4242). */
+/**
+ * Botão "Simular pagamento" (sem checkout). Ligado por padrão para testes.
+ * Em produção: VITE_ALLOW_DEV_PAYMENT=false e trocar de volta para Stripe + webhook.
+ */
 export function permitirSimulacaoPagamentoDev(): boolean {
-  return false
+  const flag = import.meta.env.VITE_ALLOW_DEV_PAYMENT
+  if (flag === 'false' || flag === '0') return false
+  return true
 }
 
 export async function simularPagamentoDev(
@@ -68,7 +73,7 @@ export async function simularPagamentoDev(
 ): Promise<ResultadoPagamento> {
   if (!permitirSimulacaoPagamentoDev()) {
     throw new Error(
-      'Simulação de pagamento disponível apenas em desenvolvimento com VITE_ALLOW_DEV_PAYMENT=true',
+      'Simulação de pagamento desligada. Defina VITE_ALLOW_DEV_PAYMENT=true para testes.',
     )
   }
 

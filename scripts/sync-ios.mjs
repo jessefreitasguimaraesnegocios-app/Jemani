@@ -8,7 +8,7 @@ const windows = process.platform === 'win32'
 const env = {
   ...process.env,
   VITE_DEMO_MODE: 'false',
-  VITE_ALLOW_DEV_PAYMENT: 'false',
+  VITE_ALLOW_DEV_PAYMENT: 'true',
 }
 
 function run(command, args) {
