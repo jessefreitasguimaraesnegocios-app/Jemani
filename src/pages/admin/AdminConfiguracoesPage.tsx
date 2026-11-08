@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
 import { SENHA_DEMO } from '@/data/seed'
 import { useAuth } from '@/contexts/AuthContext'
+import { usarTemaConta } from '@/hooks/usarPreferenciasConta'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { IdiomaApp } from '@/i18n/tipos'
+import type { TemaAparencia } from '@/lib/preferenciasConta'
 import { useDemoStore } from '@/store/demoStore'
 import './AdminConfiguracoesPage.css'
 
@@ -18,6 +20,7 @@ export function AdminConfiguracoesPage() {
   const configuracoes = useDemoStore((s) => s.configuracoes)
   const atualizarConfiguracao = useDemoStore((s) => s.atualizarConfiguracao)
   const { t, idioma, definirIdioma } = usarIdioma()
+  const { tema, definirTema } = usarTemaConta()
 
   function ler(chave: string, padrao = '') {
     return configuracoes.find((c) => c.chave === chave)?.valor ?? padrao
@@ -31,7 +34,7 @@ export function AdminConfiguracoesPage() {
     atualizarConfiguracao(chave, ligado(chave) ? 'false' : 'true')
   }
 
-  const temas = [
+  const temas: Array<{ valor: TemaAparencia; rotulo: string }> = [
     { valor: 'claro', rotulo: t('config.temaClaro') },
     { valor: 'escuro', rotulo: t('config.temaEscuro') },
     { valor: 'sistema', rotulo: t('config.temaSistema') },
@@ -77,8 +80,8 @@ export function AdminConfiguracoesPage() {
             <select
               id="cfg-tema"
               className="campo"
-              value={ler('tema_aparencia', 'claro')}
-              onChange={(e) => atualizarConfiguracao('tema_aparencia', e.target.value)}
+              value={tema}
+              onChange={(e) => definirTema(e.target.value as TemaAparencia)}
             >
               {temas.map((op) => (
                 <option key={op.valor} value={op.valor}>

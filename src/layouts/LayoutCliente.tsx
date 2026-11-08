@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Bell, CalendarCheck, CalendarPlus, History, Home, User } from 'lucide-react'
 import { MenuContaTopo } from '@/components/MenuContaTopo'
@@ -27,6 +27,7 @@ export function LayoutCliente() {
   const { t } = usarIdioma()
   const wrapperRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const [topoRolado, setTopoRolado] = useState(false)
   usarRolagemSuave(wrapperRef, contentRef)
 
   const todasNotificacoes = useDemoStore((s) => s.notificacoes)
@@ -34,6 +35,17 @@ export function LayoutCliente() {
     () => todasNotificacoes.filter((n) => n.usuario_id === usuario?.id && !n.lida),
     [todasNotificacoes, usuario?.id],
   )
+
+  useEffect(() => {
+    const painel = wrapperRef.current
+    if (!painel) return
+    function aoRolar() {
+      setTopoRolado((painel?.scrollTop ?? 0) > 8)
+    }
+    aoRolar()
+    painel.addEventListener('scroll', aoRolar, { passive: true })
+    return () => painel.removeEventListener('scroll', aoRolar)
+  }, [])
 
   async function handleSair() {
     await sair()
@@ -72,7 +84,9 @@ export function LayoutCliente() {
 
       <div ref={wrapperRef} className="layout-cliente-scroll">
         <div ref={contentRef} className="layout-cliente-conteudo">
-          <header className="layout-cliente-topo">
+          <header
+            className={cn('layout-cliente-topo', topoRolado && 'layout-cliente-topo--rolado')}
+          >
             <div>
               <p className="layout-cliente-topo-ola">{t('comum.ola')}</p>
               <h1 className="fonte-display layout-cliente-topo-nome">{usuario?.nome}</h1>

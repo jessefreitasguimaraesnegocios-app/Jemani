@@ -1,9 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Languages, LogOut, Menu, Moon, User, X } from 'lucide-react'
+import { usarTemaConta } from '@/hooks/usarPreferenciasConta'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { IdiomaApp } from '@/i18n/tipos'
-import { useDemoStore } from '@/store/demoStore'
+import type { TemaAparencia } from '@/lib/preferenciasConta'
 import { cn } from '@/utils/format'
 import './MenuContaTopo.css'
 
@@ -23,14 +24,12 @@ type Props = {
 
 export function MenuContaTopo({ variante, aoSair, className, tom = 'claro' }: Props) {
   const { t, idioma, definirIdioma } = usarIdioma()
-  const atualizarConfiguracao = useDemoStore((s) => s.atualizarConfiguracao)
-  const temaAtual =
-    useDemoStore((s) => s.configuracoes.find((c) => c.chave === 'tema_aparencia')?.valor) ?? 'claro'
+  const { tema: temaAtual, definirTema } = usarTemaConta()
   const [aberto, setAberto] = useState(false)
   const raizRef = useRef<HTMLDivElement>(null)
   const painelId = useId()
 
-  const temas = [
+  const temas: Array<{ valor: TemaAparencia; rotulo: string }> = [
     { valor: 'claro', rotulo: t('config.temaClaro') },
     { valor: 'escuro', rotulo: t('config.temaEscuro') },
     { valor: 'sistema', rotulo: t('config.temaSistema') },
@@ -97,7 +96,7 @@ export function MenuContaTopo({ variante, aoSair, className, tom = 'claro' }: Pr
                         'menu-conta-chip',
                         temaAtual === opcao.valor && 'menu-conta-chip--ativo',
                       )}
-                      onClick={() => atualizarConfiguracao('tema_aparencia', opcao.valor)}
+                      onClick={() => definirTema(opcao.valor)}
                     >
                       {opcao.rotulo}
                     </button>

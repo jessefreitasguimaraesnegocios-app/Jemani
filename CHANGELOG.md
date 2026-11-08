@@ -6,6 +6,10 @@ Registro das mudanças do Jemani.
 
 ### Adicionado
 
+- **Preferências por conta** (idioma e tema): gravadas em `localStorage` por `sessaoId` (`preferenciasConta` / `usarPreferenciasConta`). Trocar no login do cliente não altera admin, motorista nem empresa no mesmo aparelho.
+- Menu hamburger **MenuContaTopo**: cliente/empresa com tema, idioma e sair; admin só perfil + sair.
+- Aba **Histórico** no painel do cliente (rota dedicada; Agendamento deixa de misturar histórico).
+- Sync **nuvem-first** entre aparelhos (`usarNuvemComoFonte`, Auth + replace do store a partir do Supabase).
 - **Planilha mensal de corridas** (admin, empresa, ficha do motorista na empresa e Histórico do motorista): escolha de mês/ano, resumo e exportação CSV.
 - Aba **Novas solicitações** no admin (abaixo do Dashboard): fila de corridas pagas com ranking por proximidade e envio de e-mail; alerta pulsante (**!** / contagem) quando há pendências. A área saiu de Empresas.
 - Histórico do **motorista** com as mesmas métricas do painel da empresa (horas, km, turno, mecânica, lava-jato) + lista de corridas/agendamentos + planilha mensal.
@@ -15,10 +19,14 @@ Registro das mudanças do Jemani.
 
 ### Alterado
 
+- Idioma/tema saem do `configuracoes` global do Zustand; `SincronizarIdioma` aplica o tema da conta logada.
+- Admin Preços/Financeiro/Comissões/Config e demais telas admin cobertas por `t()` (i18n).
+- Header do cliente: linha sob o nome some ao rolar (`LayoutCliente` com estado scrolled).
+- Carrossel/frota do cliente: fallback de categoria para listar carros da empresa.
 - Empresas no admin ficou só cadastro/status/frota (sem fila de ofertas).
 - Histórico do motorista lista só as **5 corridas mais recentes**; o restante fica na planilha mensal.
 - Histórico da ficha da empresa no admin removido em favor da planilha mensal.
-- APK **1.0.57**.
+- APK **1.0.65**.
 
 ## [2026-10-26]
 

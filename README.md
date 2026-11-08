@@ -66,8 +66,8 @@ A ordem está no [`CHANGELOG.md`](CHANGELOG.md):
 
 - **Comissões por empresa** (salvar individual, padrão da plataforma, “Aplicar a todas”).
 - **Financeiro** redesenhado: filtros, visões por empresa/tipo e resumos.
-- **Configurações**: idioma (PT-BR / EN / ES), aparência claro/escuro/sistema, alertas (som, vibração, push).
-- **i18n global** em todo o app.
+- **Configurações**: idioma (PT-BR / EN / ES) e aparência claro/escuro/sistema **por conta** neste aparelho; alertas (som, vibração, push) na plataforma.
+- **i18n** em todo o app; cada login guarda o próprio idioma/tema (não compartilha entre cliente, admin, motorista e empresa).
 - **Tema escuro** estilo Uber (alto contraste).
 
 ### Empresa

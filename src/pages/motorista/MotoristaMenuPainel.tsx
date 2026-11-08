@@ -3,9 +3,11 @@ import { BadgeStatus } from '@/components/BadgeStatus'
 import { FotoPerfilCliente } from '@/components/FotoPerfilCliente'
 import { PlanilhaMensalCorridas } from '@/components/PlanilhaMensalCorridas'
 import { useAuth } from '@/contexts/AuthContext'
+import { usarTemaConta } from '@/hooks/usarPreferenciasConta'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import type { IdiomaApp } from '@/i18n/tipos'
 import { usarIdioma } from '@/i18n/usarIdioma'
+import type { TemaAparencia } from '@/lib/preferenciasConta'
 import { dispararFeedbackAlerta } from '@/utils/feedbackAlerta'
 import {
   dataEstaNoPeriodo,
@@ -303,6 +305,7 @@ function HistoricoMotorista({ motorista }: { motorista: Motorista }) {
 
 function ConfiguracaoMotorista() {
   const { t, idioma, definirIdioma } = usarIdioma()
+  const { tema, definirTema } = usarTemaConta()
   const configuracoes = useDemoStore((s) => s.configuracoes)
   const atualizarConfiguracao = useDemoStore((s) => s.atualizarConfiguracao)
 
@@ -325,7 +328,7 @@ function ConfiguracaoMotorista() {
     }
   }
 
-  const temas = [
+  const temas: Array<{ valor: TemaAparencia; rotulo: string }> = [
     { valor: 'claro', rotulo: t('config.temaClaro') },
     { valor: 'escuro', rotulo: t('config.temaEscuro') },
     { valor: 'sistema', rotulo: t('config.temaSistema') },
@@ -359,8 +362,8 @@ function ConfiguracaoMotorista() {
         <select
           id="motorista-tema"
           className="campo"
-          value={ler('tema_aparencia', 'claro')}
-          onChange={(evento) => atualizarConfiguracao('tema_aparencia', evento.target.value)}
+          value={tema}
+          onChange={(evento) => definirTema(evento.target.value as TemaAparencia)}
         >
           {temas.map((opcao) => (
             <option key={opcao.valor} value={opcao.valor}>

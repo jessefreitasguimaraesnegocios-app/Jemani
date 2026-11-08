@@ -1,12 +1,33 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useDemoStore } from '@/store/demoStore'
+import {
+  definirIdiomaConta,
+  lerPreferenciasConta,
+} from '@/lib/preferenciasConta'
 import { MENSAGENS, type ChaveTraducao } from './mensagens'
 import { localeDoIdioma, normalizarIdioma, type IdiomaApp } from './tipos'
 
 export function usarIdioma() {
-  const valor = useDemoStore((s) => s.configuracoes.find((c) => c.chave === 'idioma')?.valor)
-  const idioma = normalizarIdioma(valor)
-  const atualizarConfiguracao = useDemoStore((s) => s.atualizarConfiguracao)
+  const sessaoId = useDemoStore((s) => s.sessaoId)
+  const [idioma, setIdioma] = useState(() => lerPreferenciasConta(sessaoId).idioma)
+
+  useEffect(() => {
+    setIdioma(lerPreferenciasConta(sessaoId).idioma)
+  }, [sessaoId])
+
+  useEffect(() => {
+    function aoMudar(evento: Event) {
+      const detalhe = (evento as CustomEvent).detail as
+        | { usuarioId?: string; preferencias?: { idioma?: string } }
+        | undefined
+      const idEvento = detalhe?.usuarioId ?? 'anon'
+      const idAtual = sessaoId?.trim() || 'anon'
+      if (idEvento !== idAtual) return
+      setIdioma(normalizarIdioma(detalhe?.preferencias?.idioma))
+    }
+    window.addEventListener('jemani-preferencias-conta', aoMudar)
+    return () => window.removeEventListener('jemani-preferencias-conta', aoMudar)
+  }, [sessaoId])
 
   useEffect(() => {
     document.documentElement.lang = idioma
@@ -26,7 +47,8 @@ export function usarIdioma() {
   )
 
   function definirIdioma(novo: IdiomaApp) {
-    atualizarConfiguracao('idioma', novo)
+    const gravado = definirIdiomaConta(sessaoId, novo)
+    setIdioma(gravado.idioma)
   }
 
   return { idioma, locale: localeDoIdioma(idioma), t, definirIdioma }

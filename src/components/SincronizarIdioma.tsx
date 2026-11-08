@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
+import { usarTemaConta } from '@/hooks/usarPreferenciasConta'
 import { usarIdioma } from '@/i18n/usarIdioma'
-import { useDemoStore } from '@/store/demoStore'
 
 function aplicarTema(valor?: string) {
   const tema = valor === 'escuro' || valor === 'claro' || valor === 'sistema' ? valor : 'claro'
@@ -13,7 +13,7 @@ function aplicarTema(valor?: string) {
 
 export function SincronizarIdioma({ children }: { children: ReactNode }) {
   usarIdioma()
-  const tema = useDemoStore((s) => s.configuracoes.find((c) => c.chave === 'tema_aparencia')?.valor)
+  const { tema } = usarTemaConta()
 
   useEffect(() => {
     aplicarTema(tema)
