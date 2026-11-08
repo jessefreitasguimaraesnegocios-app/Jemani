@@ -138,7 +138,11 @@ import {
 import { enderecoProntoParaReserva } from '@/utils/endereco'
 import { dispararFeedbackAlerta } from '@/utils/feedbackAlerta'
 import { agoraIso, gerarCodigoViagem, gerarId } from '@/utils/format'
-import { abrirGmailCompose, corpoOfertaCorrida } from '@/utils/gmailCompose'
+import {
+  abrirGmailCompose,
+  corpoOfertaCorrida,
+  corpoOfertaCorridaHtml,
+} from '@/utils/gmailCompose'
 
 export type VisaoConvitePublico = {
   situacao: SituacaoConvite
@@ -257,7 +261,7 @@ interface EstadoDemo {
     viagemId: string,
     empresaId: string,
     adminId?: string,
-  ) => Promise<{ viagem: Viagem; urlAberta: boolean; urlConvite: string }>
+  ) => Promise<{ viagem: Viagem; urlAberta: boolean; urlConvite: string; colouHtml: boolean }>
   consultarConvitePublico: (token: string) => Promise<VisaoConvitePublico>
   aceitarConvitePublico: (token: string) => Promise<VisaoConvitePublico>
   aceitarViagem: (viagemId: string, empresaId: string) => Viagem
@@ -1910,22 +1914,24 @@ export const useDemoStore = create<EstadoDemo>()(
           minute: '2-digit',
         })
 
-        abrirGmailCompose({
+        const dadosOferta = {
+          empresaNome: empresa.nome_comercial,
+          codigo: viagem.codigo,
+          origem: viagem.origem,
+          destino: viagem.destino,
+          data: viagem.data_viagem,
+          horario: viagem.horario,
+          distanciaKm: distancia,
+          passageiros: viagem.passageiros,
+          valorEmpresa: viagem.valor_empresa,
+          urlRevisao: urlConvite,
+          validoAte,
+        }
+        const { colouHtml } = await abrirGmailCompose({
           para: empresa.email,
           assunto: `Jemani — nova corrida ${viagem.codigo} (próxima da sua base)`,
-          corpo: corpoOfertaCorrida({
-            empresaNome: empresa.nome_comercial,
-            codigo: viagem.codigo,
-            origem: viagem.origem,
-            destino: viagem.destino,
-            data: viagem.data_viagem,
-            horario: viagem.horario,
-            distanciaKm: distancia,
-            passageiros: viagem.passageiros,
-            valorEmpresa: viagem.valor_empresa,
-            urlRevisao: urlConvite,
-            validoAte,
-          }),
+          corpo: corpoOfertaCorrida(dadosOferta),
+          corpoHtml: corpoOfertaCorridaHtml(dadosOferta),
         })
 
         const statusAnterior = viagem.status
@@ -2009,7 +2015,7 @@ export const useDemoStore = create<EstadoDemo>()(
           get,
           empresa.usuario_id,
           'Nova oferta por e-mail',
-          `Corrida ${viagem.codigo} (${distancia ?? '?'} km do embarque). Use o link do e-mail para revisar.`,
+          `Corrida ${viagem.codigo} (${distancia ?? '?'} km do embarque). Use o botão do e-mail para revisar.`,
           'nova_solicitacao',
           viagemId,
         )
@@ -2022,7 +2028,7 @@ export const useDemoStore = create<EstadoDemo>()(
           if (gravou) void gravarConviteNuvem(convite)
         })
 
-        return { viagem: atualizada, urlAberta: true, urlConvite }
+        return { viagem: atualizada, urlAberta: true, urlConvite, colouHtml }
       },
 
       consultarConvitePublico: async (token) => {

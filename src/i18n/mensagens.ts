@@ -259,9 +259,9 @@ const pt = {
     'Corridas pagas aguardando oferta por e-mail às empresas mais próximas do embarque.',
   'admin.solicitacoes.comoTitulo': 'Como funciona',
   'admin.solicitacoes.como1':
-    'Corridas pagas entram na fila. O sistema ordena empresas pela distância até o embarque. Você envia o e-mail (Gmail) com um link exclusivo; a corrida fica Oferta enviada por e-mail.',
+    'Corridas pagas entram na fila. O sistema ordena empresas pela distância até o embarque. Você envia o e-mail (Gmail) com um botão “Revisar corrida”; a corrida fica Oferta enviada por e-mail.',
   'admin.solicitacoes.como2':
-    'A empresa revisa no link e só confirma no botão. Ao aceitar, a corrida vai para Parceiros externos no Kanban. Abrir o link não confirma a proposta.',
+    'Ao abrir o Gmail, cole a mensagem (Ctrl+V) para aparecer o botão. A empresa revisa no botão e só confirma na página. Abrir a revisão não aceita a proposta.',
 
   'convite.subtituloPainel': 'Proposta de corrida',
   'convite.carregando': 'Carregando proposta…',
@@ -301,6 +301,8 @@ const pt = {
   'admin.solicitacoes.enviarEmail': 'Enviar e-mail',
   'admin.solicitacoes.msgEnviado':
     'Gmail aberto · oferta marcada como enviada · {codigo} agora está “Oferta enviada por e-mail”.',
+  'admin.solicitacoes.msgEnviadoColar':
+    'Gmail aberto · cole no corpo com Ctrl+V para aparecer o botão “Revisar corrida” · {codigo} marcada como oferta enviada.',
   'admin.solicitacoes.erroEnviar': 'Falha ao enviar oferta',
   'admin.solicitacoes.alerta': '{n} novas solicitações',
 
@@ -919,9 +921,9 @@ const en: Record<ChaveTraducao, string> = {
     'Paid trips waiting for an email offer to the companies closest to pickup.',
   'admin.solicitacoes.comoTitulo': 'How it works',
   'admin.solicitacoes.como1':
-    'Paid trips enter the queue. The system ranks companies by distance to pickup. You send a Gmail with an exclusive link; the trip becomes Offer emailed.',
+    'Paid trips enter the queue. The system ranks companies by distance to pickup. You send a Gmail with a “Review trip” button; the trip becomes Offer emailed.',
   'admin.solicitacoes.como2':
-    'The company reviews the link and only confirms with the button. On accept, the trip moves to External partners on the Kanban. Opening the link does not accept the offer.',
+    'When Gmail opens, paste the message (Ctrl+V) so the button appears. The company reviews via the button and only confirms on the page. Opening the review does not accept the offer.',
 
   'convite.subtituloPainel': 'Trip proposal',
   'convite.carregando': 'Loading proposal…',
@@ -961,6 +963,8 @@ const en: Record<ChaveTraducao, string> = {
   'admin.solicitacoes.enviarEmail': 'Send email',
   'admin.solicitacoes.msgEnviado':
     'Gmail opened · offer marked as sent · {codigo} is now “Offer emailed”.',
+  'admin.solicitacoes.msgEnviadoColar':
+    'Gmail opened · paste into the body with Ctrl+V to show the “Review trip” button · {codigo} marked as offer emailed.',
   'admin.solicitacoes.erroEnviar': 'Failed to send offer',
   'admin.solicitacoes.alerta': '{n} new requests',
 
@@ -1576,9 +1580,9 @@ const es: Record<ChaveTraducao, string> = {
     'Viajes pagados esperando oferta por correo a las empresas más cercanas al embarque.',
   'admin.solicitacoes.comoTitulo': 'Cómo funciona',
   'admin.solicitacoes.como1':
-    'Los viajes pagados entran en la cola. El sistema ordena empresas por distancia al embarque. Envías un Gmail con enlace exclusivo; el viaje queda Oferta enviada por correo.',
+    'Los viajes pagados entran en la cola. El sistema ordena empresas por distancia al embarque. Envías un Gmail con el botón “Revisar viaje”; el viaje queda Oferta enviada por correo.',
   'admin.solicitacoes.como2':
-    'La empresa revisa el enlace y solo confirma con el botón. Al aceptar, el viaje va a Socios externos en el Kanban. Abrir el enlace no acepta la oferta.',
+    'Al abrir Gmail, pegue el mensaje (Ctrl+V) para que aparezca el botón. La empresa revisa con el botón y solo confirma en la página. Abrir la revisión no acepta la oferta.',
 
   'convite.subtituloPainel': 'Propuesta de viaje',
   'convite.carregando': 'Cargando propuesta…',
@@ -1618,6 +1622,8 @@ const es: Record<ChaveTraducao, string> = {
   'admin.solicitacoes.enviarEmail': 'Enviar correo',
   'admin.solicitacoes.msgEnviado':
     'Gmail abierto · oferta marcada como enviada · {codigo} ahora está “Oferta enviada por correo”.',
+  'admin.solicitacoes.msgEnviadoColar':
+    'Gmail abierto · pegue en el cuerpo con Ctrl+V para ver el botón “Revisar viaje” · {codigo} marcada como oferta enviada.',
   'admin.solicitacoes.erroEnviar': 'Error al enviar la oferta',
   'admin.solicitacoes.alerta': '{n} nuevas solicitudes',
 

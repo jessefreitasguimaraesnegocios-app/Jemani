@@ -67,8 +67,16 @@ export function AdminSolicitacoesPage() {
     setErro('')
     setMsg('')
     try {
-      const { viagem } = await enviarOfertaEmailEmpresa(viagemId, empresaId, usuario?.id)
-      setMsg(t('admin.solicitacoes.msgEnviado', { codigo: viagem.codigo }))
+      const { viagem, colouHtml } = await enviarOfertaEmailEmpresa(
+        viagemId,
+        empresaId,
+        usuario?.id,
+      )
+      setMsg(
+        t(colouHtml ? 'admin.solicitacoes.msgEnviadoColar' : 'admin.solicitacoes.msgEnviado', {
+          codigo: viagem.codigo,
+        }),
+      )
     } catch (e) {
       setErro(e instanceof Error ? e.message : t('admin.solicitacoes.erroEnviar'))
     }
