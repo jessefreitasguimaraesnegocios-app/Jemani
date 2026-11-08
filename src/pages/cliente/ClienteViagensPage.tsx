@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CalendarPlus, ChevronRight } from 'lucide-react'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { separarAgendamentos, viagemEmAndamento } from '@/services/agendamentoCliente'
+import { permitirSimulacaoPagamentoDev } from '@/services/pagamentoService'
 import { useDemoStore } from '@/store/demoStore'
 import type { Viagem } from '@/types'
 import { formatarData, formatarMoeda } from '@/utils/format'
@@ -109,8 +110,14 @@ function ProximoAgendamento({
   locale: string
 }) {
   const { t } = usarIdioma()
+  const { usuario } = useAuth()
+  const simularPagamentoEDistribuir = useDemoStore((s) => s.simularPagamentoEDistribuir)
+  const [pagando, setPagando] = useState(false)
+  const [msg, setMsg] = useState('')
   const faltaPagamento =
-    viagem.status === 'pending_payment' || viagem.payment_status === 'pending_payment'
+    viagem.payment_status !== 'paid' &&
+    (viagem.status === 'pending_payment' || viagem.payment_status === 'pending_payment')
+  const podeSimular = faltaPagamento && permitirSimulacaoPagamentoDev()
 
   return (
     <section className="cliente-agenda-proxima" aria-labelledby="proximo-agendamento">
@@ -156,6 +163,28 @@ function ProximoAgendamento({
         </p>
       )}
       {faltaPagamento && <p className="cliente-agenda-aviso">{t('cliente.viagens.pagar')}</p>}
+      {msg && <p className="cliente-agenda-aviso">{msg}</p>}
+
+      {podeSimular && (
+        <button
+          type="button"
+          className="btn-ouro w-full"
+          disabled={pagando || !usuario}
+          onClick={() => {
+            if (!usuario) return
+            setPagando(true)
+            setMsg('')
+            void simularPagamentoEDistribuir(viagem.id, usuario.id)
+              .then(() => setMsg('Pagamento simulado. Corrida liberada para as empresas.'))
+              .catch((err) =>
+                setMsg(err instanceof Error ? err.message : 'Erro ao simular pagamento'),
+              )
+              .finally(() => setPagando(false))
+          }}
+        >
+          {pagando ? 'Processando...' : 'Simular pagamento'}
+        </button>
+      )}
 
       <Link to={`/app/viagens/${viagem.id}`} className="cliente-agenda-ver">
         {t('cliente.viagens.ver')}

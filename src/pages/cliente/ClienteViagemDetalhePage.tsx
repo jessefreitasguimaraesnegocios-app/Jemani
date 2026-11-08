@@ -24,8 +24,9 @@ import './ClienteViagemDetalhePage.css'
 export function ClienteViagemDetalhePage() {
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
-  const { usuario } = useAuth()
+  const { usuario, carregando } = useAuth()
   const viagem = useDemoStore((s) => s.viagens.find((v) => v.id === id))
+  const blocoPagamentoRef = useRef<HTMLDivElement>(null)
   const empresas = useDemoStore((s) => s.empresas)
   const motoristas = useDemoStore((s) => s.motoristas)
   const veiculos = useDemoStore((s) => s.veiculos)
@@ -123,7 +124,33 @@ export function ClienteViagemDetalhePage() {
     return () => window.clearTimeout(timer)
   }, [precisaAvaliar, id])
 
-  if (!viagem || viagem.cliente_id !== usuario?.id) {
+  const aguardandoPagamento = Boolean(
+    viagem &&
+      viagem.payment_status !== 'paid' &&
+      (viagem.status === 'pending_payment' || viagem.payment_status === 'pending_payment'),
+  )
+
+  useEffect(() => {
+    if (!aguardandoPagamento) return
+    const timer = window.setTimeout(() => {
+      blocoPagamentoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 200)
+    return () => window.clearTimeout(timer)
+  }, [aguardandoPagamento, id])
+
+  if (carregando && !usuario) {
+    return <div className="cartao">Carregando conta…</div>
+  }
+
+  if (!viagem) {
+    return (
+      <div className="cartao">
+        Viagem não encontrada. <Link to="/app/viagens">Voltar ao agendamento</Link>
+      </div>
+    )
+  }
+
+  if (usuario && viagem.cliente_id !== usuario.id) {
     return (
       <div className="cartao">
         Viagem não encontrada. <Link to="/app/viagens">Voltar ao agendamento</Link>
@@ -137,6 +164,7 @@ export function ClienteViagemDetalhePage() {
   const categoria = categorias.find((c) => c.id === viagem.categoria_id)
   const jaAvaliou = Boolean(avaliacaoFeita)
   const stripeOk = stripeCheckoutDisponivel()
+  const podeSimular = permitirSimulacaoPagamentoDev()
 
   async function pagarComStripe() {
     if (!usuario) return
@@ -257,20 +285,23 @@ export function ClienteViagemDetalhePage() {
           <BadgeStatus status={viagem.status} />
         </div>
 
-        {viagem.status === 'pending_payment' && (
-          <div className="mt-4 rounded-xl border border-[var(--color-gold)] bg-[rgba(184,149,108,0.12)] p-4">
+        {aguardandoPagamento && (
+          <div
+            ref={blocoPagamentoRef}
+            className="mt-4 rounded-xl border border-[var(--color-gold)] bg-[rgba(184,149,108,0.12)] p-4"
+          >
             <p className="font-medium">Aguardando pagamento</p>
             <p className="mt-1 text-sm text-[var(--color-slate)]">
-              {permitirSimulacaoPagamentoDev()
-                ? 'Modo teste: simule o pagamento para liberar a corrida às empresas (sem checkout).'
+              {podeSimular
+                ? 'Modo teste: toque em Simular pagamento para liberar a corrida às empresas (sem checkout).'
                 : 'Confirme o pagamento para liberar a corrida às empresas parceiras. Em teste Stripe, use o cartão 4242 4242 4242 4242.'}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {permitirSimulacaoPagamentoDev() ? (
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              {podeSimular && (
                 <button
                   type="button"
-                  className="btn-ouro"
-                  disabled={pagando}
+                  className="btn-ouro w-full sm:w-auto"
+                  disabled={pagando || !usuario}
                   onClick={() => {
                     if (!usuario) return
                     setPagando(true)
@@ -287,20 +318,19 @@ export function ClienteViagemDetalhePage() {
                 >
                   {pagando ? 'Processando...' : 'Simular pagamento'}
                 </button>
-              ) : (
-                stripeOk && (
-                  <button
-                    type="button"
-                    className="btn-ouro"
-                    disabled={pagando}
-                    onClick={() => void pagarComStripe()}
-                  >
-                    {pagando ? 'Abrindo Stripe...' : 'Pagar com Stripe (teste)'}
-                  </button>
-                )
+              )}
+              {!podeSimular && stripeOk && (
+                <button
+                  type="button"
+                  className="btn-ouro w-full sm:w-auto"
+                  disabled={pagando}
+                  onClick={() => void pagarComStripe()}
+                >
+                  {pagando ? 'Abrindo Stripe...' : 'Pagar com Stripe (teste)'}
+                </button>
               )}
             </div>
-            {!permitirSimulacaoPagamentoDev() && !stripeOk && (
+            {!podeSimular && !stripeOk && (
               <p className="mt-2 text-xs text-[var(--color-slate)]">
                 Para ativar Stripe: VITE_STRIPE_ENABLED=true + Edge Functions com
                 STRIPE_SECRET_KEY.

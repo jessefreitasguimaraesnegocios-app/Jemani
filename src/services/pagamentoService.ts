@@ -59,13 +59,14 @@ export async function criarIntencaoPagamento(
 }
 
 /**
- * Botão "Simular pagamento" (sem checkout). Ligado por padrão para testes.
- * Em produção: VITE_ALLOW_DEV_PAYMENT=false e trocar de volta para Stripe + webhook.
+ * Botão "Simular pagamento" (sem checkout).
+ * Só desliga com VITE_ALLOW_DEV_PAYMENT=false (produção com Stripe real).
+ * Qualquer outro valor / ausente = ligado (QA e APK).
  */
 export function permitirSimulacaoPagamentoDev(): boolean {
-  const flag = import.meta.env.VITE_ALLOW_DEV_PAYMENT
-  if (flag === 'false' || flag === '0') return false
-  return true
+  const bruto = import.meta.env.VITE_ALLOW_DEV_PAYMENT
+  const flag = bruto == null ? '' : String(bruto).trim().toLowerCase()
+  return flag !== 'false' && flag !== '0' && flag !== 'off' && flag !== 'no'
 }
 
 export async function simularPagamentoDev(

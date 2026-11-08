@@ -6,7 +6,7 @@ Registro das mudanças do Jemani.
 
 ### Adicionado
 
-- **Simular pagamento** no detalhe da reserva (e extensão Hourly): aprova a corrida sem abrir checkout Stripe e **abre ofertas às empresas** na nuvem (como pagamento real). Temporário para testes — em produção desligar com `VITE_ALLOW_DEV_PAYMENT=false` / `ALLOW_DEV_PAYMENT` e voltar Stripe + webhook.
+- **Simular pagamento** no detalhe da reserva, no card do agendamento e na extensão Hourly: aprova a corrida sem checkout e **abre ofertas às empresas** na nuvem. Correção no celular: não esconder a viagem enquanto a conta Auth carrega; CTA full-width. Temporário para testes — em produção desligar com `VITE_ALLOW_DEV_PAYMENT=false`.
 - E-mail de oferta (admin → Gmail): mensagem HTML com botão **Revisar corrida** (sem URL crua); cole com Ctrl+V no corpo do Gmail.
 - **Preferências por conta** (idioma e tema): gravadas em `localStorage` por `sessaoId` (`preferenciasConta` / `usarPreferenciasConta`). Trocar no login do cliente não altera admin, motorista nem empresa no mesmo aparelho.
 - Menu hamburger **MenuContaTopo**: cliente/empresa com tema, idioma e sair; admin só perfil + sair.
@@ -28,7 +28,7 @@ Registro das mudanças do Jemani.
 - Empresas no admin ficou só cadastro/status/frota (sem fila de ofertas).
 - Histórico do motorista lista só as **5 corridas mais recentes**; o restante fica na planilha mensal.
 - Histórico da ficha da empresa no admin removido em favor da planilha mensal.
-- APK **1.0.68**.
+- APK **1.0.69**.
 
 ## [2026-10-26]
 

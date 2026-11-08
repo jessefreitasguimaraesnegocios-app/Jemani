@@ -1353,9 +1353,17 @@ export const useDemoStore = create<EstadoDemo>()(
         })
 
         // Servidor (service role): marca pago + cria ofertas para as empresas elegíveis.
+        // Se a function falhar, segue local + sync da viagem/ofertas para não travar o teste no celular.
         if (usarNuvemComoFonte()) {
           await gravarViagemNuvem(viagem)
-          await marcarPagamentoSimulado(viagem.id)
+          try {
+            await marcarPagamentoSimulado(viagem.id)
+          } catch (erro) {
+            console.warn(
+              'pagamento-simulado falhou; seguindo com distribuição local',
+              erro instanceof Error ? erro.message : erro,
+            )
+          }
         } else {
           await marcarPagamentoSimulado(viagem.id).catch(() => undefined)
         }
