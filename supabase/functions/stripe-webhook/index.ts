@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { CORS, json } from '../_shared/cors.ts'
 import { criarClienteStripe, valorEmCentavos } from '../_shared/stripe.ts'
+import { distribuirOfertasAposPagamento } from '../_shared/distribuirOfertas.ts'
 
 /**
  * Webhook Stripe — confirma pagamento só se valor bater com a viagem (ou metadata).
@@ -76,10 +77,6 @@ Deno.serve(async (req: Request) => {
     return json({ recebido: true, erro: 'valor_divergente', viagem_id: viagemId }, 200)
   }
 
-  if (viagem.payment_status === 'paid') {
-    return json({ recebido: true, viagem_id: viagemId, ja_pago: true })
-  }
-
   const agora = new Date().toISOString()
 
   await admin
@@ -93,14 +90,30 @@ Deno.serve(async (req: Request) => {
     })
     .eq('booking_id', viagemId)
 
-  await admin
-    .from('trips')
-    .update({
-      status: 'paid',
-      payment_status: 'paid',
-      updated_at: agora,
-    })
-    .eq('id', viagemId)
+  // Sempre distribui ofertas (idempotente se já pagou / já tem empresa).
+  let distribuicao: { ofertas: number; status: string }
+  try {
+    distribuicao = await distribuirOfertasAposPagamento(
+      admin,
+      viagemId,
+      'stripe_webhook',
+    )
+  } catch (err) {
+    const mensagem = err instanceof Error ? err.message : 'falha_distribuicao'
+    return json({
+      recebido: true,
+      viagem_id: viagemId,
+      payment_id: paymentId,
+      erro_distribuicao: mensagem,
+    }, 200)
+  }
 
-  return json({ recebido: true, viagem_id: viagemId, payment_id: paymentId })
+  return json({
+    recebido: true,
+    viagem_id: viagemId,
+    payment_id: paymentId,
+    ja_pago: viagem.payment_status === 'paid',
+    ofertas: distribuicao.ofertas,
+    status: distribuicao.status,
+  })
 })

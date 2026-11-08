@@ -1567,7 +1567,15 @@ export const useDemoStore = create<EstadoDemo>()(
           usuarioId,
           'Stripe Checkout',
         )
-        return get().iniciarDistribuicaoAposPagamento(viagemId)
+        const distribuida = get().iniciarDistribuicaoAposPagamento(viagemId)
+        await get().completarOfertasComNuvem(viagemId)
+        const ofertas = get().atribuicoes.filter(
+          (a) => a.viagem_id === viagemId && a.status === 'oferecida',
+        )
+        const final = get().viagens.find((v) => v.id === viagemId) ?? distribuida
+        await gravarViagemNuvem(final)
+        if (ofertas.length > 0) await gravarOfertasNuvem(ofertas)
+        return get().viagens.find((v) => v.id === viagemId) ?? final
       },
 
       iniciarDistribuicaoAposPagamento: (viagemId) => {
@@ -1732,11 +1740,24 @@ export const useDemoStore = create<EstadoDemo>()(
         if (typeof viagem.origem_lat !== 'number' || typeof viagem.origem_lng !== 'number') return
 
         const daNuvem = await listarEmpresasParaDistribuicaoNuvem(viagem.categoria_id)
-        if (daNuvem.length === 0) return
+        const candidatos =
+          daNuvem.length > 0
+            ? daNuvem
+            : get().empresas.filter(
+                (empresa) =>
+                  empresa.status === 'ativa' &&
+                  empresa.habilitada_receber &&
+                  (empresa.categorias_ids.length === 0 ||
+                    empresa.categorias_ids.includes(viagem.categoria_id)),
+              )
+        if (candidatos.length === 0) {
+          console.warn('Nenhuma empresa elegível para distribuir a corrida', viagemId)
+          return
+        }
 
         const empresasMescladas = (() => {
           const mapa = new Map(get().empresas.map((e) => [e.id, e]))
-          for (const empresa of daNuvem) mapa.set(empresa.id, empresa)
+          for (const empresa of candidatos) mapa.set(empresa.id, empresa)
           return [...mapa.values()]
         })()
         set({ empresas: empresasMescladas })
@@ -1747,10 +1768,11 @@ export const useDemoStore = create<EstadoDemo>()(
             .map((a) => a.empresa_id),
         )
         const { ordenadas } = ordenarEmpresasPorProximidade(
-          daNuvem,
+          candidatos,
           viagem.origem_lat,
           viagem.origem_lng,
           viagem.categoria_id,
+          get().veiculos,
         )
         const novas = ordenadas
           .filter((o) => !jaOferecidas.has(o.empresa.id))
@@ -1791,9 +1813,8 @@ export const useDemoStore = create<EstadoDemo>()(
         )
         if (ofertas.length === 0) return
 
-        void gravarViagemNuvem(atualizada).then((gravou) => {
-          if (gravou) void gravarOfertasNuvem(ofertas)
-        })
+        const gravou = await gravarViagemNuvem(atualizada)
+        if (gravou) await gravarOfertasNuvem(ofertas)
 
         for (const o of ordenadas.filter((item) => !jaOferecidas.has(item.empresa.id))) {
           notificar(

@@ -380,8 +380,9 @@ export function ofertaDaLinha(linha: LinhaOferta): AtribuicaoViagem {
 export async function gravarViagensNuvem(viagens: Viagem[]) {
   const db = cliente()
   if (!db || viagens.length === 0) return false
-  const sessao = await db.auth.getSession()
-  const uid = sessao.data.session?.user.id
+  const { obterSessaoAuthValida } = await import('@/services/sessaoAuth')
+  const sessao = await obterSessaoAuthValida()
+  const uid = sessao?.user.id
   if (!uid) return false
   const linhas = viagens.filter((viagem) => viagem.cliente_id === uid).map(paraLinha)
   if (linhas.length === 0) return false
@@ -396,8 +397,9 @@ export async function gravarViagensNuvem(viagens: Viagem[]) {
 export async function gravarViagemNuvem(viagem: Viagem) {
   const db = cliente()
   if (!db) return false
-  const sessao = await db.auth.getSession()
-  const uid = sessao.data.session?.user.id
+  const { obterSessaoAuthValida } = await import('@/services/sessaoAuth')
+  const sessao = await obterSessaoAuthValida()
+  const uid = sessao?.user.id
   if (!uid) return false
   const linha = paraLinha(viagem)
   if (uid === viagem.cliente_id) return gravarViagensNuvem([viagem])
@@ -514,27 +516,45 @@ export function linhaOfertaUsavel(linha: Partial<LinhaOferta> | null | undefined
   )
 }
 
-export async function listarViagensNuvem(opcoes?: { atualizadoDesde?: string }) {
+/** `null` = falha de rede/RLS/JWT — não usar para substituir o store. */
+export async function listarViagensNuvem(
+  opcoes?: { atualizadoDesde?: string },
+): Promise<Viagem[] | null> {
   const db = cliente()
-  if (!db) return []
+  if (!db) return null
+  const { obterSessaoAuthValida } = await import('@/services/sessaoAuth')
+  const sessao = await obterSessaoAuthValida()
+  if (!sessao) return null
   let consulta = db.from('trips').select(COLUNAS_VIAGEM)
   if (opcoes?.atualizadoDesde) {
     consulta = consulta.gte('updated_at', opcoes.atualizadoDesde)
   }
   const { data, error } = await consulta
-  if (error || !data) return []
+  if (error) {
+    console.warn('Falha ao listar viagens', error.message)
+    return null
+  }
   return (data as LinhaViagem[]).map(viagemDaLinha)
 }
 
-export async function listarOfertasNuvem(opcoes?: { criadoDesde?: string }) {
+/** `null` = falha — não apagar ofertas locais. */
+export async function listarOfertasNuvem(
+  opcoes?: { criadoDesde?: string },
+): Promise<AtribuicaoViagem[] | null> {
   const db = cliente()
-  if (!db) return []
+  if (!db) return null
+  const { obterSessaoAuthValida } = await import('@/services/sessaoAuth')
+  const sessao = await obterSessaoAuthValida()
+  if (!sessao) return null
   let consulta = db.from('trip_assignments').select(COLUNAS_OFERTA)
   if (opcoes?.criadoDesde) {
     consulta = consulta.gte('created_at', opcoes.criadoDesde)
   }
   const { data, error } = await consulta
-  if (error || !data) return []
+  if (error) {
+    console.warn('Falha ao listar ofertas', error.message)
+    return null
+  }
   return (data as LinhaOferta[]).map(ofertaDaLinha)
 }
 

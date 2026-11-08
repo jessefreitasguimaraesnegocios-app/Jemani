@@ -213,7 +213,9 @@ export function SincronizarNuvem() {
           listarNotificacoesNuvem(),
         ])
         if (!ativoRef.current) return
-        if (usarNuvemComoFonte() && opcoes.completo) {
+        if (viagensAgora == null || ofertasAgora == null) {
+          console.warn('Sync de corridas adiado: falha ao listar — mantendo store local')
+        } else if (usarNuvemComoFonte() && opcoes.completo) {
           store().substituirViagensNuvem(viagensAgora)
           store().substituirOfertasNuvem(ofertasAgora)
         } else {
@@ -228,13 +230,15 @@ export function SincronizarNuvem() {
         for (const av of avaliacoesAgora) store().aplicarAvaliacaoNuvem(av)
         for (const alerta of alertasAgora) store().aplicarNotificacaoNuvem(alerta)
         // Margem de 2s evita perder update entre o fetch e o marcador.
-        ultimaViagemSyncRef.current = new Date(Date.now() - 2000).toISOString()
+        if (viagensAgora != null) {
+          ultimaViagemSyncRef.current = new Date(Date.now() - 2000).toISOString()
+        }
         // Preços/configs da plataforma: sempre puxar no ciclo (PC e celular precisam da mesma fonte).
         if (opcoes.comCatalogo || opcoes.comPerfis) {
           await puxarCatalogoPlataforma()
           if (!ativoRef.current) return
         }
-        if (opcoes.comPerfis) {
+        if (opcoes.comPerfis && viagensAgora != null) {
           await puxarPerfisEFotos(viagensAgora)
         }
       } finally {
@@ -277,7 +281,9 @@ export function SincronizarNuvem() {
         listarAvaliacoesNuvem(),
       ])
       if (!ativoRef.current) return
-      if (usarNuvemComoFonte()) {
+      if (viagens == null || ofertas == null) {
+        console.warn('Sync inicial de corridas: falha ao listar viagens/ofertas — mantendo store local')
+      } else if (usarNuvemComoFonte()) {
         store().substituirViagensNuvem(viagens)
         store().substituirOfertasNuvem(ofertas)
       } else {
@@ -298,7 +304,7 @@ export function SincronizarNuvem() {
       store().limparNotificacoesExpiradas(sessao.id)
       store().retomarCorridasPagas()
       ultimaViagemSyncRef.current = new Date().toISOString()
-      await puxarPerfisEFotos(viagens)
+      await puxarPerfisEFotos(viagens ?? store().viagens)
       if (sessao.tipo === 'admin' || sessao.tipo === 'cliente') {
         for (const viagem of store().viagens) {
           if (viagem.payment_status !== 'paid' || viagem.empresa_id) continue
@@ -339,18 +345,21 @@ export function SincronizarNuvem() {
               viagem.veiculo_id &&
               !['cancelada', 'expired', 'viagem_finalizada'].includes(viagem.status),
           )
+          const viagensRemotas = viagens ?? []
           for (const viagem of comEquipe) {
-            const remota = viagens.find((item) => item.id === viagem.id)
+            const remota = viagensRemotas.find((item) => item.id === viagem.id)
             if (remota && !remota.veiculo_id) {
               await gravarViagemNuvem(viagem).catch(() => undefined)
             }
           }
         }
       }
+      const ofertasRemotas = ofertas ?? []
+      const viagensRemotas = viagens ?? []
       // Com nuvem como fonte, não sobe seed/local antigo — só o que já está no Supabase.
       if (!usarNuvemComoFonte() && sessao.tipo === 'cliente') {
         const locais = store().viagens.filter((v) => v.cliente_id === sessao.id)
-        const porId = new Map(viagens.map((item) => [item.id, item]))
+        const porId = new Map(viagensRemotas.map((item) => [item.id, item]))
         const paraSubir = locais.flatMap((local) => {
           const atual = store().viagens.find((v) => v.id === local.id) ?? local
           const remota = porId.get(local.id)
@@ -362,7 +371,8 @@ export function SincronizarNuvem() {
         const idsLocais = new Set(locais.map((item) => item.id))
         await gravarOfertasNuvem(
           store().atribuicoes.filter(
-            (oferta) => idsLocais.has(oferta.viagem_id) && ofertaLocalPodeSubir(oferta, ofertas),
+            (oferta) =>
+              idsLocais.has(oferta.viagem_id) && ofertaLocalPodeSubir(oferta, ofertasRemotas),
           ),
         )
       }
@@ -376,7 +386,8 @@ export function SincronizarNuvem() {
         )
         await gravarOfertasNuvem(
           store().atribuicoes.filter(
-            (oferta) => idsLocais.has(oferta.viagem_id) && ofertaLocalPodeSubir(oferta, ofertas),
+            (oferta) =>
+              idsLocais.has(oferta.viagem_id) && ofertaLocalPodeSubir(oferta, ofertasRemotas),
           ),
         )
       }
@@ -481,7 +492,7 @@ export function SincronizarNuvem() {
         ),
       )
 
-      const idsViagem = new Set(viagens.map((item) => item.id))
+      const idsViagem = new Set((viagens ?? []).map((item) => item.id))
       const idsHistorico = new Set(historicos.map((item) => item.id))
       await gravarHistoricosNuvem(
         depois.historicos.filter((item) => idsViagem.has(item.viagem_id) && !idsHistorico.has(item.id)),

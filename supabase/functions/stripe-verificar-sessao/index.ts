@@ -4,6 +4,7 @@ import { CORS, json } from '../_shared/cors.ts'
 import { exigirUsuario, RespostaAuth } from '../_shared/auth.ts'
 import { limitarTaxa, resposta429 } from '../_shared/rateLimit.ts'
 import { criarClienteStripe, valorEmCentavos } from '../_shared/stripe.ts'
+import { distribuirOfertasAposPagamento } from '../_shared/distribuirOfertas.ts'
 
 /** Confirma Checkout Session e marca a viagem como paga no banco (service role). */
 Deno.serve(async (req: Request) => {
@@ -85,7 +86,9 @@ Deno.serve(async (req: Request) => {
       }, 409)
     }
 
-    if (pago && admin && viagem && viagem.payment_status !== 'paid') {
+    let ofertas = 0
+    let statusViagem: string | null = viagem?.payment_status ?? null
+    if (pago && valorOk && admin && viagem) {
       const agora = new Date().toISOString()
       const paymentId =
         typeof session.payment_intent === 'string'
@@ -103,14 +106,28 @@ Deno.serve(async (req: Request) => {
         })
         .eq('booking_id', viagemId)
 
-      await admin
-        .from('trips')
-        .update({
-          status: 'paid',
-          payment_status: 'paid',
-          updated_at: agora,
-        })
-        .eq('id', viagemId)
+      try {
+        const dist = await distribuirOfertasAposPagamento(
+          admin,
+          viagemId,
+          'stripe_verificar_sessao',
+        )
+        ofertas = dist.ofertas
+        statusViagem = dist.status
+      } catch (err) {
+        console.warn('distribuicao falhou', err)
+        if (viagem.payment_status !== 'paid') {
+          await admin
+            .from('trips')
+            .update({
+              status: 'paid',
+              payment_status: 'paid',
+              updated_at: agora,
+            })
+            .eq('id', viagemId)
+          statusViagem = 'paid'
+        }
+      }
     }
 
     return json({
@@ -122,6 +139,8 @@ Deno.serve(async (req: Request) => {
           : session.payment_intent?.id ?? null,
       payment_status: session.payment_status,
       status: session.status,
+      status_viagem: statusViagem,
+      ofertas,
       amount_total: session.amount_total,
       currency: session.currency,
       viagem_id: session.metadata?.viagem_id ?? null,

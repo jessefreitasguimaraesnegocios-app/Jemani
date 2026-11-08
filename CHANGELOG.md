@@ -10,6 +10,7 @@ Registro das mudanças do Jemani.
 - Realtime em `notifications`, `reviews`, `drivers` e poll de turnos/agendamentos/extensões/avaliações no `SincronizarNuvem`.
 - Coluna `drivers.eh_categoria_shield`; `notifications.referencia_id` como text.
 - Validação de sessão Auth no servidor (`sessaoAuth`: `getUser` + refresh) antes de listar/criar empresa e chamar Edge Functions.
+- Helper compartilhado `distribuirOfertasAposPagamento` nas edges de pagamento (simulado / Stripe webhook / verificar sessão).
 
 ### Alterado
 
@@ -17,7 +18,8 @@ Registro das mudanças do Jemani.
 - Notificações para outros papéis sobem ao Postgres (não ficam só no aparelho de quem gerou).
 - Corrige admin com **Parceiras (0)** e **Sessão inválida**: JWT expirado no cache não passa mais por RLS/edge; hydrate nuvem deixa de reidratar seed de empresas.
 - Corrige listagem admin: coluna `companies.stripe_account_id` ausente no Postgres quebrava o `select` (Parceiras 0); fallback de colunas + marketplace.
-- APK **1.0.74**.
+- Corrige corridas que não chegavam no admin/empresas: sync não apaga mais viagens/ofertas locais quando o `list` falha (JWT/RLS/rede); gravação de viagem usa sessão Auth validada; após Stripe/simulado a distribuição grava ofertas na nuvem; API Vercel `stripe-verificar-sessao` marca pago e cria `trip_assignments`.
+- APK **1.0.75**.
 
 ## [2026-11-07]
 

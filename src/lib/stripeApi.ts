@@ -90,11 +90,13 @@ async function chamarFuncao<T>(
   permitirAnon = false,
 ): Promise<T> {
   const local = apiLocal()
-  const checkout =
+  // Checkout Stripe fica na API Vercel (secret sk_test). Verificação também,
+  // porque lá marcamos pago + criamos ofertas no Supabase.
+  const viaVercel =
     nome === 'stripe-criar-checkout' || nome === 'stripe-verificar-sessao'
   const endpoint = local
     ? `${local}/${nome}`
-    : checkout
+    : viaVercel
       ? noSitePublicado()
         ? `${window.location.origin}/api/${nome}`
         : 'https://jemani.vercel.app/api/' + nome
