@@ -25,6 +25,7 @@ import {
   registrarEnvioPosicaoViagem,
   statusExigeGpsCorrida,
 } from '@/services/gpsMotorista'
+import { usarNuvemComoFonte } from '@/lib/nuvemAtiva'
 import {
   cadastrarClienteNuvem,
   entrarContaNuvem,
@@ -219,7 +220,14 @@ interface EstadoDemo {
     horario: string,
     duracaoMinutos: number,
   ) => ReturnType<typeof calcularPrecoHourly>
-  criarViagem: (clienteId: string, dados: DadosReserva) => Viagem
+  criarViagem: (clienteId: string, dados: DadosReserva) => Promise<Viagem>
+  aplicarContaNuvem: (conta: {
+    perfil: Perfil
+    empresa?: Empresa
+    motorista?: Motorista
+  }) => void
+  substituirViagensNuvem: (viagens: Viagem[]) => void
+  substituirOfertasNuvem: (ofertas: AtribuicaoViagem[]) => void
   solicitarExtensaoHourly: (
     viagemId: string,
     minutos: number,
@@ -304,7 +312,9 @@ interface EstadoDemo {
       senha?: string
     },
   ) => Motorista
-  salvarVeiculo: (dados: Partial<Veiculo> & { empresa_id: string; marca: string; modelo: string; categoria_id: string }) => Veiculo
+  salvarVeiculo: (
+    dados: Partial<Veiculo> & { empresa_id: string; marca: string; modelo: string; categoria_id: string },
+  ) => Promise<Veiculo>
   excluirVeiculo: (id: string) => void
   atualizarAvatarCliente: (usuarioId: string, avatarUrl?: string | null) => void
   obterEmpresaDoUsuario: (usuarioId: string) => Empresa | undefined
@@ -540,28 +550,9 @@ export const useDemoStore = create<EstadoDemo>()(
         return perfis.find((p) => p.id === sessaoId) ?? null
       },
 
-      entrar: async (email, senha) => {
-        const emailLimpo = email.trim().toLowerCase()
+      aplicarContaNuvem: (conta) => {
         const state = get()
-        const local = state.perfis.find((p) => p.email.toLowerCase() === emailLimpo)
-        const senhaLocalOk = Boolean(local && state.senhas[local.email] === senha)
-
-        const conta = await entrarContaNuvem(emailLimpo, senha)
-        if (!conta && !senhaLocalOk) throw new Error('E-mail ou senha inválidos')
-        if (!conta && local) {
-          if (!local.ativo) throw new Error('Usuário inativo')
-          set({
-            sessaoId: local.id,
-            senhas: { ...state.senhas, [local.email]: senha },
-          })
-          return local
-        }
-        if (!conta) throw new Error('E-mail ou senha inválidos')
-        if (!conta.perfil.ativo) {
-          await sairNuvem()
-          throw new Error('Usuário inativo')
-        }
-
+        const emailLimpo = conta.perfil.email.toLowerCase()
         const perfis = [
           ...state.perfis.filter(
             (p) => p.id !== conta.perfil.id && p.email.toLowerCase() !== emailLimpo,
@@ -595,15 +586,50 @@ export const useDemoStore = create<EstadoDemo>()(
               )
             : [conta.motorista, ...motoristas]
         }
-
         set({
           perfis,
           empresas,
           veiculos,
           motoristas,
-          senhas: { ...get().senhas, [conta.perfil.email]: senha },
           sessaoId: conta.perfil.id,
         })
+      },
+
+      entrar: async (email, senha) => {
+        const emailLimpo = email.trim().toLowerCase()
+        const state = get()
+        const local = state.perfis.find((p) => p.email.toLowerCase() === emailLimpo)
+        const senhaLocalOk = Boolean(local && state.senhas[local.email] === senha)
+
+        if (usarNuvemComoFonte()) {
+          const conta = await entrarContaNuvem(emailLimpo, senha)
+          if (!conta) throw new Error('E-mail ou senha inválidos')
+          if (!conta.perfil.ativo) {
+            await sairNuvem()
+            throw new Error('Usuário inativo')
+          }
+          get().aplicarContaNuvem(conta)
+          set({ senhas: { ...get().senhas, [conta.perfil.email]: senha } })
+          return conta.perfil
+        }
+
+        const conta = await entrarContaNuvem(emailLimpo, senha)
+        if (!conta && !senhaLocalOk) throw new Error('E-mail ou senha inválidos')
+        if (!conta && local) {
+          if (!local.ativo) throw new Error('Usuário inativo')
+          set({
+            sessaoId: local.id,
+            senhas: { ...state.senhas, [local.email]: senha },
+          })
+          return local
+        }
+        if (!conta) throw new Error('E-mail ou senha inválidos')
+        if (!conta.perfil.ativo) {
+          await sairNuvem()
+          throw new Error('Usuário inativo')
+        }
+        get().aplicarContaNuvem(conta)
+        set({ senhas: { ...get().senhas, [conta.perfil.email]: senha } })
         return conta.perfil
       },
 
@@ -612,6 +638,31 @@ export const useDemoStore = create<EstadoDemo>()(
         const emailLimpo = email.trim().toLowerCase()
         if (state.perfis.some((p) => p.email.toLowerCase() === emailLimpo)) {
           throw new Error('E-mail já cadastrado')
+        }
+        if (usarNuvemComoFonte()) {
+          const id = await cadastrarClienteNuvem({
+            nome,
+            email: emailLimpo,
+            senha,
+            telefone,
+          })
+          const agora = agoraIso()
+          const perfil: Perfil = {
+            id,
+            email: emailLimpo,
+            nome,
+            telefone,
+            tipo: 'cliente',
+            ativo: true,
+            created_at: agora,
+            updated_at: agora,
+          }
+          set({
+            perfis: [...state.perfis, perfil],
+            senhas: { ...state.senhas, [perfil.email]: senha },
+            sessaoId: perfil.id,
+          })
+          return perfil
         }
         const id = supabase
           ? await cadastrarClienteNuvem({ nome, email: emailLimpo, senha, telefone })
@@ -665,7 +716,7 @@ export const useDemoStore = create<EstadoDemo>()(
         })
       },
 
-      criarViagem: (clienteId, dados) => {
+      criarViagem: async (clienteId, dados) => {
         const modalidade: ModalidadeViagem = dados.modalidade === 'hourly' ? 'hourly' : 'one_way'
         const checkOrigem = enderecoProntoParaReserva(dados.origemEndereco)
         if (!checkOrigem.ok) {
@@ -830,9 +881,25 @@ export const useDemoStore = create<EstadoDemo>()(
           undefined,
           false,
         )
-        void gravarViagemNuvem(viagem).then((gravou) => {
-          if (gravou) void gravarHistoricoNuvem(historicoInicial)
-        })
+
+        if (usarNuvemComoFonte()) {
+          const gravou = await gravarViagemNuvem(viagem)
+          if (!gravou) {
+            set((s) => ({
+              viagens: s.viagens.filter((v) => v.id !== viagem.id),
+              pagamentos: s.pagamentos.filter((p) => p.booking_id !== viagem.id),
+              historicos: s.historicos.filter((h) => h.id !== historicoInicial.id),
+            }))
+            throw new Error(
+              'Não foi possível salvar a corrida no Supabase. Verifique a conexão e tente de novo.',
+            )
+          }
+          void gravarHistoricoNuvem(historicoInicial)
+        } else {
+          void gravarViagemNuvem(viagem).then((gravou) => {
+            if (gravou) void gravarHistoricoNuvem(historicoInicial)
+          })
+        }
 
         notificar(
           set,
@@ -2882,7 +2949,7 @@ export const useDemoStore = create<EstadoDemo>()(
         return novo
       },
 
-      salvarVeiculo: (dados) => {
+      salvarVeiculo: async (dados) => {
         const agora = agoraIso()
         if (dados.id) {
           const atual = get().veiculos.find((v) => v.id === dados.id)!
@@ -2890,7 +2957,20 @@ export const useDemoStore = create<EstadoDemo>()(
           set((s) => ({
             veiculos: s.veiculos.map((v) => (v.id === dados.id ? atualizada : v)),
           }))
-          void gravarVeiculoNuvem(atualizada).catch(() => undefined)
+          if (usarNuvemComoFonte()) {
+            try {
+              await gravarVeiculoNuvem(atualizada)
+            } catch (err) {
+              set((s) => ({
+                veiculos: s.veiculos.map((v) => (v.id === dados.id ? atual : v)),
+              }))
+              throw err instanceof Error
+                ? err
+                : new Error('Não foi possível salvar o veículo no Supabase.')
+            }
+          } else {
+            void gravarVeiculoNuvem(atualizada).catch(() => undefined)
+          }
           return atualizada
         }
         const novo: Veiculo = {
@@ -2910,7 +2990,20 @@ export const useDemoStore = create<EstadoDemo>()(
           updated_at: agora,
         }
         set((s) => ({ veiculos: [...s.veiculos, novo] }))
-        void gravarVeiculoNuvem(novo).catch(() => undefined)
+        if (usarNuvemComoFonte()) {
+          try {
+            await gravarVeiculoNuvem(novo)
+          } catch (err) {
+            set((s) => ({
+              veiculos: s.veiculos.filter((v) => v.id !== novo.id),
+            }))
+            throw err instanceof Error
+              ? err
+              : new Error('Não foi possível salvar o veículo no Supabase.')
+          }
+        } else {
+          void gravarVeiculoNuvem(novo).catch(() => undefined)
+        }
         return novo
       },
 
@@ -2949,6 +3042,14 @@ export const useDemoStore = create<EstadoDemo>()(
               : perfil,
           ),
         }))
+      },
+
+      substituirViagensNuvem: (viagens) => {
+        set({ viagens: viagens.map(normalizarViagem) })
+      },
+
+      substituirOfertasNuvem: (ofertas) => {
+        set({ atribuicoes: deduplicarAtribuicoes(ofertas) })
       },
 
       aplicarViagemNuvem: (viagem, silencioso = false) => {
@@ -3436,6 +3537,16 @@ export const useDemoStore = create<EstadoDemo>()(
         if (!remotos.length) return
         set((state) => {
           const excluidos = new Set(state.veiculosExcluidos)
+          if (usarNuvemComoFonte()) {
+            return {
+              veiculos: remotos
+                .filter((item) => !excluidos.has(item.id))
+                .map((veiculo) => ({
+                  ...veiculo,
+                  categoria_id: alinharCategoriaIdVeiculo(veiculo.categoria_id, state.categorias),
+                })),
+            }
+          }
           const mapa = new Map(
             state.veiculos.filter((item) => !excluidos.has(item.id)).map((item) => [item.id, item]),
           )
@@ -3548,6 +3659,9 @@ export const useDemoStore = create<EstadoDemo>()(
       aplicarEmpresasNuvem: (remotos) => {
         if (!remotos.length) return
         set((state) => {
+          if (usarNuvemComoFonte()) {
+            return { empresas: remotos }
+          }
           const mapa = new Map(state.empresas.map((item) => [item.id, item]))
           for (const remoto of remotos) {
             const local = mapa.get(remoto.id)
@@ -3570,8 +3684,37 @@ export const useDemoStore = create<EstadoDemo>()(
     }),
     {
       name: 'jemani-demo-v5',
-      version: 15,
+      version: 16,
       partialize: (estado): ReturnType<typeof estadoInicial> => {
+        if (usarNuvemComoFonte()) {
+          const base = estadoInicial()
+          return {
+            ...base,
+            sessaoId: estado.sessaoId,
+            senhas: {},
+            // Transacional/catalogo: só memória + Supabase (não grava no aparelho).
+            viagens: [],
+            pagamentos: [],
+            atribuicoes: [],
+            empresas: [],
+            motoristas: [],
+            veiculos: [],
+            historicos: [],
+            notificacoes: [],
+            mensagensEmpresa: [],
+            turnos: [],
+            agendamentosVeiculo: [],
+            comissoes: [],
+            extensoesViagem: [],
+            avisosHourly: [],
+            convitesOferta: [],
+            avaliacoes: [],
+            auditLogs: [],
+            distribuicoes: [],
+            veiculosExcluidos: [],
+            perfis: [],
+          }
+        }
         const { senhas: _senhas, ...resto } = estado
         return { ...(resto as unknown as ReturnType<typeof estadoInicial>), senhas: {} }
       },

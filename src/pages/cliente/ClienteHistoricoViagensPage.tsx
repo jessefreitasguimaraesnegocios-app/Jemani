@@ -1,6 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -74,13 +72,12 @@ export function ClienteHistoricoViagensPage() {
 
   return (
     <div className="cliente-agenda animar-entrada">
-      <Link to="/app/viagens" className="cliente-agenda-voltar">
-        <ArrowLeft size={16} />
-        {t('cliente.viagens.voltar')}
-      </Link>
-      <div>
-        <h1 className="fonte-display cliente-agenda-titulo">{t('cliente.viagens.historico')}</h1>
-        <p className="cliente-agenda-sub">{t('cliente.viagens.historicoTexto')}</p>
+      <div className="cliente-agenda-topo">
+        <div>
+          <p className="cliente-agenda-olho">{t('cliente.historico.olho')}</p>
+          <h1 className="fonte-display cliente-agenda-titulo">{t('cliente.historico.titulo')}</h1>
+          <p className="cliente-agenda-sub">{t('cliente.historico.sub')}</p>
+        </div>
       </div>
 
       {historico.length === 0 ? (

@@ -1,11 +1,15 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
+  useState,
   type ReactNode,
 } from 'react'
 import { useDemoStore } from '@/store/demoStore'
-import { sairNuvem } from '@/services/nuvemCorrida'
+import { modoDemoAtivo, usarNuvemComoFonte } from '@/lib/nuvemAtiva'
+import { supabase } from '@/lib/supabase'
+import { carregarContaSessaoAtual, sairNuvem } from '@/services/nuvemCorrida'
 import type { Perfil, TipoUsuario } from '@/types'
 import { SENHA_DEMO } from '@/data/seed'
 
@@ -33,6 +37,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const entrarStore = useDemoStore((s) => s.entrar)
   const cadastrarStore = useDemoStore((s) => s.cadastrar)
   const sairStore = useDemoStore((s) => s.sair)
+  const aplicarContaNuvem = useDemoStore((s) => s.aplicarContaNuvem)
+  const [carregando, setCarregando] = useState(usarNuvemComoFonte())
+
+  useEffect(() => {
+    if (!usarNuvemComoFonte() || !supabase) {
+      setCarregando(false)
+      return
+    }
+
+    let cancelado = false
+
+    async function restaurar() {
+      try {
+        const conta = await carregarContaSessaoAtual()
+        if (cancelado) return
+        if (conta) {
+          aplicarContaNuvem(conta)
+        } else if (useDemoStore.getState().sessaoId) {
+          // Sessão só local (sem Auth) não sincroniza entre aparelhos.
+          sairStore()
+        }
+      } finally {
+        if (!cancelado) setCarregando(false)
+      }
+    }
+
+    void restaurar()
+
+    const { data } = supabase.auth.onAuthStateChange(async (evento, sessao) => {
+      if (cancelado) return
+      if (evento === 'SIGNED_OUT') {
+        if (useDemoStore.getState().sessaoId) sairStore()
+        return
+      }
+      if (!sessao?.user) return
+      if (evento === 'SIGNED_IN' || evento === 'TOKEN_REFRESHED' || evento === 'INITIAL_SESSION') {
+        const conta = await carregarContaSessaoAtual()
+        if (!cancelado && conta) aplicarContaNuvem(conta)
+      }
+    })
+
+    return () => {
+      cancelado = true
+      data.subscription.unsubscribe()
+    }
+  }, [aplicarContaNuvem, sairStore])
 
   const usuario = useMemo(
     () => perfis.find((p) => p.id === sessaoId) ?? null,
@@ -41,8 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value: AuthContextValue = {
     usuario,
-    carregando: false,
-    modoDemo: import.meta.env.VITE_DEMO_MODE !== 'false',
+    carregando,
+    modoDemo: modoDemoAtivo(),
     senhaDemo: SENHA_DEMO,
     entrar: async (email, senha) => entrarStore(email, senha),
     cadastrar: async (dados) => cadastrarStore(dados),

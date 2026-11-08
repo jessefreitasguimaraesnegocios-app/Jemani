@@ -114,6 +114,17 @@ describe('frotaCliente', () => {
     expect(lista.map((c) => c.id)).toEqual(['cat-1'])
   })
 
+  it('não esvazia o carrossel se IDs de categoria não baterem', () => {
+    const frotaOrfa: Veiculo[] = [
+      {
+        ...veiculos[0],
+        categoria_id: 'uuid-nuvem-desconhecido',
+      },
+    ]
+    const lista = categoriasComFrotaDisponivel(categorias, frotaOrfa, [empresaAtiva])
+    expect(lista.map((c) => c.id)).toEqual(['cat-1', 'cat-2'])
+  })
+
   it('prioriza veículo com foto no destaque da categoria', () => {
     const destaque = veiculoDestaqueDaCategoria('cat-1', veiculos, [empresaAtiva])
     expect(destaque?.fotos[0]).toBe('/frota/escalade.jpg')

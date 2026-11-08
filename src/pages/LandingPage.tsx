@@ -93,23 +93,29 @@ export function LandingPage() {
     const trilho = fleetTrack.current
     if (!trilho) return
     let quadro = 0
+    let vivo = true
     const andar = () => {
+      if (!vivo) return
       if (Date.now() >= pausaCarrossel.current) {
         const metade = trilho.scrollWidth / 2
-        if (trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
+        if (metade > 0 && trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
         trilho.scrollLeft += 0.7
       }
       quadro = window.requestAnimationFrame(andar)
     }
     const pausar = () => { pausaCarrossel.current = Number.POSITIVE_INFINITY }
     const seguir = () => { pausaCarrossel.current = 0 }
+    pausaCarrossel.current = 0
     trilho.addEventListener('pointerenter', pausar)
     trilho.addEventListener('pointerleave', seguir)
+    trilho.addEventListener('pointercancel', seguir)
     quadro = window.requestAnimationFrame(andar)
     return () => {
+      vivo = false
       window.cancelAnimationFrame(quadro)
       trilho.removeEventListener('pointerenter', pausar)
       trilho.removeEventListener('pointerleave', seguir)
+      trilho.removeEventListener('pointercancel', seguir)
     }
   }, [])
 

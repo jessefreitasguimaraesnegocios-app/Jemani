@@ -46,12 +46,12 @@ export function SeletorCategoria3D({
   )
 
   function fotoCategoria(categoria: CategoriaVeiculo) {
-    const destaque = veiculoDestaqueDaCategoria(categoria.id, veiculos, empresas)
+    const destaque = veiculoDestaqueDaCategoria(categoria.id, veiculos, empresas, categorias)
     return destaque?.fotos[0] ?? fotoDaFrota(categoria.slug)
   }
 
   function rotuloCategoria(categoria: CategoriaVeiculo) {
-    const destaque = veiculoDestaqueDaCategoria(categoria.id, veiculos, empresas)
+    const destaque = veiculoDestaqueDaCategoria(categoria.id, veiculos, empresas, categorias)
     if (destaque) return `${destaque.marca} ${destaque.modelo}`.trim()
     return rotuloCurtoFrota(categoria.slug, categoria.nome)
   }
@@ -64,11 +64,15 @@ export function SeletorCategoria3D({
     return () => media.removeEventListener('change', aplicar)
   }, [])
 
+  const chaveFaixa = categoriasValidas.map((c) => c.id).join('|')
+
   useEffect(() => {
     const trilho = faixaRef.current
-    if (!trilho || !movimento) return
+    if (!trilho || !movimento || !chaveFaixa) return
     let quadro = 0
+    let vivo = true
     const andar = () => {
+      if (!vivo) return
       if (Date.now() >= pausaFaixa.current) {
         const metade = trilho.scrollWidth / 2
         if (metade > 0 && trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
@@ -82,6 +86,8 @@ export function SeletorCategoria3D({
     const seguir = () => {
       pausaFaixa.current = 0
     }
+    trilho.scrollLeft = 0
+    pausaFaixa.current = 0
     trilho.addEventListener('pointerenter', pausar)
     trilho.addEventListener('pointerleave', seguir)
     trilho.addEventListener('pointerdown', pausar)
@@ -89,6 +95,7 @@ export function SeletorCategoria3D({
     trilho.addEventListener('pointercancel', seguir)
     quadro = window.requestAnimationFrame(andar)
     return () => {
+      vivo = false
       window.cancelAnimationFrame(quadro)
       trilho.removeEventListener('pointerenter', pausar)
       trilho.removeEventListener('pointerleave', seguir)
@@ -96,12 +103,17 @@ export function SeletorCategoria3D({
       trilho.removeEventListener('pointerup', seguir)
       trilho.removeEventListener('pointercancel', seguir)
     }
-  }, [movimento, categoriasValidas.length])
+  }, [movimento, chaveFaixa])
 
   if (!selecionada) return null
 
   const elite = selecionada.slug === SLUG_SHIELD
-  const veiculoSelecionado = veiculoDestaqueDaCategoria(selecionada.id, veiculos, empresas)
+  const veiculoSelecionado = veiculoDestaqueDaCategoria(
+    selecionada.id,
+    veiculos,
+    empresas,
+    categorias,
+  )
   const foto = fotoCategoria(selecionada)
   const copias = movimento ? [0, 1] : [0]
 

@@ -241,25 +241,30 @@ export function EmpresaVeiculosPage() {
     setMsg(t('empresa.veiculos.excluido'))
   }
 
-  function enviar() {
+  async function enviar() {
     if (!marca.trim() || !modelo.trim()) {
       setErro('Informe marca e modelo.')
       throw new Error('campos')
     }
     const eraEdicao = Boolean(editandoId)
-    salvarVeiculo({
-      id: editandoId ?? undefined,
-      empresa_id: empresa!.id,
-      marca: marca.trim(),
-      modelo: modelo.trim(),
-      ano,
-      categoria_id: categoriaId,
-      capacidade,
-      placa: placa.trim(),
-      fotos: fotoUrl ? [fotoUrl] : [],
-      ar_condicionado: true,
-      bagageiro: true,
-    })
+    try {
+      await salvarVeiculo({
+        id: editandoId ?? undefined,
+        empresa_id: empresa!.id,
+        marca: marca.trim(),
+        modelo: modelo.trim(),
+        ano,
+        categoria_id: categoriaId,
+        capacidade,
+        placa: placa.trim(),
+        fotos: fotoUrl ? [fotoUrl] : [],
+        ar_condicionado: true,
+        bagageiro: true,
+      })
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Falha ao salvar veículo')
+      throw err
+    }
     limparFormulario()
     setErro('')
     setMsg(eraEdicao ? t('empresa.veiculos.atualizado') : t('empresa.veiculos.salvo'))

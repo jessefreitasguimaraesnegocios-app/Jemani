@@ -163,18 +163,22 @@ export function AdminComissoesPage() {
                   <p className="font-medium">{empresa.nome_comercial}</p>
                   <p className="comissoes-empresa-meta">
                     {empresa.cidade} · {empresa.status}
-                    {igualPadrao ? ' · igual ao padrão' : ' · personalizada'}
+                    {igualPadrao
+                      ? ` · ${t('admin.comissoes.igualPadrao')}`
+                      : ` · ${t('admin.comissoes.personalizada')}`}
                   </p>
                 </div>
                 <div className="comissoes-empresa-acoes">
-                  {!igualPadrao && <span className="comissoes-selo">Personalizada</span>}
+                  {!igualPadrao && (
+                    <span className="comissoes-selo">{t('admin.comissoes.seloPersonalizada')}</span>
+                  )}
                   <input
                     className="campo"
                     type="number"
                     min={0}
                     max={100}
                     step={0.1}
-                    aria-label={`Comissão de ${empresa.nome_comercial}`}
+                    aria-label={t('admin.comissoes.ariaEmpresa', { nome: empresa.nome_comercial })}
                     value={valorCampo(empresa.id, empresa.comissao_percentual)}
                     onChange={(e) =>
                       setRascunhos((atual) => ({ ...atual, [empresa.id]: e.target.value }))
@@ -184,7 +188,7 @@ export function AdminComissoesPage() {
                     className="btn-secundario !py-2"
                     aoSalvar={() => salvarEmpresaPct(empresa.id)}
                   >
-                    Salvar
+                    {t('comum.salvar')}
                   </BotaoSalvar>
                 </div>
               </div>
@@ -197,7 +201,7 @@ export function AdminComissoesPage() {
         <h2 className="fonte-display text-2xl">{t('admin.comissoes.historico')}</h2>
         {historicoPorEmpresa.length === 0 ? (
           <div className="cartao">
-            <p className="comissoes-vazio">Nenhuma comissão de corrida finalizada ainda.</p>
+            <p className="comissoes-vazio">{t('admin.comissoes.historicoVazio')}</p>
           </div>
         ) : (
           <div className="comissoes-historico">
@@ -206,8 +210,10 @@ export function AdminComissoesPage() {
                 <div className="comissoes-grupo-cabeca">
                   <h3 className="font-medium">{grupo.nome}</h3>
                   <p className="comissoes-grupo-totais">
-                    Plataforma {formatarMoeda(grupo.totalPlat, locale)} · Empresa{' '}
-                    {formatarMoeda(grupo.totalEmp, locale)}
+                    {t('admin.comissoes.totaisGrupo', {
+                      plat: formatarMoeda(grupo.totalPlat, locale),
+                      emp: formatarMoeda(grupo.totalEmp, locale),
+                    })}
                   </p>
                 </div>
                 {grupo.itens.map((item) => (
@@ -219,8 +225,16 @@ export function AdminComissoesPage() {
                       </p>
                     </div>
                     <div className="text-right text-sm">
-                      <p>Plat. {formatarMoeda(item.valorPlat, locale)}</p>
-                      <p className="comissoes-item-meta">Emp. {formatarMoeda(item.valorEmp, locale)}</p>
+                      <p>
+                        {t('admin.comissoes.platCurto', {
+                          valor: formatarMoeda(item.valorPlat, locale),
+                        })}
+                      </p>
+                      <p className="comissoes-item-meta">
+                        {t('admin.comissoes.empCurto', {
+                          valor: formatarMoeda(item.valorEmp, locale),
+                        })}
+                      </p>
                     </div>
                   </div>
                 ))}

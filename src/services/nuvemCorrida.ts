@@ -197,24 +197,16 @@ function motoristaDaLinha(linha: Motorista): Motorista {
   }
 }
 
-export async function entrarContaNuvem(email: string, senha: string) {
+async function montarContaDoUsuario(userId: string) {
   const db = cliente()
-  if (!db || !email || !senha) return null
-  const { data, error } = await db.auth.signInWithPassword({
-    email: email.trim().toLowerCase(),
-    password: senha,
-  })
-  if (error || !data.user) return null
+  if (!db) return null
 
   const { data: linha, error: erroPerfil } = await db
     .from('profiles')
     .select('*')
-    .eq('id', data.user.id)
+    .eq('id', userId)
     .maybeSingle()
-  if (erroPerfil || !linha) {
-    await db.auth.signOut()
-    return null
-  }
+  if (erroPerfil || !linha) return null
 
   const perfil = perfilDaLinha(linha as Perfil)
   let empresa: Empresa | undefined
@@ -237,6 +229,33 @@ export async function entrarContaNuvem(email: string, senha: string) {
   }
 
   return { perfil, empresa, motorista }
+}
+
+export async function entrarContaNuvem(email: string, senha: string) {
+  const db = cliente()
+  if (!db || !email || !senha) return null
+  const { data, error } = await db.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password: senha,
+  })
+  if (error || !data.user) return null
+
+  const conta = await montarContaDoUsuario(data.user.id)
+  if (!conta) {
+    await db.auth.signOut()
+    return null
+  }
+  return conta
+}
+
+/** Restaura perfil/empresa/motorista a partir da sessão Auth já persistida. */
+export async function carregarContaSessaoAtual() {
+  const db = cliente()
+  if (!db) return null
+  const { data } = await db.auth.getSession()
+  const userId = data.session?.user.id
+  if (!userId) return null
+  return montarContaDoUsuario(userId)
 }
 
 export async function sairNuvem() {

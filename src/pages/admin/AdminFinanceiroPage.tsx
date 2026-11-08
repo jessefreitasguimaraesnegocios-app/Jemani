@@ -103,8 +103,10 @@ export function AdminFinanceiroPage() {
             value={empresaId}
             onChange={(e) => setEmpresaId(e.target.value)}
           >
-            <option value="">Todas as empresas</option>
-            {temSemEmpresa && <option value="sem_empresa">Sem empresa atribuída</option>}
+            <option value="">{t('admin.financeiro.todasEmpresas')}</option>
+            {temSemEmpresa && (
+              <option value="sem_empresa">{t('admin.financeiro.semEmpresa')}</option>
+            )}
             {empresasComVolume.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.nome_comercial}
@@ -114,7 +116,7 @@ export function AdminFinanceiroPage() {
         </div>
         <div>
           <label className="rotulo" htmlFor="fin-tipo">
-            Tipo / status
+            {t('admin.financeiro.tipoStatus')}
           </label>
           <select
             id="fin-tipo"
@@ -122,7 +124,7 @@ export function AdminFinanceiroPage() {
             value={tipo}
             onChange={(e) => setTipo(e.target.value as TipoPagamentoFiltro)}
           >
-            <option value="todos">Todos os tipos</option>
+            <option value="todos">{t('admin.financeiro.todosTipos')}</option>
             {tiposPresentes.map((status) => (
               <option key={status} value={status}>
                 {rotuloStatusPagamento(status)}
@@ -132,7 +134,7 @@ export function AdminFinanceiroPage() {
         </div>
         <div>
           <label className="rotulo" htmlFor="fin-cat">
-            Categoria
+            {t('admin.financeiro.categoria')}
           </label>
           <select
             id="fin-cat"
@@ -140,7 +142,7 @@ export function AdminFinanceiroPage() {
             value={categoriaId}
             onChange={(e) => setCategoriaId(e.target.value)}
           >
-            <option value="">Todas as categorias</option>
+            <option value="">{t('admin.financeiro.todasCategorias')}</option>
             {categorias
               .filter((c) => c.ativo)
               .sort((a, b) => a.ordem - b.ordem)
@@ -153,14 +155,14 @@ export function AdminFinanceiroPage() {
         </div>
         <div>
           <label className="rotulo" htmlFor="fin-busca">
-            Busca
+            {t('admin.financeiro.busca')}
           </label>
           <input
             id="fin-busca"
             className="campo"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Código, empresa, payment id..."
+            placeholder={t('admin.financeiro.buscaPlaceholder')}
           />
         </div>
       </div>
@@ -171,7 +173,7 @@ export function AdminFinanceiroPage() {
           className={`fin-chip ${!empresaId ? 'fin-chip--ativa' : ''}`}
           onClick={() => setEmpresaId('')}
         >
-          Todas
+          {t('admin.financeiro.todas')}
         </button>
         {temSemEmpresa && (
           <button
@@ -179,7 +181,7 @@ export function AdminFinanceiroPage() {
             className={`fin-chip ${empresaId === 'sem_empresa' ? 'fin-chip--ativa' : ''}`}
             onClick={() => setEmpresaId('sem_empresa')}
           >
-            Sem empresa
+            {t('admin.financeiro.chipSemEmpresa')}
           </button>
         )}
         {empresasComVolume.map((e) => (
@@ -198,30 +200,35 @@ export function AdminFinanceiroPage() {
         <div className="cartao fin-resumo-item">
           <p className="fin-resumo-rotulo">{t('admin.financeiro.volume')}</p>
           <p className="fonte-display fin-resumo-valor">{formatarMoeda(resumo.volume, locale)}</p>
-          <p className="fin-resumo-meta">{resumo.quantidade} lançamentos</p>
+          <p className="fin-resumo-meta">
+            {t('admin.financeiro.lancamentosN', { n: resumo.quantidade })}
+          </p>
         </div>
         <div className="cartao fin-resumo-item">
           <p className="fin-resumo-rotulo">{t('admin.financeiro.comissao')}</p>
           <p className="fonte-display fin-resumo-valor">{formatarMoeda(resumo.comissao, locale)}</p>
-          <p className="fin-resumo-meta">Plataforma</p>
+          <p className="fin-resumo-meta">{t('admin.financeiro.plataforma')}</p>
         </div>
         <div className="cartao fin-resumo-item">
           <p className="fin-resumo-rotulo">{t('admin.financeiro.valorEmpresas')}</p>
           <p className="fonte-display fin-resumo-valor">{formatarMoeda(resumo.valorEmpresa, locale)}</p>
-          <p className="fin-resumo-meta">Repasse filtrado</p>
+          <p className="fin-resumo-meta">{t('admin.financeiro.repasseFiltrado')}</p>
         </div>
         <div className="cartao fin-resumo-item">
           <p className="fin-resumo-rotulo">{t('admin.financeiro.situacao')}</p>
           <p className="fonte-display fin-resumo-valor">{resumo.pagos}</p>
           <p className="fin-resumo-meta">
-            pagos · {resumo.pendentes} pendentes · {resumo.testes} teste/DEV
+            {t('admin.financeiro.situacaoMeta', {
+              pendentes: resumo.pendentes,
+              testes: resumo.testes,
+            })}
           </p>
         </div>
       </div>
 
       {filtrados.length === 0 ? (
         <div className="cartao">
-          <p className="fin-vazio">Nenhum lançamento com esses filtros.</p>
+          <p className="fin-vazio">{t('admin.financeiro.vazio')}</p>
         </div>
       ) : visao === 'empresas' ? (
         <div className="fin-grupos">
@@ -234,17 +241,21 @@ export function AdminFinanceiroPage() {
                 </div>
                 <div className="fin-grupo-totais">
                   <span>
-                    Volume <strong>{formatarMoeda(grupo.volume, locale)}</strong>
+                    {t('admin.financeiro.volumeLinha', {
+                      valor: formatarMoeda(grupo.volume, locale),
+                    })}
                   </span>
                   <span>
-                    Comissão <strong>{formatarMoeda(grupo.comissao, locale)}</strong>
+                    {t('admin.financeiro.comissaoLinha', {
+                      valor: formatarMoeda(grupo.comissao, locale),
+                    })}
                   </span>
                   <span>
-                    Empresa <strong>{formatarMoeda(grupo.valorEmpresa, locale)}</strong>
+                    {t('admin.financeiro.empresaLinha', {
+                      valor: formatarMoeda(grupo.valorEmpresa, locale),
+                    })}
                   </span>
-                  <span>
-                    Qtd <strong>{grupo.quantidade}</strong>
-                  </span>
+                  <span>{t('admin.financeiro.qtdLinha', { n: grupo.quantidade })}</span>
                 </div>
               </div>
               <div className="fin-lista">
@@ -262,14 +273,20 @@ export function AdminFinanceiroPage() {
               <div className="fin-grupo-cabeca">
                 <div>
                   <h2 className="fonte-display fin-grupo-titulo">{grupo.titulo}</h2>
-                  <p className="fin-grupo-sub">{grupo.quantidade} lançamentos neste tipo</p>
+                  <p className="fin-grupo-sub">
+                    {t('admin.financeiro.lancamentosTipo', { n: grupo.quantidade })}
+                  </p>
                 </div>
                 <div className="fin-grupo-totais">
                   <span>
-                    Volume <strong>{formatarMoeda(grupo.volume, locale)}</strong>
+                    {t('admin.financeiro.volumeLinha', {
+                      valor: formatarMoeda(grupo.volume, locale),
+                    })}
                   </span>
                   <span>
-                    Comissão <strong>{formatarMoeda(grupo.comissao, locale)}</strong>
+                    {t('admin.financeiro.comissaoLinha', {
+                      valor: formatarMoeda(grupo.comissao, locale),
+                    })}
                   </span>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarPlus, ChevronRight, History } from 'lucide-react'
+import { CalendarPlus, ChevronRight } from 'lucide-react'
 import { BadgeStatus } from '@/components/BadgeStatus'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -23,7 +23,7 @@ export function ClienteViagensPage() {
     () => todasViagens.filter((v) => v.cliente_id === usuario?.id),
     [todasViagens, usuario?.id],
   )
-  const { proxima, outras, historico } = useMemo(() => separarAgendamentos(viagens), [viagens])
+  const { proxima, outras } = useMemo(() => separarAgendamentos(viagens), [viagens])
 
   const mapaCategorias = useMemo(() => new Map(categorias.map((c) => [c.id, c.nome])), [categorias])
   const mapaEmpresas = useMemo(
@@ -66,22 +66,6 @@ export function ClienteViagensPage() {
           </Link>
         </section>
       )}
-
-      <Link to="/app/viagens/historico" className="cliente-agenda-historico">
-        <span className="cliente-agenda-historico-icone" aria-hidden>
-          <History size={22} />
-        </span>
-        <span className="cliente-agenda-historico-texto">
-          <span className="cliente-agenda-historico-titulo">{t('cliente.viagens.historico')}</span>
-          <span className="cliente-agenda-historico-sub">
-            {historico.length === 0
-              ? t('cliente.viagens.historicoVazio')
-              : t('cliente.viagens.historicoTexto')}
-          </span>
-        </span>
-        <span className="cliente-agenda-historico-qtd">{historico.length}</span>
-        <ChevronRight size={20} className="cliente-agenda-historico-seta" />
-      </Link>
 
       {outras.length > 0 && (
         <details className="cliente-agenda-outras">

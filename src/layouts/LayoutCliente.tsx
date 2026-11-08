@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Bell, CalendarCheck, Home, LogOut, User, CalendarPlus } from 'lucide-react'
+import { Bell, CalendarCheck, CalendarPlus, History, Home, User } from 'lucide-react'
+import { MenuContaTopo } from '@/components/MenuContaTopo'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { ChaveTraducao } from '@/i18n/mensagens'
@@ -12,7 +13,8 @@ import './LayoutCliente.css'
 
 const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Home; end?: boolean }> = [
   { to: '/app', chave: 'nav.cliente.inicio', icon: Home, end: true },
-  { to: '/app/viagens', chave: 'nav.cliente.viagens', icon: CalendarCheck },
+  { to: '/app/viagens', chave: 'nav.cliente.viagens', icon: CalendarCheck, end: true },
+  { to: '/app/historico', chave: 'nav.cliente.historico', icon: History },
   { to: '/app/reservar', chave: 'nav.cliente.reservar', icon: CalendarPlus },
   { to: '/app/notificacoes', chave: 'nav.cliente.alertas', icon: Bell },
   { to: '/app/perfil', chave: 'nav.cliente.perfil', icon: User },
@@ -41,9 +43,12 @@ export function LayoutCliente() {
   return (
     <div className="layout-cliente">
       <aside className="layout-cliente-aside painel-lateral">
-        <div className="layout-cliente-marca">
-          <p className="fonte-display layout-cliente-marca-titulo">Jemani</p>
-          <p className="layout-cliente-marca-sub">{t('nav.cliente.subtitle')}</p>
+        <div className="layout-cliente-marca layout-cliente-marca-linha">
+          <div>
+            <p className="fonte-display layout-cliente-marca-titulo">Jemani</p>
+            <p className="layout-cliente-marca-sub">{t('nav.cliente.subtitle')}</p>
+          </div>
+          <MenuContaTopo variante="completo" tom="escuro" aoSair={handleSair} />
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           {links.map((l) => (
@@ -63,14 +68,6 @@ export function LayoutCliente() {
             </NavLink>
           ))}
         </nav>
-        <button
-          type="button"
-          onClick={handleSair}
-          className="sidebar-link mt-4 w-full border-0 bg-transparent text-left"
-        >
-          <LogOut size={18} />
-          {t('comum.sair')}
-        </button>
       </aside>
 
       <div ref={wrapperRef} className="layout-cliente-scroll">
@@ -80,9 +77,11 @@ export function LayoutCliente() {
               <p className="layout-cliente-topo-ola">{t('comum.ola')}</p>
               <h1 className="fonte-display layout-cliente-topo-nome">{usuario?.nome}</h1>
             </div>
-            <button type="button" className="layout-cliente-topo-sair" onClick={handleSair}>
-              {t('comum.sair')}
-            </button>
+            <MenuContaTopo
+              variante="completo"
+              className="layout-cliente-topo-menu"
+              aoSair={handleSair}
+            />
           </header>
           <main className="layout-cliente-main">
             <Outlet />

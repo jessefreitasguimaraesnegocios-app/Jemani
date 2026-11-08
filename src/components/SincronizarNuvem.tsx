@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core'
 import type { PluginListenerHandle } from '@capacitor/core'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useAuth } from '@/contexts/AuthContext'
+import { usarNuvemComoFonte } from '@/lib/nuvemAtiva'
 import { ofertaLocalPodeSubir } from '@/services/filtroGravacaoNuvem'
 import { nuvemEstaAtrasada } from '@/services/fundirViagemNuvem'
 import {
@@ -185,8 +186,13 @@ export function SincronizarNuvem() {
           puxarChat ? listarMensagensNuvem() : Promise.resolve([]),
         ])
         if (!ativoRef.current) return
-        for (const viagem of viagensAgora) store().aplicarViagemNuvem(viagem, true)
-        for (const oferta of ofertasAgora) store().aplicarOfertaNuvem(oferta, true)
+        if (usarNuvemComoFonte() && opcoes.completo) {
+          store().substituirViagensNuvem(viagensAgora)
+          store().substituirOfertasNuvem(ofertasAgora)
+        } else {
+          for (const viagem of viagensAgora) store().aplicarViagemNuvem(viagem, true)
+          for (const oferta of ofertasAgora) store().aplicarOfertaNuvem(oferta, true)
+        }
         // Chat: sem silêncio — se o Realtime falhar, o motorista ainda recebe alerta de mensagem nova.
         for (const mensagem of mensagensAgora) store().aplicarMensagemNuvem(mensagem, false)
         // Margem de 2s evita perder update entre o fetch e o marcador.
@@ -207,7 +213,13 @@ export function SincronizarNuvem() {
     void (async () => {
       const senha = store().senhas[sessao.email]
       const entrou = await garantirSessaoNuvem(sessao.email, senha ?? '')
-      if (!entrou || !ativoRef.current) return
+      if (!ativoRef.current) return
+      if (!entrou) {
+        if (usarNuvemComoFonte()) {
+          console.warn('Sincronização pausada: sem sessão Auth no Supabase')
+        }
+        return
+      }
       const [viagens, ofertas, mensagens, turnos, agendamentos, historicos, frota, alertas] =
         await Promise.all([
           listarViagensNuvem(),
@@ -220,8 +232,13 @@ export function SincronizarNuvem() {
           listarNotificacoesNuvem(),
         ])
       if (!ativoRef.current) return
-      for (const viagem of viagens) store().aplicarViagemNuvem(viagem, true)
-      for (const oferta of ofertas) store().aplicarOfertaNuvem(oferta, true)
+      if (usarNuvemComoFonte()) {
+        store().substituirViagensNuvem(viagens)
+        store().substituirOfertasNuvem(ofertas)
+      } else {
+        for (const viagem of viagens) store().aplicarViagemNuvem(viagem, true)
+        for (const oferta of ofertas) store().aplicarOfertaNuvem(oferta, true)
+      }
       for (const mensagem of mensagens) store().aplicarMensagemNuvem(mensagem, true)
       for (const turno of turnos) store().aplicarTurnoNuvem(turno)
       for (const item of agendamentos) store().aplicarAgendamentoNuvem(item, true)
@@ -283,7 +300,8 @@ export function SincronizarNuvem() {
           }
         }
       }
-      if (sessao.tipo === 'cliente') {
+      // Com nuvem como fonte, não sobe seed/local antigo — só o que já está no Supabase.
+      if (!usarNuvemComoFonte() && sessao.tipo === 'cliente') {
         const locais = store().viagens.filter((v) => v.cliente_id === sessao.id)
         const porId = new Map(viagens.map((item) => [item.id, item]))
         const paraSubir = locais.flatMap((local) => {
@@ -300,6 +318,10 @@ export function SincronizarNuvem() {
             (oferta) => idsLocais.has(oferta.viagem_id) && ofertaLocalPodeSubir(oferta, ofertas),
           ),
         )
+      }
+      if (usarNuvemComoFonte() && sessao.tipo === 'cliente') {
+        store().garantirOfertasAbertas()
+        store().limparDuplicatasNuvem()
       }
 
       if (!ativoRef.current) return
@@ -342,6 +364,9 @@ export function SincronizarNuvem() {
       relogio = window.setInterval(() => {
         void puxarCorridasAoVivo({ completo: false, comCatalogo: true })
       }, INTERVALO_SEGURANCA_NUVEM_MS)
+
+      // Em modo nuvem, o Supabase é a fonte — não reenvia resíduos locais/seed.
+      if (usarNuvemComoFonte()) return
 
       const depois = store()
       const motorista = depois.motoristas.find((m) => m.usuario_id === sessao.id)

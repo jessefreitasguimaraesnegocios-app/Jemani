@@ -5,7 +5,6 @@ import {
   Car,
   Inbox,
   LayoutDashboard,
-  LogOut,
   Settings,
   Tags,
   Users,
@@ -13,6 +12,7 @@ import {
   Percent,
   BadgeDollarSign,
 } from 'lucide-react'
+import { MenuContaTopo } from '@/components/MenuContaTopo'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { ChaveTraducao } from '@/i18n/mensagens'
@@ -54,16 +54,14 @@ export function LayoutAdmin() {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
       <aside className="painel-lateral">
-        <div className="flex items-center justify-between p-4 lg:block lg:p-6">
+        <div className="flex items-center justify-between gap-3 p-4 lg:items-start lg:p-6">
           <div>
             <p className="fonte-display text-3xl">Jemani</p>
             <p className="mt-1 text-sm text-white/55">{t('nav.admin.subtitle')}</p>
           </div>
-          <button type="button" className="btn-secundario !py-2 lg:hidden" onClick={handleSair}>
-            {t('comum.sair')}
-          </button>
+          <MenuContaTopo variante="admin" tom="escuro" aoSair={handleSair} />
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:px-6">
+        <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:px-6 lg:pb-6">
           {links.map((l) => {
             const alertaSolicitacoes = l.to === '/admin/solicitacoes' && qtdSolicitacoes > 0
             return (
@@ -72,10 +70,7 @@ export function LayoutAdmin() {
                 to={l.to}
                 end={l.end}
                 className={({ isActive }) =>
-                  cn(
-                    'sidebar-link layout-admin-link whitespace-nowrap',
-                    isActive && 'ativo',
-                  )
+                  cn('sidebar-link layout-admin-link whitespace-nowrap', isActive && 'ativo')
                 }
               >
                 <span className="layout-admin-link-linha">
@@ -97,14 +92,6 @@ export function LayoutAdmin() {
             )
           })}
         </nav>
-        <button
-          type="button"
-          onClick={handleSair}
-          className="sidebar-link mx-6 mb-6 hidden border-0 bg-transparent lg:flex"
-        >
-          <LogOut size={18} />
-          {t('comum.sair')}
-        </button>
       </aside>
       <main
         className={cn(

@@ -92,11 +92,11 @@ export function AdminConfiguracoesPage() {
       </section>
 
       <section className="cartao config-secao">
-        <h2 className="fonte-display text-2xl">Reservas</h2>
+        <h2 className="fonte-display text-2xl">{t('config.reservas')}</h2>
         <div className="config-grade">
           <div>
             <label className="rotulo" htmlFor="cfg-antecedencia">
-              Antecedência mínima (horas)
+              {t('config.antecedencia')}
             </label>
             <input
               id="cfg-antecedencia"
@@ -109,10 +109,7 @@ export function AdminConfiguracoesPage() {
             />
           </div>
         </div>
-        <p className="config-sub">
-          O cliente só consegue agendar com pelo menos essas horas a partir do momento atual (fuso
-          da plataforma).
-        </p>
+        <p className="config-sub">{t('config.antecedenciaDica')}</p>
       </section>
 
       <section className="cartao config-secao">

@@ -89,7 +89,7 @@ export function AdminFrotaVeiculos() {
     )
   }
 
-  function enviar() {
+  async function enviar() {
     if (!empresaId) {
       setErro('Selecione a empresa do veículo.')
       throw new Error('empresa')
@@ -99,20 +99,25 @@ export function AdminFrotaVeiculos() {
       throw new Error('campos')
     }
     const eraEdicao = Boolean(editandoId)
-    salvarVeiculo({
-      id: editandoId ?? undefined,
-      empresa_id: empresaId,
-      marca: marca.trim(),
-      modelo: modelo.trim(),
-      ano,
-      categoria_id: categoriaId,
-      capacidade,
-      placa: placa.trim(),
-      fotos: fotoUrl ? [fotoUrl] : [],
-      ar_condicionado: true,
-      bagageiro: true,
-      status,
-    })
+    try {
+      await salvarVeiculo({
+        id: editandoId ?? undefined,
+        empresa_id: empresaId,
+        marca: marca.trim(),
+        modelo: modelo.trim(),
+        ano,
+        categoria_id: categoriaId,
+        capacidade,
+        placa: placa.trim(),
+        fotos: fotoUrl ? [fotoUrl] : [],
+        ar_condicionado: true,
+        bagageiro: true,
+        status,
+      })
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Falha ao salvar veículo')
+      throw err
+    }
     limparFormulario()
     setErro('')
     setMsg(eraEdicao ? t('empresa.veiculos.atualizado') : t('empresa.veiculos.salvo'))

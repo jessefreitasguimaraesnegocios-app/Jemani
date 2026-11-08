@@ -388,7 +388,7 @@ export function ReservarPage() {
     setEtapa((e) => Math.max(e - 1, 0))
   }
 
-  function confirmar(e: FormEvent) {
+  async function confirmar(e: FormEvent) {
     e.preventDefault()
     if (!usuario || !preco || !origemEndereco || !destinoEndereco) return
     if (!ehHourly && !rota) return
@@ -419,7 +419,7 @@ export function ReservarPage() {
     setEnviando(true)
     setErro('')
     try {
-      const viagem = criarViagem(usuario.id, {
+      const viagem = await criarViagem(usuario.id, {
         modalidade,
         origemEndereco,
         destinoEndereco,

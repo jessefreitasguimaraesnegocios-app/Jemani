@@ -38,27 +38,41 @@ export function veiculosOfereceiveis(
   })
 }
 
+function frotaAlinhada(
+  veiculos: Veiculo[],
+  empresas: Empresa[],
+  categorias: CategoriaVeiculo[],
+): Veiculo[] {
+  return veiculosOfereceiveis(veiculos, empresas).map((veiculo) => ({
+    ...veiculo,
+    categoria_id: alinharCategoriaIdVeiculo(veiculo.categoria_id, categorias),
+  }))
+}
+
 /** Categorias ativas que têm pelo menos um veículo cadastrado por empresa elegível. */
 export function categoriasComFrotaDisponivel(
   categorias: CategoriaVeiculo[],
   veiculos: Veiculo[],
   empresas: Empresa[],
 ): CategoriaVeiculo[] {
-  const frota = veiculosOfereceiveis(veiculos, empresas)
-  if (!frota.length) {
-    return categorias.filter((categoria) => categoria.ativo)
-  }
+  const ativas = categorias.filter((categoria) => categoria.ativo)
+  const frota = frotaAlinhada(veiculos, empresas, categorias)
+  if (!frota.length) return ativas
   const ids = new Set(frota.map((veiculo) => veiculo.categoria_id))
-  return categorias.filter((categoria) => categoria.ativo && ids.has(categoria.id))
+  const comFrota = ativas.filter((categoria) => ids.has(categoria.id))
+  // IDs seed vs nuvem desalinhados: não zera o carrossel — mostra categorias ativas.
+  return comFrota.length ? comFrota : ativas
 }
 
 export function veiculoDestaqueDaCategoria(
   categoriaId: string,
   veiculos: Veiculo[],
   empresas: Empresa[],
+  categorias: CategoriaVeiculo[] = [],
 ): Veiculo | undefined {
-  const frota = veiculosOfereceiveis(veiculos, empresas).filter(
-    (veiculo) => veiculo.categoria_id === categoriaId,
+  const alvo = alinharCategoriaIdVeiculo(categoriaId, categorias)
+  const frota = frotaAlinhada(veiculos, empresas, categorias).filter(
+    (veiculo) => veiculo.categoria_id === alvo,
   )
   const disponiveis = frota.filter((veiculo) => veiculo.status === 'disponivel')
   const base = disponiveis.length ? disponiveis : frota

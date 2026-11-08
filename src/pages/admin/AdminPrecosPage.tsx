@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BotaoSalvar } from '@/components/BotaoSalvar'
+import type { ChaveTraducao } from '@/i18n/mensagens'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { useDemoStore } from '@/store/demoStore'
 import type { RegraPreco } from '@/types'
@@ -21,6 +22,28 @@ function formDaRegra(regra: RegraPreco) {
     cobrancas_adicionais: regra.cobrancas_adicionais ?? '',
   }
 }
+
+const CAMPOS_ONE_WAY: Array<[keyof ReturnType<typeof formDaRegra>, ChaveTraducao]> = [
+  ['preco_base', 'admin.precos.precoBase'],
+  ['preco_por_km', 'admin.precos.precoKm'],
+  ['preco_minimo', 'admin.precos.precoMinimo'],
+  ['adicional_horario_noturno', 'admin.precos.adicionalNoturno'],
+  ['distancia_padrao_km', 'admin.precos.distanciaPadrao'],
+]
+
+const CAMPOS_HOURLY: Array<[keyof ReturnType<typeof formDaRegra>, ChaveTraducao]> = [
+  ['preco_por_hora', 'admin.precos.precoHora'],
+  ['franquia_milhas_por_hora', 'admin.precos.franquiaMilhas'],
+  ['preco_por_milha_excedente', 'admin.precos.milhaExcedente'],
+  ['duracao_minima_minutos', 'admin.precos.duracaoMin'],
+  ['duracao_maxima_minutos', 'admin.precos.duracaoMax'],
+]
+
+const CAMPOS_TEXTO: Array<[keyof ReturnType<typeof formDaRegra>, ChaveTraducao]> = [
+  ['regra_extensao', 'admin.precos.regraExtensao'],
+  ['regra_cancelamento', 'admin.precos.regraCancelamento'],
+  ['cobrancas_adicionais', 'admin.precos.cobrancasAdicionais'],
+]
 
 export function AdminPrecosPage() {
   const { t } = usarIdioma()
@@ -63,7 +86,7 @@ export function AdminPrecosPage() {
     return configuracoes.find((c) => c.chave === chave)?.valor ?? padrao
   }
 
-  if (!regra) return <div className="cartao">Nenhuma regra de preço.</div>
+  if (!regra) return <div className="cartao">{t('admin.precos.semRegra')}</div>
 
   function salvar() {
     atualizarRegraPreco(regra!.id, {
@@ -79,18 +102,10 @@ export function AdminPrecosPage() {
     <div className="animar-entrada space-y-4">
       <h1 className="fonte-display text-3xl">{t('admin.precos.titulo')}</h1>
       <div className="cartao grid gap-3 sm:grid-cols-2">
-        <p className="sm:col-span-2 text-sm font-medium">ONE-WAY RIDE</p>
-        {(
-          [
-            ['preco_base', 'Preço base (USD)'],
-            ['preco_por_km', 'Preço por km (USD)'],
-            ['preco_minimo', 'Preço mínimo (USD)'],
-            ['adicional_horario_noturno', 'Adicional noturno (USD)'],
-            ['distancia_padrao_km', 'Distância padrão (km)'],
-          ] as const
-        ).map(([key, label]) => (
+        <p className="sm:col-span-2 text-sm font-medium">{t('admin.precos.oneWay')}</p>
+        {CAMPOS_ONE_WAY.map(([key, chave]) => (
           <div key={key}>
-            <label className="rotulo">{label}</label>
+            <label className="rotulo">{t(chave)}</label>
             <input
               className="campo"
               type="number"
@@ -104,22 +119,11 @@ export function AdminPrecosPage() {
           </div>
         ))}
 
-        <p className="sm:col-span-2 mt-2 text-sm font-medium">HOURLY CHAUFFEUR</p>
-        <p className="sm:col-span-2 text-xs text-[var(--color-slate)]">
-          Deixe preço por hora em 0 para manter hourly desabilitado. Não invente tarifas — use o
-          valor comercial real.
-        </p>
-        {(
-          [
-            ['preco_por_hora', 'Preço por hora (USD) — 0 = off'],
-            ['franquia_milhas_por_hora', 'Franquia de milhas / hora'],
-            ['preco_por_milha_excedente', 'USD por milha excedente'],
-            ['duracao_minima_minutos', 'Duração mínima (min)'],
-            ['duracao_maxima_minutos', 'Duração máxima (min)'],
-          ] as const
-        ).map(([key, label]) => (
+        <p className="sm:col-span-2 mt-2 text-sm font-medium">{t('admin.precos.hourly')}</p>
+        <p className="sm:col-span-2 text-xs text-[var(--color-slate)]">{t('admin.precos.hourlyDica')}</p>
+        {CAMPOS_HOURLY.map(([key, chave]) => (
           <div key={key}>
-            <label className="rotulo">{label}</label>
+            <label className="rotulo">{t(chave)}</label>
             <input
               className="campo"
               type="number"
@@ -134,7 +138,7 @@ export function AdminPrecosPage() {
         ))}
         <div>
           <label className="rotulo" htmlFor="preco-paradas-bloco">
-            Endereços por bloco
+            {t('admin.precos.paradasBloco')}
           </label>
           <input
             id="preco-paradas-bloco"
@@ -148,7 +152,7 @@ export function AdminPrecosPage() {
         </div>
         <div>
           <label className="rotulo" htmlFor="preco-raio-paradas">
-            Raio máximo das paradas (km)
+            {t('admin.precos.raioParadas')}
           </label>
           <input
             id="preco-raio-paradas"
@@ -161,18 +165,11 @@ export function AdminPrecosPage() {
           />
         </div>
         <p className="sm:col-span-2 text-xs text-[var(--color-slate)]">
-          No início da corrida o cliente pode enviar até N endereços. Cada extensão paga libera mais
-          N vagas, dentro do raio e das regiões da empresa.
+          {t('admin.precos.paradasDica')}
         </p>
-        {(
-          [
-            ['regra_extensao', 'Regra de extensão'],
-            ['regra_cancelamento', 'Regra de cancelamento'],
-            ['cobrancas_adicionais', 'Cobranças adicionais'],
-          ] as const
-        ).map(([key, label]) => (
+        {CAMPOS_TEXTO.map(([key, chave]) => (
           <div key={key} className="sm:col-span-2">
-            <label className="rotulo">{label}</label>
+            <label className="rotulo">{t(chave)}</label>
             <textarea
               className="campo min-h-20"
               value={form[key]}
@@ -184,7 +181,7 @@ export function AdminPrecosPage() {
           </div>
         ))}
         <BotaoSalvar className="btn-primario sm:col-span-2" aoSalvar={salvar}>
-          Salvar regra de preço
+          {t('admin.precos.salvar')}
         </BotaoSalvar>
       </div>
     </div>

@@ -45,6 +45,7 @@ import { AdminComissoesPage } from '@/pages/admin/AdminComissoesPage'
 import { AdminCategoriasPage } from '@/pages/admin/AdminCategoriasPage'
 import { AdminPrecosPage } from '@/pages/admin/AdminPrecosPage'
 import { AdminConfiguracoesPage } from '@/pages/admin/AdminConfiguracoesPage'
+import { AdminPerfilPage } from '@/pages/admin/AdminPerfilPage'
 
 export default function App() {
   return (
@@ -68,7 +69,11 @@ export default function App() {
               <Route index element={<ClienteInicioPage />} />
               <Route path="reservar" element={<ReservarPage />} />
               <Route path="viagens" element={<ClienteViagensPage />} />
-              <Route path="viagens/historico" element={<ClienteHistoricoViagensPage />} />
+              <Route path="historico" element={<ClienteHistoricoViagensPage />} />
+              <Route
+                path="viagens/historico"
+                element={<Navigate to="/app/historico" replace />}
+              />
               <Route path="viagens/:id" element={<ClienteViagemDetalhePage />} />
               <Route path="notificacoes" element={<ClienteNotificacoesPage />} />
               <Route path="perfil" element={<ClientePerfilPage />} />
@@ -110,6 +115,7 @@ export default function App() {
               <Route path="categorias" element={<AdminCategoriasPage />} />
               <Route path="precos" element={<AdminPrecosPage />} />
               <Route path="configuracoes" element={<AdminConfiguracoesPage />} />
+              <Route path="perfil" element={<AdminPerfilPage />} />
             </Route>
           </Route>
 
