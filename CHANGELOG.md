@@ -6,6 +6,7 @@ Registro das mudanças do Jemani.
 
 ### Adicionado
 
+- **Sessão persistente no APK**: login fica salvo (Capacitor Preferences + perfil local) até o usuário tocar em Sair.
 - **Simular pagamento** no detalhe da reserva, no card do agendamento e na extensão Hourly: aprova a corrida sem checkout e **abre ofertas às empresas** na nuvem. Correção no celular: não esconder a viagem enquanto a conta Auth carrega; CTA full-width. Temporário para testes — em produção desligar com `VITE_ALLOW_DEV_PAYMENT=false`.
 - E-mail de oferta (admin → Gmail): mensagem HTML com botão **Revisar corrida** (sem URL crua); cole com Ctrl+V no corpo do Gmail.
 - **Preferências por conta** (idioma e tema): gravadas em `localStorage` por `sessaoId` (`preferenciasConta` / `usarPreferenciasConta`). Trocar no login do cliente não altera admin, motorista nem empresa no mesmo aparelho.
@@ -28,7 +29,7 @@ Registro das mudanças do Jemani.
 - Empresas no admin ficou só cadastro/status/frota (sem fila de ofertas).
 - Histórico do motorista lista só as **5 corridas mais recentes**; o restante fica na planilha mensal.
 - Histórico da ficha da empresa no admin removido em favor da planilha mensal.
-- APK **1.0.69**.
+- APK **1.0.70**.
 
 ## [2026-10-26]
 

@@ -3725,16 +3725,27 @@ export const useDemoStore = create<EstadoDemo>()(
       partialize: (estado): ReturnType<typeof estadoInicial> => {
         if (usarNuvemComoFonte()) {
           const base = estadoInicial()
+          // Mantém perfil (e vínculo empresa/motorista) da sessão para reabrir o app já logado.
+          const perfilSessao = estado.sessaoId
+            ? estado.perfis.filter((p) => p.id === estado.sessaoId)
+            : []
+          const empresaSessao = estado.sessaoId
+            ? estado.empresas.filter((e) => e.usuario_id === estado.sessaoId)
+            : []
+          const motoristaSessao = estado.sessaoId
+            ? estado.motoristas.filter((m) => m.usuario_id === estado.sessaoId)
+            : []
           return {
             ...base,
             sessaoId: estado.sessaoId,
             senhas: {},
+            perfis: perfilSessao,
+            empresas: empresaSessao,
+            motoristas: motoristaSessao,
             // Transacional/catalogo: só memória + Supabase (não grava no aparelho).
             viagens: [],
             pagamentos: [],
             atribuicoes: [],
-            empresas: [],
-            motoristas: [],
             veiculos: [],
             historicos: [],
             notificacoes: [],
@@ -3749,7 +3760,6 @@ export const useDemoStore = create<EstadoDemo>()(
             auditLogs: [],
             distribuicoes: [],
             veiculosExcluidos: [],
-            perfis: [],
           }
         }
         const { senhas: _senhas, ...resto } = estado

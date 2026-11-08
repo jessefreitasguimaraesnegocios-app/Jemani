@@ -31,6 +31,28 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+async function restaurarSessaoComRetry(tentativas = 6) {
+  for (let i = 0; i < tentativas; i++) {
+    const conta = await carregarContaSessaoAtual()
+    if (conta) return conta
+    if (supabase) {
+      const { data } = await supabase.auth.getSession()
+      if (data.session) {
+        const contaSessao = await carregarContaSessaoAtual()
+        if (contaSessao) return contaSessao
+      }
+      // Tenta renovar token persistido antes de desistir.
+      const refrescou = await supabase.auth.refreshSession()
+      if (!refrescou.error && refrescou.data.session) {
+        const contaRefresh = await carregarContaSessaoAtual()
+        if (contaRefresh) return contaRefresh
+      }
+    }
+    await new Promise((r) => setTimeout(r, 250 * (i + 1)))
+  }
+  return null
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const sessaoId = useDemoStore((s) => s.sessaoId)
   const perfis = useDemoStore((s) => s.perfis)
@@ -50,12 +72,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function restaurar() {
       try {
-        const conta = await carregarContaSessaoAtual()
+        const conta = await restaurarSessaoComRetry()
         if (cancelado) return
         if (conta) {
           aplicarContaNuvem(conta)
-        } else if (useDemoStore.getState().sessaoId) {
-          // Sessão só local (sem Auth) não sincroniza entre aparelhos.
+          return
+        }
+        // Só desloga se realmente não houver sessão Auth.
+        // Mantém sessaoId local enquanto a restauração ainda pode concluir via evento.
+        const { data } = await supabase!.auth.getSession()
+        if (!data.session && useDemoStore.getState().sessaoId) {
           sairStore()
         }
       } finally {
@@ -72,7 +98,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       if (!sessao?.user) return
-      if (evento === 'SIGNED_IN' || evento === 'TOKEN_REFRESHED' || evento === 'INITIAL_SESSION') {
+      if (
+        evento === 'SIGNED_IN' ||
+        evento === 'TOKEN_REFRESHED' ||
+        evento === 'INITIAL_SESSION'
+      ) {
         const conta = await carregarContaSessaoAtual()
         if (!cancelado && conta) aplicarContaNuvem(conta)
       }
