@@ -18,6 +18,10 @@ const COLUNAS_CONFIG = 'id,chave,valor,descricao,updated_at'
 const COLUNAS_EMPRESA =
   'id,usuario_id,nome_comercial,razao_social,cnpj,telefone,email,cidade,endereco_base,latitude,longitude,regioes_atendidas,categorias_ids,status,habilitada_receber,avaliacao_media,comissao_percentual,stripe_account_id,created_at,updated_at'
 
+/** Sem colunas opcionais (ex.: stripe_account_id se migration atrasar). */
+const COLUNAS_EMPRESA_BASE =
+  'id,usuario_id,nome_comercial,razao_social,cnpj,telefone,email,cidade,endereco_base,latitude,longitude,regioes_atendidas,categorias_ids,status,habilitada_receber,avaliacao_media,comissao_percentual,created_at,updated_at'
+
 /** Configurações que vivem em platform_settings (não preferência local do aparelho). */
 export const CHAVES_CONFIG_NUVEM = new Set([
   'comissao_percentual',
@@ -269,7 +273,20 @@ export async function listarEmpresasNuvem(): Promise<Empresa[]> {
   const { obterSessaoAuthValida } = await import('@/services/sessaoAuth')
   await obterSessaoAuthValida()
 
-  const { data, error } = await db.from('companies').select(COLUNAS_EMPRESA)
+  let data: unknown[] | null = null
+  let error: { message: string } | null = null
+  {
+    const completo = await db.from('companies').select(COLUNAS_EMPRESA)
+    data = completo.data
+    error = completo.error
+    // Coluna Stripe ausente no banco (migration atrasada): tenta select base.
+    if (error && /stripe_account_id/i.test(error.message)) {
+      const basico = await db.from('companies').select(COLUNAS_EMPRESA_BASE)
+      data = basico.data
+      error = basico.error
+    }
+  }
+
   const porId = new Map<string, Empresa>()
   if (error) {
     console.warn('Falha ao listar companies', error.message)
@@ -279,42 +296,46 @@ export async function listarEmpresasNuvem(): Promise<Empresa[]> {
       porId.set(empresa.id, empresa)
     }
   }
-  // Cliente não lê companies completas (RLS) — marketplace sem PII/Connect.
-  // Admin já deve ter veio completo acima; marketplace só completa lacunas.
-  if (porId.size === 0) {
-    const { data: mercado, error: erroMercado } = await db.rpc('empresas_marketplace')
-    if (erroMercado) {
-      console.warn('Falha ao listar empresas_marketplace', erroMercado.message)
-    } else if (Array.isArray(mercado)) {
-      for (const linha of mercado as Record<string, unknown>[]) {
-        const id = String(linha.id)
-        if (porId.has(id)) continue
-        porId.set(id, {
-          id,
-          usuario_id: '',
-          nome_comercial: String(linha.nome_comercial ?? ''),
-          razao_social: String(linha.nome_comercial ?? ''),
-          cnpj: '',
-          telefone: '',
-          email: '',
-          cidade: String(linha.cidade ?? ''),
-          latitude: linha.latitude != null ? Number(linha.latitude) : undefined,
-          longitude: linha.longitude != null ? Number(linha.longitude) : undefined,
-          regioes_atendidas: Array.isArray(linha.regioes_atendidas)
-            ? (linha.regioes_atendidas as string[])
-            : [],
-          categorias_ids: Array.isArray(linha.categorias_ids)
-            ? (linha.categorias_ids as string[])
-            : [],
-          status: (linha.status as Empresa['status']) ?? 'ativa',
-          habilitada_receber: Boolean(linha.habilitada_receber ?? true),
-          avaliacao_media: Number(linha.avaliacao_media ?? 5),
-          comissao_percentual: 10,
-          created_at: '',
-          updated_at: '',
-        })
-      }
+
+  // Marketplace: cliente (RLS bloqueia companies) e fallback se o select completo falhar.
+  const { data: mercado, error: erroMercado } = await db.rpc('empresas_marketplace')
+  if (erroMercado) {
+    console.warn('Falha ao listar empresas_marketplace', erroMercado.message)
+  } else if (Array.isArray(mercado)) {
+    for (const linha of mercado as Record<string, unknown>[]) {
+      const id = String(linha.id)
+      if (porId.has(id)) continue
+      porId.set(id, {
+        id,
+        usuario_id: '',
+        nome_comercial: String(linha.nome_comercial ?? ''),
+        razao_social: String(linha.nome_comercial ?? ''),
+        cnpj: '',
+        telefone: '',
+        email: '',
+        cidade: String(linha.cidade ?? ''),
+        latitude: linha.latitude != null ? Number(linha.latitude) : undefined,
+        longitude: linha.longitude != null ? Number(linha.longitude) : undefined,
+        regioes_atendidas: Array.isArray(linha.regioes_atendidas)
+          ? (linha.regioes_atendidas as string[])
+          : [],
+        categorias_ids: Array.isArray(linha.categorias_ids)
+          ? (linha.categorias_ids as string[])
+          : [],
+        status: (linha.status as Empresa['status']) ?? 'ativa',
+        habilitada_receber: Boolean(linha.habilitada_receber ?? true),
+        avaliacao_media: Number(linha.avaliacao_media ?? 5),
+        comissao_percentual: 10,
+        created_at: '',
+        updated_at: '',
+      })
     }
+  }
+
+  if (error && porId.size === 0) {
+    throw new Error(
+      `Não foi possível carregar empresas do Supabase: ${error.message}. Saia e entre de novo.`,
+    )
   }
   return [...porId.values()]
 }

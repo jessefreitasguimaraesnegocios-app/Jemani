@@ -49,8 +49,15 @@ export function AdminEmpresasPage() {
     let ativo = true
     void listarEmpresasNuvem()
       .then((lista) => {
-        if (!ativo || !lista.length) return
+        if (!ativo) return
+        if (!lista.length) {
+          setErro(
+            'Nenhuma empresa veio do Supabase. Confira a sessão (sair e entrar) ou as políticas RLS.',
+          )
+          return
+        }
         aplicarEmpresasNuvem(lista)
+        setErro('')
       })
       .catch((err) => {
         if (!ativo) return

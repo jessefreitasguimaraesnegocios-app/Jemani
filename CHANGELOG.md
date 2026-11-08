@@ -16,7 +16,8 @@ Registro das mudanças do Jemani.
 - `salvarMotorista` / `criarAvaliacao` / `solicitarExtensaoHourly` / `confirmarExtensaoHourlyPaga` persistem na nuvem com rollback se falhar.
 - Notificações para outros papéis sobem ao Postgres (não ficam só no aparelho de quem gerou).
 - Corrige admin com **Parceiras (0)** e **Sessão inválida**: JWT expirado no cache não passa mais por RLS/edge; hydrate nuvem deixa de reidratar seed de empresas.
-- APK **1.0.73**.
+- Corrige listagem admin: coluna `companies.stripe_account_id` ausente no Postgres quebrava o `select` (Parceiras 0); fallback de colunas + marketplace.
+- APK **1.0.74**.
 
 ## [2026-11-07]
 
