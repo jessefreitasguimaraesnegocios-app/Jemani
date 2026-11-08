@@ -118,18 +118,8 @@ export async function cadastrarClienteNuvem(dados: {
 }
 
 export async function entrarNuvem(email: string, senha: string) {
-  const db = cliente()
-  if (!db || !email) return false
-  const emailLimpo = email.toLowerCase()
-  const atual = await db.auth.getSession()
-  if (atual.data.session?.user.email?.toLowerCase() === emailLimpo) {
-    const refrescou = await db.auth.refreshSession()
-    if (!refrescou.error && refrescou.data.session) return true
-    return true
-  }
-  if (!senha) return false
-  const { error } = await db.auth.signInWithPassword({ email, password: senha })
-  return !error
+  const { assegurarSessaoParaEmail } = await import('@/services/sessaoAuth')
+  return assegurarSessaoParaEmail(email, senha)
 }
 
 /** Aguarda a sessão Auth persistida (WebView/APK demora a restaurar o storage). */
@@ -138,8 +128,9 @@ export async function garantirSessaoNuvem(
   senha: string,
   tentativas = 5,
 ): Promise<boolean> {
+  const { assegurarSessaoParaEmail } = await import('@/services/sessaoAuth')
   for (let i = 0; i < tentativas; i++) {
-    const ok = await entrarNuvem(email, senha)
+    const ok = await assegurarSessaoParaEmail(email, senha)
     if (ok) return true
     await new Promise((r) => setTimeout(r, 400 * (i + 1)))
   }
@@ -252,8 +243,9 @@ export async function entrarContaNuvem(email: string, senha: string) {
 export async function carregarContaSessaoAtual() {
   const db = cliente()
   if (!db) return null
-  const { data } = await db.auth.getSession()
-  const userId = data.session?.user.id
+  const { obterSessaoAuthValida } = await import('@/services/sessaoAuth')
+  const sessao = await obterSessaoAuthValida()
+  const userId = sessao?.user.id
   if (!userId) return null
   return montarContaDoUsuario(userId)
 }

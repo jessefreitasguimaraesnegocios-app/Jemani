@@ -244,11 +244,12 @@ export function SincronizarNuvem() {
 
     void (async () => {
       const senha = store().senhas[sessao.email]
+      // Sem senha em memória (não persistimos): valida/renova JWT; com senha, reentra se preciso.
       const entrou = await garantirSessaoNuvem(sessao.email, senha ?? '')
       if (!ativoRef.current) return
       if (!entrou) {
         if (usarNuvemComoFonte()) {
-          console.warn('Sincronização pausada: sem sessão Auth no Supabase')
+          console.warn('Sincronização pausada: sem sessão Auth válida no Supabase')
         }
         return
       }

@@ -9,12 +9,14 @@ Registro das mudanças do Jemani.
 - **Sync completo Supabase**: motoristas (Auth + `drivers` via edge `criar-motorista`), extensões hourly (`trip_extensions` + edge `confirmar-extensao`), avaliações (`reviews`), notificações cross-user (RPC `enviar_notificacao`).
 - Realtime em `notifications`, `reviews`, `drivers` e poll de turnos/agendamentos/extensões/avaliações no `SincronizarNuvem`.
 - Coluna `drivers.eh_categoria_shield`; `notifications.referencia_id` como text.
+- Validação de sessão Auth no servidor (`sessaoAuth`: `getUser` + refresh) antes de listar/criar empresa e chamar Edge Functions.
 
 ### Alterado
 
 - `salvarMotorista` / `criarAvaliacao` / `solicitarExtensaoHourly` / `confirmarExtensaoHourlyPaga` persistem na nuvem com rollback se falhar.
 - Notificações para outros papéis sobem ao Postgres (não ficam só no aparelho de quem gerou).
-- APK **1.0.72**.
+- Corrige admin com **Parceiras (0)** e **Sessão inválida**: JWT expirado no cache não passa mais por RLS/edge; hydrate nuvem deixa de reidratar seed de empresas.
+- APK **1.0.73**.
 
 ## [2026-11-07]
 

@@ -53,8 +53,20 @@ async function cabecalhosAuth(permitirAnon = false): Promise<Record<string, stri
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
   if (!anon) throw new Error('VITE_SUPABASE_ANON_KEY não configurada')
 
-  const sessao = supabase ? (await supabase.auth.getSession()).data.session : null
-  const token = sessao?.access_token
+  let token: string | undefined
+  if (supabase) {
+    try {
+      const { exigirSessaoAuthValida } = await import('@/services/sessaoAuth')
+      const sessao = await exigirSessaoAuthValida()
+      token = sessao.access_token
+    } catch {
+      if (!permitirAnon) {
+        throw new Error('Faça login novamente para continuar o pagamento.')
+      }
+      const { data } = await supabase.auth.getSession()
+      token = data.session?.access_token
+    }
+  }
   if (!token && !permitirAnon) {
     throw new Error('Faça login novamente para continuar o pagamento.')
   }

@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { exigirSessaoAuthValida } from '@/services/sessaoAuth'
 import type { Empresa } from '@/types'
 
 export interface DadosNovaEmpresa {
@@ -28,9 +28,11 @@ function clienteFunctions() {
 
 export async function criarEmpresaNoSupabase(dados: DadosNovaEmpresa): Promise<Empresa> {
   const { base, anon } = clienteFunctions()
-  const sessao = supabase ? (await supabase.auth.getSession()).data.session : null
-  if (!sessao?.access_token) {
-    throw new Error('Faça login como admin para cadastrar empresa.')
+  let sessao
+  try {
+    sessao = await exigirSessaoAuthValida()
+  } catch {
+    throw new Error('Sessão expirada. Saia e entre de novo como admin para cadastrar empresa.')
   }
   const resp = await fetch(`${base}/functions/v1/criar-empresa`, {
     method: 'POST',
@@ -43,7 +45,11 @@ export async function criarEmpresaNoSupabase(dados: DadosNovaEmpresa): Promise<E
   })
   const data = (await resp.json()) as { empresa?: Empresa; erro?: string }
   if (!resp.ok || !data.empresa) {
-    throw new Error(data.erro ?? `Falha ao salvar empresa no Supabase (${resp.status})`)
+    const msg = data.erro ?? `Falha ao salvar empresa no Supabase (${resp.status})`
+    if (/sess[aã]o inválida/i.test(msg) || resp.status === 401) {
+      throw new Error('Sessão expirada. Saia e entre de novo como admin para cadastrar empresa.')
+    }
+    throw new Error(msg)
   }
   return {
     ...data.empresa,

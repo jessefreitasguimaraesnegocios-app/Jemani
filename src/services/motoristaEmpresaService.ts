@@ -27,9 +27,12 @@ export async function criarMotoristaNoSupabase(
   dados: DadosNovoMotorista,
 ): Promise<Motorista> {
   const { base, anon } = clienteFunctions()
-  const sessao = supabase ? (await supabase.auth.getSession()).data.session : null
-  if (!sessao?.access_token) {
-    throw new Error('Faça login como empresa ou admin para cadastrar motorista.')
+  const { exigirSessaoAuthValida } = await import('@/services/sessaoAuth')
+  let sessao
+  try {
+    sessao = await exigirSessaoAuthValida()
+  } catch {
+    throw new Error('Sessão expirada. Saia e entre de novo para cadastrar motorista.')
   }
   const resp = await fetch(`${base}/functions/v1/criar-motorista`, {
     method: 'POST',

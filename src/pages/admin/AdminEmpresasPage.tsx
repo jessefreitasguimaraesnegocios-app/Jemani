@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { FormularioEditarEmpresa } from '@/components/FormularioEditarEmpresa'
 import { FormularioNovaEmpresa } from '@/components/FormularioNovaEmpresa'
@@ -6,6 +6,7 @@ import { usarIdioma } from '@/i18n/usarIdioma'
 import { AdminCatalogoVeiculos } from '@/pages/admin/AdminCatalogoVeiculos'
 import { AdminFrotaVeiculos } from '@/pages/admin/AdminFrotaVeiculos'
 import { excluirEmpresaAdmin } from '@/services/adminUsuarios'
+import { listarEmpresasNuvem } from '@/services/nuvemCatalogo'
 import { useDemoStore } from '@/store/demoStore'
 import './AdminEmpresasPage.css'
 
@@ -42,6 +43,23 @@ export function AdminEmpresasPage() {
     () => empresas.find((e) => e.id === empresaAbertaId) ?? null,
     [empresas, empresaAbertaId],
   )
+  const aplicarEmpresasNuvem = useDemoStore((s) => s.aplicarEmpresasNuvem)
+
+  useEffect(() => {
+    let ativo = true
+    void listarEmpresasNuvem()
+      .then((lista) => {
+        if (!ativo || !lista.length) return
+        aplicarEmpresasNuvem(lista)
+      })
+      .catch((err) => {
+        if (!ativo) return
+        setErro(err instanceof Error ? err.message : t('admin.empresas.erroExcluir'))
+      })
+    return () => {
+      ativo = false
+    }
+  }, [aplicarEmpresasNuvem, t])
 
   async function confirmarExclusaoEmpresa() {
     if (!empresaAberta || excluindo) return

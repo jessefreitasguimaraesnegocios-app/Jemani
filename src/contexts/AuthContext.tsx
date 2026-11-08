@@ -10,6 +10,7 @@ import { useDemoStore } from '@/store/demoStore'
 import { modoDemoAtivo, usarNuvemComoFonte } from '@/lib/nuvemAtiva'
 import { supabase } from '@/lib/supabase'
 import { carregarContaSessaoAtual, sairNuvem } from '@/services/nuvemCorrida'
+import { obterSessaoAuthValida } from '@/services/sessaoAuth'
 import type { Perfil, TipoUsuario } from '@/types'
 import { SENHA_DEMO } from '@/data/seed'
 
@@ -33,20 +34,11 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 async function restaurarSessaoComRetry(tentativas = 6) {
   for (let i = 0; i < tentativas; i++) {
-    const conta = await carregarContaSessaoAtual()
-    if (conta) return conta
-    if (supabase) {
-      const { data } = await supabase.auth.getSession()
-      if (data.session) {
-        const contaSessao = await carregarContaSessaoAtual()
-        if (contaSessao) return contaSessao
-      }
-      // Tenta renovar token persistido antes de desistir.
-      const refrescou = await supabase.auth.refreshSession()
-      if (!refrescou.error && refrescou.data.session) {
-        const contaRefresh = await carregarContaSessaoAtual()
-        if (contaRefresh) return contaRefresh
-      }
+    // Valida JWT no servidor / renova refresh — não confia em getSession() stale.
+    const sessao = await obterSessaoAuthValida()
+    if (sessao) {
+      const conta = await carregarContaSessaoAtual()
+      if (conta) return conta
     }
     await new Promise((r) => setTimeout(r, 250 * (i + 1)))
   }
@@ -78,11 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           aplicarContaNuvem(conta)
           return
         }
-        // Só desloga se realmente não houver sessão Auth.
-        // Mantém sessaoId local enquanto a restauração ainda pode concluir via evento.
-        const { data } = await supabase!.auth.getSession()
-        if (!data.session && useDemoStore.getState().sessaoId) {
+        // Sem JWT válido no servidor: limpa login local para não operar com RLS vazio.
+        const valida = await obterSessaoAuthValida()
+        if (!valida && useDemoStore.getState().sessaoId) {
           sairStore()
+          await sairNuvem()
         }
       } finally {
         if (!cancelado) setCarregando(false)

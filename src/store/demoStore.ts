@@ -3986,6 +3986,10 @@ export const useDemoStore = create<EstadoDemo>()(
       merge: (persistido, atual) => {
         const bruto = persistido as {
           senhas?: Record<string, string>
+          sessaoId?: string | null
+          perfis?: Perfil[]
+          empresas?: Empresa[]
+          motoristas?: Motorista[]
           turnos?: TurnoMotorista[]
           mensagensEmpresa?: MensagemEmpresa[]
           agendamentosVeiculo?: AgendamentoVeiculo[]
@@ -4000,6 +4004,42 @@ export const useDemoStore = create<EstadoDemo>()(
           regrasPreco?: RegraPreco[]
         }
         const { senhas: _senhas, ...semSenha } = bruto ?? {}
+
+        // Modo nuvem: não reidrata seed do estadoInicial (empresas “fantasma” no admin).
+        if (usarNuvemComoFonte()) {
+          const perfilSessao = Array.isArray(bruto?.perfis) ? bruto.perfis : []
+          const empresaSessao = Array.isArray(bruto?.empresas) ? bruto.empresas : []
+          const motoristaSessao = Array.isArray(bruto?.motoristas) ? bruto.motoristas : []
+          return {
+            ...atual,
+            sessaoId: bruto?.sessaoId ?? null,
+            senhas: {},
+            perfis: perfilSessao,
+            empresas: empresaSessao,
+            motoristas: motoristaSessao,
+            viagens: [],
+            pagamentos: [],
+            atribuicoes: [],
+            veiculos: [],
+            historicos: [],
+            notificacoes: [],
+            mensagensEmpresa: [],
+            turnos: [],
+            agendamentosVeiculo: [],
+            comissoes: [],
+            extensoesViagem: [],
+            avisosHourly: [],
+            convitesOferta: [],
+            avaliacoes: [],
+            auditLogs: [],
+            distribuicoes: [],
+            veiculosExcluidos: [],
+            fotosCatalogoVeiculo: fundirCatalogoComFrota(
+              Array.isArray(bruto?.fotosCatalogoVeiculo) ? bruto.fotosCatalogoVeiculo : [],
+            ),
+          }
+        }
+
         const base = completarCatalogo({
           ...atual,
           ...semSenha,
