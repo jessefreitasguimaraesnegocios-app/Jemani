@@ -1351,8 +1351,14 @@ export const useDemoStore = create<EstadoDemo>()(
           platformFee: viagem.valor_plataforma,
           companyAmount: viagem.valor_empresa,
         })
-        // Preferência: Edge Function com service role. Se falhar, ainda grava via sync da viagem.
-        await marcarPagamentoSimulado(viagem.id).catch(() => undefined)
+
+        // Servidor (service role): marca pago + cria ofertas para as empresas elegíveis.
+        if (usarNuvemComoFonte()) {
+          await gravarViagemNuvem(viagem)
+          await marcarPagamentoSimulado(viagem.id)
+        } else {
+          await marcarPagamentoSimulado(viagem.id).catch(() => undefined)
+        }
 
         const agora = agoraIso()
         const viagemPaga: Viagem = {
@@ -1391,8 +1397,17 @@ export const useDemoStore = create<EstadoDemo>()(
         })
 
         registrarHistorico(set, get, viagemId, 'pending_payment', 'paid', usuarioId, 'DEV simulado')
-        void gravarViagemNuvem(viagemPaga)
-        return get().iniciarDistribuicaoAposPagamento(viagemId)
+        const distribuida = get().iniciarDistribuicaoAposPagamento(viagemId)
+        // Completa ofertas com empresas reais da nuvem e garante sync local↔nuvem.
+        await get().completarOfertasComNuvem(viagemId)
+        const ofertas = get().atribuicoes.filter(
+          (a) => a.viagem_id === viagemId && a.status === 'oferecida',
+        )
+        const final =
+          get().viagens.find((v) => v.id === viagemId) ?? distribuida
+        await gravarViagemNuvem(final)
+        if (ofertas.length > 0) await gravarOfertasNuvem(ofertas)
+        return get().viagens.find((v) => v.id === viagemId) ?? final
       },
 
       confirmarPagamentoStripe: async (viagemId, usuarioId, sessionId) => {

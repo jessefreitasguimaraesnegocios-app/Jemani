@@ -259,7 +259,7 @@ export function SincronizarNuvem() {
           const temOferta = store().atribuicoes.some(
             (oferta) => oferta.viagem_id === viagem.id && oferta.status === 'oferecida',
           )
-          if (!temOferta && sessao.tipo === 'admin') {
+          if (!temOferta) {
             try {
               store().iniciarDistribuicaoAposPagamento(viagem.id)
             } catch (err) {
@@ -322,6 +322,16 @@ export function SincronizarNuvem() {
       if (usarNuvemComoFonte() && sessao.tipo === 'cliente') {
         store().garantirOfertasAbertas()
         store().limparDuplicatasNuvem()
+        const idsLocais = new Set(
+          store()
+            .viagens.filter((v) => v.cliente_id === sessao.id)
+            .map((item) => item.id),
+        )
+        await gravarOfertasNuvem(
+          store().atribuicoes.filter(
+            (oferta) => idsLocais.has(oferta.viagem_id) && ofertaLocalPodeSubir(oferta, ofertas),
+          ),
+        )
       }
 
       if (!ativoRef.current) return
