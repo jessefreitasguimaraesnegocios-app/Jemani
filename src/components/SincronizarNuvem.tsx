@@ -39,6 +39,14 @@ import {
   listarNotificacoesNuvem,
 } from '@/services/nuvemNotificacoes'
 import {
+  assinarExtensoesNuvem,
+  listarExtensoesNuvem,
+} from '@/services/nuvemExtensoes'
+import {
+  assinarAvaliacoesNuvem,
+  listarAvaliacoesNuvem,
+} from '@/services/nuvemAvaliacoes'
+import {
   buscarClientesNuvem,
   buscarMotoristasNuvem,
   buscarPerfisNuvem,
@@ -74,6 +82,8 @@ export function SincronizarNuvem() {
     let canalCorrida: RealtimeChannel | null = null
     let canalOperacao: RealtimeChannel | null = null
     let canalNotificacoes: RealtimeChannel | null = null
+    let canalExtensoes: RealtimeChannel | null = null
+    let canalAvaliacoes: RealtimeChannel | null = null
 
     const store = () => useDemoStore.getState()
 
@@ -116,7 +126,7 @@ export function SincronizarNuvem() {
         ])
         if (!ativoRef.current) return
         store().substituirClientesNuvem(clientes)
-        store().aplicarMotoristasNuvem(motoristas)
+        store().aplicarMotoristasNuvem(motoristas, { substituirTodos: true })
         store().substituirCatalogoFotosVeiculo(catalogo)
         store().aplicarVeiculosNuvem(frotaAdmin)
         return
@@ -130,7 +140,10 @@ export function SincronizarNuvem() {
           listarVeiculosNuvem(),
         ])
         if (!ativoRef.current) return
-        store().aplicarMotoristasNuvem(motoristas)
+        store().aplicarMotoristasNuvem(
+          motoristas,
+          empresa ? { substituirEmpresaId: empresa.id } : undefined,
+        )
         store().aplicarPerfisNuvem(clientes)
         store().substituirCatalogoFotosVeiculo(catalogo)
         store().aplicarVeiculosNuvem(frotaEmpresa)
@@ -179,11 +192,25 @@ export function SincronizarNuvem() {
             ? ultimaViagemSyncRef.current
             : undefined
         const puxarChat = sessao.tipo === 'motorista' || sessao.tipo === 'empresa'
-        const [viagensAgora, ofertasAgora, mensagensAgora] = await Promise.all([
+        const [
+          viagensAgora,
+          ofertasAgora,
+          mensagensAgora,
+          turnosAgora,
+          agendamentosAgora,
+          extensoesAgora,
+          avaliacoesAgora,
+          alertasAgora,
+        ] = await Promise.all([
           listarViagensNuvem(desde ? { atualizadoDesde: desde } : undefined),
           // Ofertas: lista completa (tabela pequena via RLS); evita perder mudança de status.
           listarOfertasNuvem(),
           puxarChat ? listarMensagensNuvem() : Promise.resolve([]),
+          listarTurnosNuvem(),
+          listarAgendamentosNuvem(),
+          listarExtensoesNuvem(),
+          listarAvaliacoesNuvem(),
+          listarNotificacoesNuvem(),
         ])
         if (!ativoRef.current) return
         if (usarNuvemComoFonte() && opcoes.completo) {
@@ -195,6 +222,11 @@ export function SincronizarNuvem() {
         }
         // Chat: sem silêncio — se o Realtime falhar, o motorista ainda recebe alerta de mensagem nova.
         for (const mensagem of mensagensAgora) store().aplicarMensagemNuvem(mensagem, false)
+        for (const turno of turnosAgora) store().aplicarTurnoNuvem(turno)
+        for (const item of agendamentosAgora) store().aplicarAgendamentoNuvem(item, true)
+        for (const ext of extensoesAgora) store().aplicarExtensaoNuvem(ext)
+        for (const av of avaliacoesAgora) store().aplicarAvaliacaoNuvem(av)
+        for (const alerta of alertasAgora) store().aplicarNotificacaoNuvem(alerta)
         // Margem de 2s evita perder update entre o fetch e o marcador.
         ultimaViagemSyncRef.current = new Date(Date.now() - 2000).toISOString()
         // Preços/configs da plataforma: sempre puxar no ciclo (PC e celular precisam da mesma fonte).
@@ -220,17 +252,29 @@ export function SincronizarNuvem() {
         }
         return
       }
-      const [viagens, ofertas, mensagens, turnos, agendamentos, historicos, frota, alertas] =
-        await Promise.all([
-          listarViagensNuvem(),
-          listarOfertasNuvem(),
-          listarMensagensNuvem(),
-          listarTurnosNuvem(),
-          listarAgendamentosNuvem(),
-          listarHistoricosNuvem(),
-          listarVeiculosNuvem(),
-          listarNotificacoesNuvem(),
-        ])
+      const [
+        viagens,
+        ofertas,
+        mensagens,
+        turnos,
+        agendamentos,
+        historicos,
+        frota,
+        alertas,
+        extensoes,
+        avaliacoes,
+      ] = await Promise.all([
+        listarViagensNuvem(),
+        listarOfertasNuvem(),
+        listarMensagensNuvem(),
+        listarTurnosNuvem(),
+        listarAgendamentosNuvem(),
+        listarHistoricosNuvem(),
+        listarVeiculosNuvem(),
+        listarNotificacoesNuvem(),
+        listarExtensoesNuvem(),
+        listarAvaliacoesNuvem(),
+      ])
       if (!ativoRef.current) return
       if (usarNuvemComoFonte()) {
         store().substituirViagensNuvem(viagens)
@@ -244,6 +288,8 @@ export function SincronizarNuvem() {
       for (const item of agendamentos) store().aplicarAgendamentoNuvem(item, true)
       for (const item of historicos) store().aplicarHistoricoNuvem(item)
       for (const alerta of alertas) store().aplicarNotificacaoNuvem(alerta)
+      for (const ext of extensoes) store().aplicarExtensaoNuvem(ext)
+      for (const av of avaliacoes) store().aplicarAvaliacaoNuvem(av)
       store().aplicarVeiculosNuvem(frota)
       await puxarCatalogoPlataforma()
       if (!ativoRef.current) return
@@ -355,6 +401,15 @@ export function SincronizarNuvem() {
       canalNotificacoes = assinarNotificacoesNuvem((alerta) => {
         if (alerta.usuario_id === sessao.id) store().aplicarNotificacaoNuvem(alerta)
       })
+      canalExtensoes = assinarExtensoesNuvem((ext) => {
+        store().aplicarExtensaoNuvem(ext)
+        if (ext.status === 'pago') {
+          void buscarViagemNuvem(ext.viagem_id).then((viagem) => {
+            if (ativoRef.current && viagem) store().aplicarViagemNuvem(viagem, false)
+          })
+        }
+      })
+      canalAvaliacoes = assinarAvaliacoesNuvem((av) => store().aplicarAvaliacaoNuvem(av))
 
       aoVoltar = () => {
         if (document.visibilityState === 'visible') {
@@ -441,6 +496,8 @@ export function SincronizarNuvem() {
       void canalCorrida?.unsubscribe()
       void canalOperacao?.unsubscribe()
       void canalNotificacoes?.unsubscribe()
+      void canalExtensoes?.unsubscribe()
+      void canalAvaliacoes?.unsubscribe()
     }
   }, [usuario?.id, usuario?.email])
 

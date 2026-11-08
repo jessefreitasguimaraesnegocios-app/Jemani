@@ -20,7 +20,7 @@ A plataforma capta clientes, distribui solicitações para empresas parceiras e 
 ### Entre aparelhos (site + APK)
 
 - Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens, notificações e comissões.
-- APK atual: **1.0.57** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
+- APK atual: **1.0.72** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
 
 Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
 

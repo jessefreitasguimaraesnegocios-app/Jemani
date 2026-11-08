@@ -63,7 +63,7 @@ export function HourlyResumo({
     setMsg('')
     try {
       const chave = `ui-${viagem.id}-${minutos}-${Math.floor(Date.now() / 5000)}`
-      const ext = solicitarExtensaoHourly(viagem.id, minutos, sessaoId, chave)
+      const ext = await solicitarExtensaoHourly(viagem.id, minutos, sessaoId, chave)
 
       if (permitirSimulacaoPagamentoDev()) {
         const confirmada = await confirmarExtensaoHourlyPaga(ext.id, sessaoId, {

@@ -257,7 +257,7 @@ export function ClienteViagemDetalhePage() {
   function handleAvaliar(e: FormEvent) {
     e.preventDefault()
     if (!usuario || !viagem?.empresa_id) return
-    criarAvaliacao({
+    void criarAvaliacao({
       viagem_id: viagem.id,
       cliente_id: usuario.id,
       empresa_id: viagem.empresa_id,
@@ -267,7 +267,10 @@ export function ClienteViagemDetalhePage() {
       nota_servico: notaServico,
       comentario: comentario || undefined,
     })
-    setMsg('Avaliação registrada. Obrigado!')
+      .then(() => setMsg('Avaliação registrada. Obrigado!'))
+      .catch((err) => {
+        setMsg(err instanceof Error ? err.message : 'Não foi possível salvar a avaliação.')
+      })
   }
 
   return (

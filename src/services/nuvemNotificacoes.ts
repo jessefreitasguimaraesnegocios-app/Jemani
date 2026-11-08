@@ -60,10 +60,29 @@ export async function gravarNotificacaoNuvem(item: Notificacao) {
   if (!db) return false
   const sessao = await db.auth.getSession()
   const uid = sessao.data.session?.user.id
-  if (!uid || uid !== item.usuario_id) return false
-  const { error } = await db.from('notifications').upsert(paraLinha(item), { onConflict: 'id' })
+  if (!uid) return false
+
+  // Própria notificação: upsert direto (RLS own).
+  if (uid === item.usuario_id) {
+    const { error } = await db.from('notifications').upsert(paraLinha(item), { onConflict: 'id' })
+    if (error) {
+      console.warn('Falha ao gravar notificação na nuvem', error.message)
+      return false
+    }
+    return true
+  }
+
+  // Outro usuário (empresa/motorista/admin): RPC security definer.
+  const { error } = await db.rpc('enviar_notificacao', {
+    p_usuario_id: item.usuario_id,
+    p_titulo: item.titulo,
+    p_mensagem: item.mensagem,
+    p_tipo: item.tipo,
+    p_referencia_id: item.referencia_id ?? null,
+    p_id: item.id,
+  })
   if (error) {
-    console.warn('Falha ao gravar notificação na nuvem', error.message)
+    console.warn('Falha ao enviar notificação na nuvem', error.message)
     return false
   }
   return true

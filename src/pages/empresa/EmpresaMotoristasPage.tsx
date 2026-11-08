@@ -109,11 +109,11 @@ export function EmpresaMotoristasPage() {
 
   if (!empresa) return null
 
-  function enviar() {
+  async function enviar() {
     setErro('')
     setMsg('')
     try {
-      salvarMotorista({
+      await salvarMotorista({
         empresa_id: empresa!.id,
         nome: nome.trim(),
         email: email.trim(),
@@ -141,9 +141,11 @@ export function EmpresaMotoristasPage() {
   function alternarShield(id: string, atual: boolean) {
     const motorista = motoristas.find((m) => m.id === id)
     if (!motorista) return
-    salvarMotorista({
+    void salvarMotorista({
       ...motorista,
       eh_categoria_shield: !atual,
+    }).catch((err) => {
+      setErro(err instanceof Error ? err.message : t('cadastrar.falha'))
     })
   }
 
@@ -161,7 +163,7 @@ export function EmpresaMotoristasPage() {
     setEnviandoFoto(true)
     try {
       const url = await enviarFotoMotorista(motoristaAberto.id, arquivo)
-      salvarMotorista({
+      await salvarMotorista({
         ...motoristaAberto,
         foto_url: url,
       })
@@ -181,7 +183,7 @@ export function EmpresaMotoristasPage() {
     setEnviandoFoto(true)
     try {
       await removerFotoMotorista(motoristaAberto.id)
-      salvarMotorista({
+      await salvarMotorista({
         ...motoristaAberto,
         foto_url: undefined,
       })

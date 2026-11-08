@@ -2,6 +2,20 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-11-08]
+
+### Adicionado
+
+- **Sync completo Supabase**: motoristas (Auth + `drivers` via edge `criar-motorista`), extensões hourly (`trip_extensions` + edge `confirmar-extensao`), avaliações (`reviews`), notificações cross-user (RPC `enviar_notificacao`).
+- Realtime em `notifications`, `reviews`, `drivers` e poll de turnos/agendamentos/extensões/avaliações no `SincronizarNuvem`.
+- Coluna `drivers.eh_categoria_shield`; `notifications.referencia_id` como text.
+
+### Alterado
+
+- `salvarMotorista` / `criarAvaliacao` / `solicitarExtensaoHourly` / `confirmarExtensaoHourlyPaga` persistem na nuvem com rollback se falhar.
+- Notificações para outros papéis sobem ao Postgres (não ficam só no aparelho de quem gerou).
+- APK **1.0.72**.
+
 ## [2026-11-07]
 
 ### Adicionado

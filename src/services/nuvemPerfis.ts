@@ -34,6 +34,7 @@ function motoristaDaLinha(linha: Motorista): Motorista {
     experiencia_anos: Number(linha.experiencia_anos ?? 0),
     disponivel: linha.disponivel ?? true,
     avaliacao_media: Number(linha.avaliacao_media ?? 5),
+    eh_categoria_shield: Boolean(linha.eh_categoria_shield),
     foto_url: linha.foto_url ?? undefined,
   }
 }

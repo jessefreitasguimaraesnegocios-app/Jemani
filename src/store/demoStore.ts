@@ -32,6 +32,7 @@ import {
   gravarOfertasNuvem,
   listarEmpresasParaDistribuicaoNuvem,
   sairNuvem,
+  buscarViagemNuvem,
   gravarPosicaoNuvem,
   gravarViagemNuvem,
   gravarViagensNuvem,
@@ -59,6 +60,15 @@ import {
   gravarNotificacaoNuvem,
   marcarNotificacaoLidaNuvem,
 } from '@/services/nuvemNotificacoes'
+import {
+  confirmarExtensaoNaNuvem,
+  gravarExtensaoNuvem,
+} from '@/services/nuvemExtensoes'
+import { gravarAvaliacaoNuvem } from '@/services/nuvemAvaliacoes'
+import {
+  atualizarMotoristaNuvem,
+  criarMotoristaNoSupabase,
+} from '@/services/motoristaEmpresaService'
 import {
   apagarAgendamentoNuvem,
   gravarAgendamentoNuvem,
@@ -237,13 +247,14 @@ interface EstadoDemo {
     minutos: number,
     clienteId: string,
     idempotencyKey?: string,
-  ) => ExtensaoViagem
+  ) => Promise<ExtensaoViagem>
   confirmarExtensaoHourlyPaga: (
     extensaoId: string,
     usuarioId: string,
     opcoes?: { provider?: Pagamento['provider']; sessionId?: string },
   ) => Promise<ExtensaoViagem>
   aplicarExtensaoNuvem: (ext: ExtensaoViagem) => void
+  aplicarAvaliacaoNuvem: (item: Avaliacao) => void
   verificarAvisosHourly: (agora?: Date) => void
   adicionarParadaHourly: (viagemId: string, endereco: EnderecoLocal) => ParadaHourly
   marcarParadaHourlyChegou: (viagemId: string, paradaId: string) => void
@@ -282,7 +293,10 @@ interface EstadoDemo {
   substituirClientesNuvem: (clientes: Perfil[]) => void
   removerUsuarioLocal: (usuarioId: string) => void
   removerEmpresaLocal: (empresaId: string) => void
-  aplicarMotoristasNuvem: (motoristas: Motorista[]) => void
+  aplicarMotoristasNuvem: (
+    motoristas: Motorista[],
+    opcoes?: { substituirTodos?: boolean; substituirEmpresaId?: string },
+  ) => void
   substituirCatalogoFotosVeiculo: (fotos: FotoCatalogoVeiculo[]) => void
   adicionarFotoCatalogoVeiculo: (foto: FotoCatalogoVeiculo) => void
   removerFotoCatalogoVeiculoLocal: (id: string) => void
@@ -295,7 +309,7 @@ interface EstadoDemo {
   solicitarFinalizacao: (viagemId: string) => { ok: boolean; mensagem: string }
   confirmarFinalizacao: (viagemId: string, usuarioId: string, confirmado: boolean) => Viagem
   cancelarViagem: (viagemId: string, usuarioId: string, motivo: string) => Viagem
-  criarAvaliacao: (dados: Omit<Avaliacao, 'id' | 'created_at'>) => Avaliacao
+  criarAvaliacao: (dados: Omit<Avaliacao, 'id' | 'created_at'>) => Promise<Avaliacao>
   marcarNotificacaoLida: (id: string) => void
   /** Remove alertas com mais de 24h se o usuário não estiver em corrida ativa. */
   limparNotificacoesExpiradas: (usuarioId: string) => void
@@ -315,7 +329,7 @@ interface EstadoDemo {
       email?: string
       senha?: string
     },
-  ) => Motorista
+  ) => Promise<Motorista>
   salvarVeiculo: (
     dados: Partial<Veiculo> & { empresa_id: string; marca: string; modelo: string; categoria_id: string },
   ) => Promise<Veiculo>
@@ -502,13 +516,12 @@ function notificar(
     created_at: agoraIso(),
   }
   set(() => ({ notificacoes: [n, ...get().notificacoes] }))
-  if (get().sessaoId === usuarioId) {
-    if (!silencioso) {
-      dispararFeedbackAlerta(get().configuracoes, tipo)
-      emitirAvisoSistema(titulo, mensagem)
-    }
-    void gravarNotificacaoNuvem(n)
+  if (get().sessaoId === usuarioId && !silencioso) {
+    dispararFeedbackAlerta(get().configuracoes, tipo)
+    emitirAvisoSistema(titulo, mensagem)
   }
+  // Sempre sobe para o Supabase (próprio usuário ou RPC cross-user).
+  void gravarNotificacaoNuvem(n)
 }
 
 function registrarHistorico(
@@ -925,7 +938,7 @@ export const useDemoStore = create<EstadoDemo>()(
         return viagem
       },
 
-      solicitarExtensaoHourly: (viagemId, minutos, clienteId, idempotencyKey) => {
+      solicitarExtensaoHourly: async (viagemId, minutos, clienteId, idempotencyKey) => {
         const state = get()
         const viagem = state.viagens.find((v) => v.id === viagemId)
         if (!viagem || !ehHourly(viagem)) throw new Error('Reserva hourly não encontrada.')
@@ -986,6 +999,25 @@ export const useDemoStore = create<EstadoDemo>()(
           created_at: agoraIso(),
         }
         set({ extensoesViagem: [ext, ...state.extensoesViagem] })
+        if (usarNuvemComoFonte()) {
+          try {
+            const remota = await gravarExtensaoNuvem(ext)
+            set({
+              extensoesViagem: get().extensoesViagem.map((e) =>
+                e.id === ext.id ? remota : e,
+              ),
+            })
+            return remota
+          } catch (err) {
+            set({
+              extensoesViagem: get().extensoesViagem.filter((e) => e.id !== ext.id),
+            })
+            throw err instanceof Error
+              ? err
+              : new Error('Não foi possível salvar a extensão no Supabase.')
+          }
+        }
+        void gravarExtensaoNuvem(ext).catch(() => undefined)
         return ext
       },
 
@@ -1002,6 +1034,49 @@ export const useDemoStore = create<EstadoDemo>()(
         if (!simulando && (opcoes?.provider !== 'stripe' || !opcoes.sessionId)) {
           throw new Error('Extensão só confirma após pagamento.')
         }
+
+        if (usarNuvemComoFonte()) {
+          if (!simulando) {
+            const sessao = await confirmarSessaoCheckoutStripe(opcoes!.sessionId!, viagem.id)
+            if (sessao.status !== 'pago') {
+              throw new Error('Pagamento Stripe da extensão não confirmado.')
+            }
+          }
+          const resultado = await confirmarExtensaoNaNuvem({
+            extensaoId,
+            provider: simulando ? 'dev_simulado' : 'stripe',
+            sessionId: opcoes?.sessionId,
+          })
+          const confirmada = resultado.extensao
+          get().aplicarExtensaoNuvem(confirmada)
+          const remota = await buscarViagemNuvem(viagem.id)
+          if (remota) get().aplicarViagemNuvem(remota, false)
+          const texto = formatarExtensaoConfirmada(confirmada)
+          notificar(set, get, viagem.cliente_id, 'RESERVATION EXTENDED', texto, 'status', confirmada.id)
+          if (viagem.motorista_id) {
+            const motorista = get().motoristas.find((m) => m.id === viagem.motorista_id)
+            if (motorista?.usuario_id) {
+              notificar(
+                set,
+                get,
+                motorista.usuario_id,
+                'RESERVATION EXTENDED',
+                texto,
+                'status',
+                confirmada.id,
+              )
+            }
+          }
+          const empresa = get().empresas.find((e) => e.id === viagem.empresa_id)
+          if (empresa?.usuario_id) {
+            notificar(set, get, empresa.usuario_id, 'RESERVATION EXTENDED', texto, 'status', confirmada.id)
+          }
+          for (const admin of get().perfis.filter((p) => p.tipo === 'admin' && p.ativo)) {
+            notificar(set, get, admin.id, 'Extensão hourly confirmada', texto, 'sistema', confirmada.id)
+          }
+          return confirmada
+        }
+
         let paymentId = `dev_ext_${extensaoId.slice(0, 8)}_${Date.now()}`
         let sessionIdStripe: string | undefined
         if (!simulando) {
@@ -1139,6 +1214,19 @@ export const useDemoStore = create<EstadoDemo>()(
             )
           }
         }
+      },
+
+      aplicarAvaliacaoNuvem: (item) => {
+        const lista = get().avaliacoes
+        if (lista.some((a) => a.id === item.id || a.viagem_id === item.viagem_id)) {
+          set({
+            avaliacoes: lista.map((a) =>
+              a.id === item.id || a.viagem_id === item.viagem_id ? { ...a, ...item } : a,
+            ),
+          })
+          return
+        }
+        set({ avaliacoes: [item, ...lista] })
       },
 
       verificarAvisosHourly: (agora = new Date()) => {
@@ -2714,13 +2802,30 @@ export const useDemoStore = create<EstadoDemo>()(
         return atualizada
       },
 
-      criarAvaliacao: (dados) => {
+      criarAvaliacao: async (dados) => {
         const avaliacao: Avaliacao = {
           ...dados,
           id: gerarId(),
           created_at: agoraIso(),
         }
         set((s) => ({ avaliacoes: [avaliacao, ...s.avaliacoes] }))
+        if (usarNuvemComoFonte()) {
+          try {
+            const remota = await gravarAvaliacaoNuvem(avaliacao)
+            set((s) => ({
+              avaliacoes: s.avaliacoes.map((a) => (a.id === avaliacao.id ? remota : a)),
+            }))
+            return remota
+          } catch (err) {
+            set((s) => ({
+              avaliacoes: s.avaliacoes.filter((a) => a.id !== avaliacao.id),
+            }))
+            throw err instanceof Error
+              ? err
+              : new Error('Não foi possível salvar a avaliação no Supabase.')
+          }
+        }
+        void gravarAvaliacaoNuvem(avaliacao).catch(() => undefined)
         return avaliacao
       },
 
@@ -2924,7 +3029,7 @@ export const useDemoStore = create<EstadoDemo>()(
         return empresaNova
       },
 
-      salvarMotorista: (dados) => {
+      salvarMotorista: async (dados) => {
         const agora = agoraIso()
         if (dados.id) {
           const atual = get().motoristas.find((m) => m.id === dados.id)!
@@ -2935,6 +3040,23 @@ export const useDemoStore = create<EstadoDemo>()(
           set((s) => ({
             motoristas: s.motoristas.map((m) => (m.id === dados.id ? atualizada : m)),
           }))
+          if (usarNuvemComoFonte()) {
+            try {
+              const remota = await atualizarMotoristaNuvem(atualizada)
+              set((s) => ({
+                motoristas: s.motoristas.map((m) => (m.id === remota.id ? remota : m)),
+              }))
+              return remota
+            } catch (err) {
+              set((s) => ({
+                motoristas: s.motoristas.map((m) => (m.id === dados.id ? atual : m)),
+              }))
+              throw err instanceof Error
+                ? err
+                : new Error('Não foi possível atualizar o motorista no Supabase.')
+            }
+          }
+          void atualizarMotoristaNuvem(atualizada).catch(() => undefined)
           return atualizada
         }
 
@@ -2948,6 +3070,39 @@ export const useDemoStore = create<EstadoDemo>()(
         const state = get()
         if (state.perfis.some((p) => p.email.toLowerCase() === email)) {
           throw new Error('E-mail já cadastrado')
+        }
+
+        if (usarNuvemComoFonte()) {
+          const remoto = await criarMotoristaNoSupabase({
+            empresa_id: dados.empresa_id,
+            nome: dados.nome,
+            email,
+            senha,
+            telefone: dados.telefone,
+            cnh: dados.cnh,
+            categoria_cnh: dados.categoria_cnh ?? 'B',
+            experiencia_anos: dados.experiencia_anos ?? 0,
+            eh_categoria_shield: Boolean(dados.eh_categoria_shield),
+            foto_url: dados.foto_url,
+          })
+          const perfil: Perfil = {
+            id: remoto.usuario_id ?? gerarId(),
+            email,
+            nome: dados.nome,
+            telefone: dados.telefone,
+            tipo: 'motorista',
+            ativo: true,
+            created_at: remoto.created_at ?? agora,
+            updated_at: remoto.updated_at ?? agora,
+          }
+          set((s) => ({
+            motoristas: [...s.motoristas.filter((m) => m.id !== remoto.id), remoto],
+            perfis: s.perfis.some((p) => p.id === perfil.id || p.email === email)
+              ? s.perfis
+              : [...s.perfis, perfil],
+            senhas: { ...s.senhas, [email]: senha },
+          }))
+          return remoto
         }
 
         const usuarioId = dados.usuario_id ?? gerarId()
@@ -3539,9 +3694,23 @@ export const useDemoStore = create<EstadoDemo>()(
         })
       },
 
-      aplicarMotoristasNuvem: (motoristas) => {
-        if (!motoristas.length) return
+      aplicarMotoristasNuvem: (motoristas, opcoes) => {
+        if (!motoristas.length && !opcoes?.substituirTodos && !opcoes?.substituirEmpresaId) {
+          return
+        }
         set((state) => {
+          if (usarNuvemComoFonte() && opcoes?.substituirTodos) {
+            return { motoristas }
+          }
+          if (usarNuvemComoFonte() && opcoes?.substituirEmpresaId) {
+            const empresaId = opcoes.substituirEmpresaId
+            return {
+              motoristas: [
+                ...state.motoristas.filter((m) => m.empresa_id !== empresaId),
+                ...motoristas,
+              ],
+            }
+          }
           const mapa = new Map(state.motoristas.map((m) => [m.id, m]))
           for (const remoto of motoristas) {
             const local = mapa.get(remoto.id)
