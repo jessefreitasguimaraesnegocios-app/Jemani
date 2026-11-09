@@ -1440,16 +1440,21 @@ export const useDemoStore = create<EstadoDemo>()(
           companyAmount: viagem.valor_empresa,
         })
 
-        // Servidor (service role): marca pago + cria ofertas para as empresas elegíveis.
-        // Se a function falhar, segue local + sync da viagem/ofertas para não travar o teste no celular.
+        // Servidor (service role): só ele pode marcar payment_status=paid (trigger RLS).
         if (usarNuvemComoFonte()) {
-          await gravarViagemNuvem(viagem)
+          const gravou = await gravarViagemNuvem(viagem)
+          if (!gravou) {
+            throw new Error(
+              'Corrida ainda não está no Supabase. Aguarde a sincronização e tente de novo.',
+            )
+          }
           try {
             await marcarPagamentoSimulado(viagem.id)
           } catch (erro) {
-            console.warn(
-              'pagamento-simulado falhou; seguindo com distribuição local',
-              erro instanceof Error ? erro.message : erro,
+            throw new Error(
+              erro instanceof Error
+                ? `Não foi possível confirmar o pagamento na nuvem: ${erro.message}`
+                : 'Não foi possível confirmar o pagamento na nuvem.',
             )
           }
         } else {
@@ -1459,7 +1464,7 @@ export const useDemoStore = create<EstadoDemo>()(
         const agora = agoraIso()
         const viagemPaga: Viagem = {
           ...viagem,
-          status: 'paid',
+          status: 'aguardando_empresa',
           payment_status: 'paid',
           version: viagem.version + 1,
           updated_at: agora,
@@ -1493,17 +1498,17 @@ export const useDemoStore = create<EstadoDemo>()(
         })
 
         registrarHistorico(set, get, viagemId, 'pending_payment', 'paid', usuarioId, 'DEV simulado')
-        const distribuida = get().iniciarDistribuicaoAposPagamento(viagemId)
-        // Completa ofertas com empresas reais da nuvem e garante sync local↔nuvem.
+        // Offertas: edge já criou na nuvem; completa/mescla no store local sem regravar payment_status.
+        try {
+          get().iniciarDistribuicaoAposPagamento(viagemId)
+        } catch (erro) {
+          console.warn(
+            'Distribuição local adiada',
+            erro instanceof Error ? erro.message : erro,
+          )
+        }
         await get().completarOfertasComNuvem(viagemId)
-        const ofertas = get().atribuicoes.filter(
-          (a) => a.viagem_id === viagemId && a.status === 'oferecida',
-        )
-        const final =
-          get().viagens.find((v) => v.id === viagemId) ?? distribuida
-        await gravarViagemNuvem(final)
-        if (ofertas.length > 0) await gravarOfertasNuvem(ofertas)
-        return get().viagens.find((v) => v.id === viagemId) ?? final
+        return get().viagens.find((v) => v.id === viagemId) ?? viagemPaga
       },
 
       confirmarPagamentoStripe: async (viagemId, usuarioId, sessionId) => {
@@ -1511,14 +1516,31 @@ export const useDemoStore = create<EstadoDemo>()(
         const viagem = state.viagens.find((v) => v.id === viagemId)
         if (!viagem) throw new Error('Viagem não encontrada')
         if (viagem.payment_status === 'paid') {
-          return get().iniciarDistribuicaoAposPagamento(viagemId)
+          try {
+            get().iniciarDistribuicaoAposPagamento(viagemId)
+          } catch (erro) {
+            console.warn(
+              'Redistribuição após Stripe adiada',
+              erro instanceof Error ? erro.message : erro,
+            )
+          }
+          await get().completarOfertasComNuvem(viagemId)
+          return get().viagens.find((v) => v.id === viagemId) ?? viagem
         }
         if (viagem.status !== 'pending_payment') {
           throw new Error('Viagem não está aguardando pagamento')
         }
 
+        // Edge Function (service role) confirma Stripe + marca pago + cria ofertas.
         const resultado = await confirmarSessaoCheckoutStripe(sessionId, viagemId)
         const agora = agoraIso()
+        const viagemPaga: Viagem = {
+          ...viagem,
+          status: 'aguardando_empresa',
+          payment_status: 'paid',
+          version: viagem.version + 1,
+          updated_at: agora,
+        }
         set({
           pagamentos: state.pagamentos.map((p) =>
             p.booking_id === viagemId
@@ -1533,17 +1555,7 @@ export const useDemoStore = create<EstadoDemo>()(
                 }
               : p,
           ),
-          viagens: state.viagens.map((v) =>
-            v.id === viagemId
-              ? {
-                  ...v,
-                  status: 'paid',
-                  payment_status: 'paid',
-                  version: v.version + 1,
-                  updated_at: agora,
-                }
-              : v,
-          ),
+          viagens: state.viagens.map((v) => (v.id === viagemId ? viagemPaga : v)),
           auditLogs: [
             {
               id: gerarId(),
@@ -1567,15 +1579,16 @@ export const useDemoStore = create<EstadoDemo>()(
           usuarioId,
           'Stripe Checkout',
         )
-        const distribuida = get().iniciarDistribuicaoAposPagamento(viagemId)
+        try {
+          get().iniciarDistribuicaoAposPagamento(viagemId)
+        } catch (erro) {
+          console.warn(
+            'Distribuição local após Stripe adiada',
+            erro instanceof Error ? erro.message : erro,
+          )
+        }
         await get().completarOfertasComNuvem(viagemId)
-        const ofertas = get().atribuicoes.filter(
-          (a) => a.viagem_id === viagemId && a.status === 'oferecida',
-        )
-        const final = get().viagens.find((v) => v.id === viagemId) ?? distribuida
-        await gravarViagemNuvem(final)
-        if (ofertas.length > 0) await gravarOfertasNuvem(ofertas)
-        return get().viagens.find((v) => v.id === viagemId) ?? final
+        return get().viagens.find((v) => v.id === viagemId) ?? viagemPaga
       },
 
       iniciarDistribuicaoAposPagamento: (viagemId) => {
@@ -1611,9 +1624,8 @@ export const useDemoStore = create<EstadoDemo>()(
               viagens: state.viagens.map((v) => (v.id === viagemId ? atualizada : v)),
               atribuicoes: deduplicarAtribuicoes(state.atribuicoes),
             })
-            void gravarViagemNuvem(atualizada).then((gravou) => {
-              if (gravou) void gravarOfertasNuvem(ofertasDaViagem)
-            })
+            void gravarViagemNuvem(atualizada).catch(() => undefined)
+            void gravarOfertasNuvem(ofertasDaViagem)
             // Ofertas locais (IDs demo) podem não existir na nuvem — completa com parceiras reais.
             void get().completarOfertasComNuvem(viagemId)
             return atualizada
@@ -1703,9 +1715,8 @@ export const useDemoStore = create<EstadoDemo>()(
         })
 
         registrarHistorico(set, get, viagemId, 'paid', 'aguardando_empresa')
-        void gravarViagemNuvem(atualizada).then((gravou) => {
-          if (gravou) void gravarOfertasNuvem(atribuicoes)
-        })
+        void gravarViagemNuvem(atualizada).catch(() => undefined)
+        void gravarOfertasNuvem(atribuicoes)
 
         for (const o of ordenadas) {
           notificar(
@@ -1813,8 +1824,12 @@ export const useDemoStore = create<EstadoDemo>()(
         )
         if (ofertas.length === 0) return
 
-        const gravou = await gravarViagemNuvem(atualizada)
-        if (gravou) await gravarOfertasNuvem(ofertas)
+        // payment_status só muda via Edge (service role). Aqui só sobe ofertas;
+        // status aguardando_empresa pode falhar se a nuvem ainda estiver pending.
+        if (atualizada.payment_status === 'paid' && atualizada.status !== 'paid') {
+          await gravarViagemNuvem(atualizada).catch(() => undefined)
+        }
+        await gravarOfertasNuvem(ofertas)
 
         for (const o of ordenadas.filter((item) => !jaOferecidas.has(item.empresa.id))) {
           notificar(

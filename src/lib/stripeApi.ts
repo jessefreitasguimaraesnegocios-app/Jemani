@@ -90,10 +90,9 @@ async function chamarFuncao<T>(
   permitirAnon = false,
 ): Promise<T> {
   const local = apiLocal()
-  // Checkout Stripe fica na API Vercel (secret sk_test). Verificação também,
-  // porque lá marcamos pago + criamos ofertas no Supabase.
-  const viaVercel =
-    nome === 'stripe-criar-checkout' || nome === 'stripe-verificar-sessao'
+  // Criar Checkout na Vercel (secret sk_test). Confirmar sessão na Edge Function
+  // do Supabase (service role marca pago + cria ofertas — o cliente não pode).
+  const viaVercel = nome === 'stripe-criar-checkout'
   const endpoint = local
     ? `${local}/${nome}`
     : viaVercel

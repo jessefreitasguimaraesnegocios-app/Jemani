@@ -216,8 +216,18 @@ export function SincronizarNuvem() {
         if (viagensAgora == null || ofertasAgora == null) {
           console.warn('Sync de corridas adiado: falha ao listar — mantendo store local')
         } else if (usarNuvemComoFonte() && opcoes.completo) {
-          store().substituirViagensNuvem(viagensAgora)
-          store().substituirOfertasNuvem(ofertasAgora)
+          // Evita apagar corridas ativas se o select voltar vazio por RLS/timing.
+          const locaisAtivas = store().viagens.some(
+            (v) =>
+              v.payment_status === 'paid' ||
+              ['aguardando_empresa', 'oferta_enviada', 'pending_payment'].includes(v.status),
+          )
+          if (viagensAgora.length === 0 && locaisAtivas) {
+            console.warn('Sync completo ignorado: nuvem vazia com corridas locais ativas')
+          } else {
+            store().substituirViagensNuvem(viagensAgora)
+            store().substituirOfertasNuvem(ofertasAgora)
+          }
         } else {
           for (const viagem of viagensAgora) store().aplicarViagemNuvem(viagem, true)
           for (const oferta of ofertasAgora) store().aplicarOfertaNuvem(oferta, true)
@@ -284,8 +294,17 @@ export function SincronizarNuvem() {
       if (viagens == null || ofertas == null) {
         console.warn('Sync inicial de corridas: falha ao listar viagens/ofertas — mantendo store local')
       } else if (usarNuvemComoFonte()) {
-        store().substituirViagensNuvem(viagens)
-        store().substituirOfertasNuvem(ofertas)
+        const locaisAtivas = store().viagens.some(
+          (v) =>
+            v.payment_status === 'paid' ||
+            ['aguardando_empresa', 'oferta_enviada', 'pending_payment'].includes(v.status),
+        )
+        if (viagens.length === 0 && locaisAtivas) {
+          console.warn('Sync inicial ignorado: nuvem vazia com corridas locais ativas')
+        } else {
+          store().substituirViagensNuvem(viagens)
+          store().substituirOfertasNuvem(ofertas)
+        }
       } else {
         for (const viagem of viagens) store().aplicarViagemNuvem(viagem, true)
         for (const oferta of ofertas) store().aplicarOfertaNuvem(oferta, true)

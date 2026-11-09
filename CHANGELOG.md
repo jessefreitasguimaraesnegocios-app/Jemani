@@ -19,7 +19,8 @@ Registro das mudanças do Jemani.
 - Corrige admin com **Parceiras (0)** e **Sessão inválida**: JWT expirado no cache não passa mais por RLS/edge; hydrate nuvem deixa de reidratar seed de empresas.
 - Corrige listagem admin: coluna `companies.stripe_account_id` ausente no Postgres quebrava o `select` (Parceiras 0); fallback de colunas + marketplace.
 - Corrige corridas que não chegavam no admin/empresas: sync não apaga mais viagens/ofertas locais quando o `list` falha (JWT/RLS/rede); gravação de viagem usa sessão Auth validada; após Stripe/simulado a distribuição grava ofertas na nuvem; API Vercel `stripe-verificar-sessao` marca pago e cria `trip_assignments`.
-- APK **1.0.75**.
+- Pagamento: simulado/Stripe não fingem “pago” só no aparelho — exigem Edge (service role); sync não zera corridas ativas se a nuvem voltar vazia; checkout Vercel prefere `preco_total` do banco.
+- APK **1.0.76**.
 
 ## [2026-11-07]
 

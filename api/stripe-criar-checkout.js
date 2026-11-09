@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { createClient } from '@supabase/supabase-js'
 
 function origemValida(bruta) {
   try {
@@ -41,13 +42,42 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}
     const viagemId = String(body.viagem_id ?? '').trim()
-    const amount = Number(body.amount)
-    if (!viagemId || !Number.isFinite(amount) || amount <= 0 || amount > 200000) {
+    if (!viagemId) {
+      res.status(400).json({ erro: 'viagem_id obrigatório' })
+      return
+    }
+
+    let amount = Number(body.amount)
+    let platformFee = Number(body.platform_fee ?? 0)
+    let companyAmount = Number(body.company_amount ?? 0)
+    let codigo = String(body.codigo ?? 'Jemani').trim()
+
+    // Prefere preço do banco (evita underpay com amount enviado pelo cliente).
+    const url =
+      process.env.SUPABASE_URL ||
+      process.env.VITE_SUPABASE_URL ||
+      'https://qdiocaeoevxhdsrtcahn.supabase.co'
+    const service = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    if (service) {
+      const admin = createClient(url, service)
+      const { data: viagem } = await admin
+        .from('trips')
+        .select('codigo,preco_total,valor_plataforma,valor_empresa')
+        .eq('id', viagemId)
+        .maybeSingle()
+      if (viagem) {
+        amount = Number(viagem.preco_total)
+        platformFee = Number(viagem.valor_plataforma ?? 0)
+        companyAmount = Number(viagem.valor_empresa ?? 0)
+        if (viagem.codigo) codigo = String(viagem.codigo)
+      }
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 200000) {
       res.status(400).json({ erro: 'viagem_id e amount válidos são obrigatórios' })
       return
     }
 
-    const codigo = String(body.codigo ?? 'Jemani').trim()
     const appUrl = origemValida(body.app_url)
     const stripe = new Stripe(chave)
     const session = await stripe.checkout.sessions.create({
@@ -71,8 +101,8 @@ export default async function handler(req, res) {
       metadata: {
         viagem_id: viagemId,
         codigo,
-        platform_fee: String(body.platform_fee ?? 0),
-        company_amount: String(body.company_amount ?? 0),
+        platform_fee: String(platformFee),
+        company_amount: String(companyAmount),
         preco_total: String(amount),
         ambiente: 'teste',
       },
