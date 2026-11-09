@@ -12,10 +12,7 @@ import { PainelVoo } from '@/components/motorista/PainelVoo'
 import { ehHourly } from '@/services/hourlyChauffeur'
 import { useAuth } from '@/contexts/AuthContext'
 import { stripeCheckoutDisponivel } from '@/lib/stripeApi'
-import {
-  criarIntencaoPagamento,
-  permitirSimulacaoPagamentoDev,
-} from '@/services/pagamentoService'
+import { criarIntencaoPagamento } from '@/services/pagamentoService'
 import { useDemoStore } from '@/store/demoStore'
 import { rotuloRotaCliente } from '@/utils/contatoViagem'
 import { formatarData, formatarMoeda } from '@/utils/format'
@@ -164,7 +161,6 @@ export function ClienteViagemDetalhePage() {
   const categoria = categorias.find((c) => c.id === viagem.categoria_id)
   const jaAvaliou = Boolean(avaliacaoFeita)
   const stripeOk = stripeCheckoutDisponivel()
-  const podeSimular = permitirSimulacaoPagamentoDev()
 
   async function pagarComStripe() {
     if (!usuario) return
@@ -295,37 +291,34 @@ export function ClienteViagemDetalhePage() {
           >
             <p className="font-medium">Aguardando pagamento</p>
             <p className="mt-1 text-sm text-[var(--color-slate)]">
-              {podeSimular
-                ? 'Modo teste: toque em Simular pagamento para liberar a corrida às empresas (sem checkout).'
-                : 'Confirme o pagamento para liberar a corrida às empresas parceiras. Em teste Stripe, use o cartão 4242 4242 4242 4242.'}
+              Modo teste: toque em Simular pagamento para liberar a corrida às empresas (sem
+              checkout).
             </p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-              {podeSimular && (
+              <button
+                type="button"
+                className="btn-ouro w-full sm:w-auto"
+                disabled={pagando || !usuario}
+                onClick={() => {
+                  if (!usuario) return
+                  setPagando(true)
+                  setMsg('')
+                  void simularPagamentoEDistribuir(viagem.id, usuario.id)
+                    .then(() =>
+                      setMsg('Pagamento simulado. Corrida liberada para as empresas.'),
+                    )
+                    .catch((err) =>
+                      setMsg(err instanceof Error ? err.message : 'Erro ao simular pagamento'),
+                    )
+                    .finally(() => setPagando(false))
+                }}
+              >
+                {pagando ? 'Processando...' : 'Simular pagamento'}
+              </button>
+              {stripeOk && (
                 <button
                   type="button"
-                  className="btn-ouro w-full sm:w-auto"
-                  disabled={pagando || !usuario}
-                  onClick={() => {
-                    if (!usuario) return
-                    setPagando(true)
-                    setMsg('')
-                    void simularPagamentoEDistribuir(viagem.id, usuario.id)
-                      .then(() =>
-                        setMsg('Pagamento simulado. Corrida liberada para as empresas.'),
-                      )
-                      .catch((err) =>
-                        setMsg(err instanceof Error ? err.message : 'Erro ao simular pagamento'),
-                      )
-                      .finally(() => setPagando(false))
-                  }}
-                >
-                  {pagando ? 'Processando...' : 'Simular pagamento'}
-                </button>
-              )}
-              {!podeSimular && stripeOk && (
-                <button
-                  type="button"
-                  className="btn-ouro w-full sm:w-auto"
+                  className="btn-secundario w-full sm:w-auto"
                   disabled={pagando}
                   onClick={() => void pagarComStripe()}
                 >
@@ -333,12 +326,10 @@ export function ClienteViagemDetalhePage() {
                 </button>
               )}
             </div>
-            {!podeSimular && !stripeOk && (
-              <p className="mt-2 text-xs text-[var(--color-slate)]">
-                Para ativar Stripe: VITE_STRIPE_ENABLED=true + Edge Functions com
-                STRIPE_SECRET_KEY.
-              </p>
-            )}
+            <p className="mt-2 text-xs text-[var(--color-slate)]">
+              Em teste, use <strong>Simular pagamento</strong> — marca pago no banco e envia às
+              empresas (sem cartão).
+            </p>
           </div>
         )}
 

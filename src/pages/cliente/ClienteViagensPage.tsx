@@ -5,7 +5,6 @@ import { BadgeStatus } from '@/components/BadgeStatus'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { separarAgendamentos, viagemEmAndamento } from '@/services/agendamentoCliente'
-import { permitirSimulacaoPagamentoDev } from '@/services/pagamentoService'
 import { useDemoStore } from '@/store/demoStore'
 import type { Viagem } from '@/types'
 import { formatarData, formatarMoeda } from '@/utils/format'
@@ -117,7 +116,8 @@ function ProximoAgendamento({
   const faltaPagamento =
     viagem.payment_status !== 'paid' &&
     (viagem.status === 'pending_payment' || viagem.payment_status === 'pending_payment')
-  const podeSimular = faltaPagamento && permitirSimulacaoPagamentoDev()
+  // Em teste o botão aparece sempre que falta pagar (Stripe não esconde a simulação).
+  const podeSimular = faltaPagamento
 
   return (
     <section className="cliente-agenda-proxima" aria-labelledby="proximo-agendamento">

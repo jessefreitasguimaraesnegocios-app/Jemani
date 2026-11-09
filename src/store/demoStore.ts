@@ -900,15 +900,36 @@ export const useDemoStore = create<EstadoDemo>()(
         )
 
         if (usarNuvemComoFonte()) {
-          const gravou = await gravarViagemNuvem(viagem)
-          if (!gravou) {
+          const { assegurarSessaoParaEmail } = await import('@/services/sessaoAuth')
+          const { gravarViagemNuvemDetalhe } = await import('@/services/nuvemCorrida')
+          const perfil = get().perfis.find((p) => p.id === clienteId)
+          const email = perfil?.email
+          const senha = email ? get().senhas[email] : undefined
+          if (email) await assegurarSessaoParaEmail(email, senha)
+          const sessaoAuth = await (await import('@/services/sessaoAuth')).obterSessaoAuthValida()
+          const uid = sessaoAuth?.user.id
+          const viagemNuvem =
+            uid && uid !== viagem.cliente_id ? { ...viagem, cliente_id: uid } : viagem
+          if (uid && uid !== clienteId) {
+            set((s) => ({
+              viagens: s.viagens.map((v) =>
+                v.id === viagem.id ? { ...v, cliente_id: uid } : v,
+              ),
+              sessaoId: uid,
+              perfis: s.perfis.map((p) => (p.id === clienteId ? { ...p, id: uid } : p)),
+            }))
+          }
+          const gravacao = await gravarViagemNuvemDetalhe(viagemNuvem)
+          if (!gravacao.ok) {
             set((s) => ({
               viagens: s.viagens.filter((v) => v.id !== viagem.id),
               pagamentos: s.pagamentos.filter((p) => p.booking_id !== viagem.id),
               historicos: s.historicos.filter((h) => h.id !== historicoInicial.id),
             }))
             throw new Error(
-              'Não foi possível salvar a corrida no Supabase. Verifique a conexão e tente de novo.',
+              gravacao.erro
+                ? `Não foi possível salvar a corrida no Supabase: ${gravacao.erro}`
+                : 'Não foi possível salvar a corrida no Supabase. Verifique a conexão e tente de novo.',
             )
           }
           void gravarHistoricoNuvem(historicoInicial)

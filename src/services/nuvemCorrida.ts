@@ -377,39 +377,73 @@ export function ofertaDaLinha(linha: LinhaOferta): AtribuicaoViagem {
   }
 }
 
-export async function gravarViagensNuvem(viagens: Viagem[]) {
+export type ResultadoGravacaoViagem = {
+  ok: boolean
+  erro?: string
+}
+
+export async function gravarViagensNuvem(viagens: Viagem[]): Promise<boolean> {
+  const resultado = await gravarViagensNuvemDetalhe(viagens)
+  return resultado.ok
+}
+
+/** Grava viagens do cliente autenticado; alinha cliente_id ao auth.uid() (RLS). */
+export async function gravarViagensNuvemDetalhe(
+  viagens: Viagem[],
+): Promise<ResultadoGravacaoViagem> {
   const db = cliente()
-  if (!db || viagens.length === 0) return false
+  if (!db || viagens.length === 0) {
+    return { ok: false, erro: 'Supabase indisponível ou lista vazia' }
+  }
   const { obterSessaoAuthValida } = await import('@/services/sessaoAuth')
   const sessao = await obterSessaoAuthValida()
   const uid = sessao?.user.id
-  if (!uid) return false
-  const linhas = viagens.filter((viagem) => viagem.cliente_id === uid).map(paraLinha)
-  if (linhas.length === 0) return false
+  if (!uid) {
+    return { ok: false, erro: 'Sessão expirada. Saia e entre de novo.' }
+  }
+  // RLS exige cliente_id = auth.uid(); corrige seed/local desalinhado.
+  const linhas = viagens.map((viagem) =>
+    paraLinha({ ...viagem, cliente_id: uid }),
+  )
   const { error } = await db.from('trips').upsert(linhas, { onConflict: 'id' })
   if (error) {
     console.warn('Falha ao gravar viagem na nuvem', error.message)
-    return false
+    return { ok: false, erro: error.message }
   }
-  return true
+  return { ok: true }
 }
 
 export async function gravarViagemNuvem(viagem: Viagem) {
+  const resultado = await gravarViagemNuvemDetalhe(viagem)
+  return resultado.ok
+}
+
+export async function gravarViagemNuvemDetalhe(
+  viagem: Viagem,
+): Promise<ResultadoGravacaoViagem> {
   const db = cliente()
-  if (!db) return false
+  if (!db) return { ok: false, erro: 'Supabase indisponível' }
   const { obterSessaoAuthValida } = await import('@/services/sessaoAuth')
   const sessao = await obterSessaoAuthValida()
   const uid = sessao?.user.id
-  if (!uid) return false
+  if (!uid) return { ok: false, erro: 'Sessão expirada. Saia e entre de novo.' }
+
+  // Cliente dono da reserva (ou id local desalinhado): upsert com uid.
+  if (uid === viagem.cliente_id || !viagem.cliente_id) {
+    return gravarViagensNuvemDetalhe([{ ...viagem, cliente_id: uid }])
+  }
+
   const linha = paraLinha(viagem)
-  if (uid === viagem.cliente_id) return gravarViagensNuvem([viagem])
   const { id, created_at, ...resto } = linha
   const { data, error } = await db.from('trips').update(resto).eq('id', id).select('id')
-  if (error || !data?.length) {
-    console.warn('Falha ao gravar viagem na nuvem', error?.message ?? 'nenhuma linha atualizada')
-    return false
+  if (error) {
+    console.warn('Falha ao gravar viagem na nuvem', error.message)
+    return { ok: false, erro: error.message }
   }
-  return true
+  if (!data?.length) {
+    return { ok: false, erro: 'Nenhuma linha atualizada (sem permissão ou id inexistente)' }
+  }
+  return { ok: true }
 }
 
 export async function gravarPosicaoNuvem(viagemId: string, latitude: number, longitude: number) {
