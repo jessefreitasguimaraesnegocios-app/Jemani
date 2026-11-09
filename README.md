@@ -4,6 +4,23 @@ Marketplace de transporte executivo nos **Estados Unidos** e no **mundo** — en
 
 A plataforma capta clientes, distribui solicitações para empresas parceiras e registra a comissão.
 
+## Novidades — 08/11/2026
+
+### Optical Glass (claro + escuro)
+
+- Acabamento inspirado no **Liquid Glass (iOS 26)**: glassmorphism, frost, refração SVG leve e specular highlights.
+- Aplicado em botões, nav, menus, modais e cards — sem transformar toda a UI em vidro.
+- Componentes reutilizáveis: `VidroLiquido`, `FiltrosVidroSvg`, tokens em `src/styles/liquid-glass.css`.
+- Tema escuro com vidro fumado e rampas de luz (não fica mais flat/opaco no chrome).
+
+### Sync, solicitações e APK
+
+- Corridas pagas chegam no admin e nas empresas via sync + distribuição na nuvem.
+- Badge `1!` / `2!` / `3!` em **Novas solicitações** (admin e empresa).
+- APK atual: **1.0.81** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
+
+Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Novidades — 07/11/2026
 
 ### Admin, planilha e solicitações
@@ -20,7 +37,6 @@ A plataforma capta clientes, distribui solicitações para empresas parceiras e 
 ### Entre aparelhos (site + APK)
 
 - Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens, notificações e comissões.
-- APK atual: **1.0.74** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
 
 Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
 

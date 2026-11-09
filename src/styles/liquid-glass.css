@@ -1,0 +1,1165 @@
+/* Jemani Optical Glass — Liquid Glass + Glassmorphism + Frost + Refração + Specular
+   Camadas: fill translúcido → frost (backdrop) → lente → sheen/specular → conteúdo → aro
+   Tema claro e escuro. Importar DEPOIS dos overrides de tema. */
+
+:root {
+  --vidro-luz: 135deg;
+  --vidro-raio: 22px;
+  --vidro-lente: ;
+  --vidro-lente-fina: ;
+  --vidro-blur-mul: 1;
+  --vidro-alpha-mul: 1;
+  --vidro-hover: 0;
+
+  /* Claro — frost branco quente / ouro Jemani */
+  --vidro-tint: 255 252 247;
+  --vidro-alpha: 0.22;
+  --vidro-blur: 14px;
+  --vidro-saturate: 1.55;
+  --vidro-brilho: 1.05;
+  --vidro-rim: 0.82;
+  --vidro-rim-perto: 255 255 255;
+  --vidro-rim-longe: 184 149 108;
+  --vidro-sheen: 0.24;
+  --vidro-specular: 0.55;
+  --vidro-ink: #0c1222;
+  --vidro-sombra: 20 18 28;
+  --vidro-sombra-alpha: 0.2;
+  --vidro-elevacao: 16px;
+  --vidro-solido: #f7f4ef;
+  --vidro-foco: #b8956c;
+  --vidro-cromatico-a: 201 168 124;
+  --vidro-cromatico-b: 120 160 200;
+  --vidro-ouro: 184 149 108;
+  --vidro-ink-rgb: 12 18 34;
+}
+
+html[data-tema='escuro'] {
+  --vidro-tint: 22 22 24;
+  --vidro-alpha: 0.55;
+  --vidro-blur: 18px;
+  --vidro-saturate: 1.4;
+  --vidro-brilho: 1.04;
+  --vidro-rim: 0.78;
+  --vidro-rim-perto: 255 255 255;
+  --vidro-rim-longe: 201 168 124;
+  --vidro-sheen: 0.18;
+  --vidro-specular: 0.42;
+  --vidro-ink: #f5f5f5;
+  --vidro-sombra: 0 0 0;
+  --vidro-sombra-alpha: 0.55;
+  --vidro-elevacao: 20px;
+  --vidro-solido: #1a1a1a;
+  --vidro-foco: #c9a87c;
+  --vidro-cromatico-a: 201 168 124;
+  --vidro-cromatico-b: 90 140 200;
+  --vidro-ouro: 201 168 124;
+  --vidro-ink-rgb: 245 245 245;
+}
+
+/* Ambiente escuro com rampas de luminância (o blur precisa de algo para amostrar) */
+html[data-tema='escuro'] body {
+  background:
+    radial-gradient(ellipse 70% 45% at 12% -8%, rgb(201 168 124 / 0.14), transparent 52%),
+    radial-gradient(ellipse 55% 40% at 100% 8%, rgb(255 255 255 / 0.05), transparent 48%),
+    radial-gradient(ellipse 50% 35% at 50% 100%, rgb(40 40 48 / 0.55), transparent 55%),
+    #000000;
+}
+
+/* Espessuras reutilizáveis */
+.vidro--claro {
+  --vidro-alpha: 0.12;
+  --vidro-blur: 8px;
+  --vidro-saturate: 1.65;
+  --vidro-brilho: 1.08;
+  --vidro-rim: 0.92;
+  --vidro-sheen: 0.16;
+  --vidro-specular: 0.4;
+}
+
+.vidro--regular {
+  --vidro-alpha: 0.22;
+  --vidro-blur: 14px;
+}
+
+.vidro--gelado {
+  --vidro-alpha: 0.38;
+  --vidro-blur: 24px;
+  --vidro-saturate: 1.4;
+  --vidro-rim: 0.65;
+  --vidro-sheen: 0.28;
+  --vidro-specular: 0.5;
+}
+
+.vidro--fumado {
+  --vidro-tint: 12 14 20;
+  --vidro-alpha: 0.52;
+  --vidro-blur: 18px;
+  --vidro-saturate: 1.45;
+  --vidro-ink: #ffffff;
+  --vidro-sheen: 0.16;
+  --vidro-specular: 0.38;
+  --vidro-solido: #12141a;
+}
+
+.vidro--ouro {
+  --vidro-tint: var(--vidro-ouro);
+  --vidro-alpha: 0.55;
+  --vidro-blur: 12px;
+  --vidro-ink: #ffffff;
+  --vidro-rim: 1;
+  --vidro-sheen: 0.3;
+  --vidro-specular: 0.65;
+  --vidro-sombra: 140 106 69;
+  --vidro-solido: #8c6a45;
+}
+
+.vidro--tinta {
+  --vidro-tint: var(--vidro-ink-rgb);
+  --vidro-alpha: 0.64;
+  --vidro-blur: 12px;
+  --vidro-ink: #ffffff;
+  --vidro-sheen: 0.22;
+  --vidro-specular: 0.48;
+  --vidro-solido: #0c1222;
+}
+
+.vidro--pilula {
+  --vidro-raio: 999px;
+}
+
+/* ——— Primitivo .vidro ——— */
+.vidro {
+  --vidro-hover: 0;
+  position: relative;
+  isolation: isolate;
+  color: var(--vidro-ink);
+  background: var(--vidro-solido);
+  border: 1px solid rgb(var(--vidro-rim-longe) / 0.28);
+  border-radius: var(--vidro-raio);
+  box-shadow:
+    0 1px 2px rgb(var(--vidro-sombra) / 0.08),
+    0 var(--vidro-elevacao) calc(var(--vidro-elevacao) * 2.2)
+      calc(var(--vidro-elevacao) * -0.75) rgb(var(--vidro-sombra) / var(--vidro-sombra-alpha));
+  transition:
+    transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.22s ease,
+    background-color 0.22s ease;
+}
+
+.vidro > * {
+  position: relative;
+  z-index: 1;
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .vidro {
+    border-color: transparent;
+    background:
+      radial-gradient(
+        90% 70% at 16% 8%,
+        rgb(255 255 255 / calc(var(--vidro-specular) * 0.55)) 0%,
+        transparent 52%
+      ),
+      linear-gradient(
+        var(--vidro-luz),
+        rgb(255 255 255 / calc(0.22 * var(--vidro-rim))) 0%,
+        transparent 46%
+      ),
+      rgb(var(--vidro-tint) / min(0.92, calc(var(--vidro-alpha) * var(--vidro-alpha-mul) + var(--vidro-hover))));
+    -webkit-backdrop-filter: var(--vidro-lente) blur(calc(var(--vidro-blur) * var(--vidro-blur-mul)))
+      saturate(var(--vidro-saturate)) brightness(var(--vidro-brilho));
+    backdrop-filter: var(--vidro-lente) blur(calc(var(--vidro-blur) * var(--vidro-blur-mul)))
+      saturate(var(--vidro-saturate)) brightness(var(--vidro-brilho));
+    box-shadow:
+      inset 0 1px 0 rgb(var(--vidro-rim-perto) / calc(0.58 * var(--vidro-rim))),
+      inset 0 -1px 0 rgb(var(--vidro-rim-longe) / calc(0.16 * var(--vidro-rim))),
+      0 0 0 0.5px rgb(var(--vidro-cromatico-a) / 0.18),
+      0 1px 2px rgb(var(--vidro-sombra) / 0.08),
+      0 var(--vidro-elevacao) calc(var(--vidro-elevacao) * 2.4)
+        calc(var(--vidro-elevacao) * -0.8) rgb(var(--vidro-sombra) / var(--vidro-sombra-alpha));
+  }
+
+  /* Aro + fringe cromática (refração na borda) */
+  .vidro::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        var(--vidro-luz),
+        rgb(var(--vidro-rim-perto) / calc(0.95 * var(--vidro-rim))) 0%,
+        rgb(var(--vidro-cromatico-a) / calc(0.45 * var(--vidro-rim))) 28%,
+        rgb(var(--vidro-rim-perto) / calc(0.18 * var(--vidro-rim))) 48%,
+        rgb(var(--vidro-cromatico-b) / calc(0.22 * var(--vidro-rim))) 72%,
+        rgb(var(--vidro-rim-longe) / calc(0.5 * var(--vidro-rim))) 100%
+      );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  /* Sheen + specular highlight */
+  .vidro::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        42% 28% at 22% 10%,
+        rgb(255 255 255 / var(--vidro-specular)) 0%,
+        transparent 70%
+      ),
+      radial-gradient(
+        28% 18% at 78% 18%,
+        rgb(255 255 255 / calc(var(--vidro-specular) * 0.35)) 0%,
+        transparent 72%
+      ),
+      linear-gradient(
+        var(--vidro-luz),
+        rgb(var(--vidro-rim-perto) / var(--vidro-sheen)) 0%,
+        rgb(var(--vidro-rim-perto) / calc(var(--vidro-sheen) * 0.2)) 36%,
+        transparent 62%
+      );
+    opacity: 0.95;
+    transition: opacity 0.22s ease;
+  }
+
+  @supports (top: calc(sin(1deg) * 1px)) {
+    .vidro {
+      box-shadow:
+        inset calc(sin(var(--vidro-luz)) * 1px) calc(cos(var(--vidro-luz)) * -1px) 0
+          rgb(var(--vidro-rim-perto) / calc(0.55 * var(--vidro-rim))),
+        inset calc(sin(var(--vidro-luz)) * -1px) calc(cos(var(--vidro-luz)) * 1px) 0
+          rgb(var(--vidro-rim-longe) / calc(0.14 * var(--vidro-rim))),
+        0 0 0 0.5px rgb(var(--vidro-cromatico-a) / 0.16),
+        0 1px 2px rgb(var(--vidro-sombra) / 0.08),
+        0 var(--vidro-elevacao) calc(var(--vidro-elevacao) * 2.4)
+          calc(var(--vidro-elevacao) * -0.8) rgb(var(--vidro-sombra) / var(--vidro-sombra-alpha));
+    }
+  }
+}
+
+.vidro-placa {
+  position: relative;
+  z-index: 1;
+  background: rgb(var(--vidro-tint) / 0.32);
+  color: var(--vidro-ink);
+  border-radius: max(0px, calc(var(--vidro-raio) - 10px));
+  box-shadow: inset 0 0 0 1px rgb(var(--vidro-rim-perto) / 0.12);
+}
+
+html[data-tema='escuro'] .vidro-placa {
+  background: rgb(255 255 255 / 0.07);
+}
+
+.vidro--interativo,
+button.vidro,
+a.vidro {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vidro--interativo:hover,
+button.vidro:hover,
+a.vidro:hover {
+  --vidro-hover: 0.06;
+  --vidro-rim: 1;
+  --vidro-elevacao: 20px;
+  --vidro-specular: 0.68;
+  transform: translateY(-1px);
+}
+
+.vidro--interativo:active,
+button.vidro:active,
+a.vidro:active {
+  transform: translateY(1px) scale(0.985);
+  --vidro-elevacao: 8px;
+  --vidro-sheen: 0.08;
+}
+
+.vidro--interativo:active::after,
+button.vidro:active::after,
+a.vidro:active::after {
+  opacity: 0.5;
+}
+
+button.vidro:disabled,
+.vidro[aria-disabled='true'] {
+  --vidro-rim: 0.28;
+  --vidro-sheen: 0;
+  --vidro-specular: 0;
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.55;
+}
+
+.vidro:focus-visible,
+button.vidro:focus-visible,
+a.vidro:focus-visible {
+  outline: 2px solid var(--vidro-foco);
+  outline-offset: 3px;
+}
+
+/* Lente ativa (Chromium: url(#jemani-lente); demais engines ignoram / frost) */
+.vidro--lente {
+  --vidro-lente: url(#jemani-lente);
+}
+
+.vidro--lente-fina {
+  --vidro-lente-fina: url(#jemani-lente-fina);
+}
+
+/* ——— Helpers de superfície (botões / cards / chrome) ——— */
+.vidro-superficie {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-color: transparent !important;
+}
+
+.vidro-superficie > * {
+  position: relative;
+  z-index: 1;
+}
+
+.vidro-superficie::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    var(--vidro-luz),
+    rgb(var(--vidro-rim-perto) / 0.92) 0%,
+    rgb(var(--vidro-cromatico-a) / 0.4) 32%,
+    rgb(var(--vidro-rim-perto) / 0.12) 52%,
+    rgb(var(--vidro-cromatico-b) / 0.2) 74%,
+    rgb(var(--vidro-rim-longe) / 0.48) 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.vidro-superficie::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 26% at 20% 8%, rgb(255 255 255 / var(--vidro-specular, 0.5)) 0%, transparent 70%),
+    linear-gradient(
+      var(--vidro-luz),
+      rgb(255 255 255 / var(--vidro-sheen, 0.22)) 0%,
+      transparent 58%
+    );
+  opacity: 0.95;
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  /* ===== Botão secundário — glass claro / fumado ===== */
+  .btn-secundario {
+    --vidro-specular: 0.48;
+    --vidro-sheen: 0.22;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-color: transparent;
+    background:
+      radial-gradient(80% 60% at 20% 0%, rgb(255 255 255 / 0.45) 0%, transparent 55%),
+      linear-gradient(135deg, rgb(255 255 255 / 0.42) 0%, rgb(255 255 255 / 0.12) 55%, rgb(184 149 108 / 0.1) 100%),
+      rgb(255 252 247 / 0.5);
+    color: var(--color-ink, #0c1222);
+    -webkit-backdrop-filter: url(#jemani-lente-fina) blur(11px) saturate(1.45) brightness(1.04);
+    backdrop-filter: url(#jemani-lente-fina) blur(11px) saturate(1.45) brightness(1.04);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.72),
+      inset 0 -1px 0 rgb(184 149 108 / 0.14),
+      0 0 0 0.5px rgb(184 149 108 / 0.2),
+      0 10px 24px rgb(20 18 28 / 0.1);
+    transition:
+      transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1),
+      box-shadow 0.22s ease,
+      background 0.22s ease;
+  }
+
+  .btn-secundario::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      135deg,
+      rgb(255 255 255 / 0.95) 0%,
+      rgb(201 168 124 / 0.45) 40%,
+      rgb(120 160 200 / 0.2) 70%,
+      rgb(184 149 108 / 0.4) 100%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  .btn-secundario::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(36% 24% at 22% 12%, rgb(255 255 255 / 0.55) 0%, transparent 72%);
+  }
+
+  .btn-secundario:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.85),
+      0 14px 30px rgb(20 18 28 / 0.14);
+  }
+
+  .btn-secundario:active {
+    transform: translateY(1px) scale(0.985);
+  }
+
+  html[data-tema='escuro'] .btn-secundario {
+    background:
+      radial-gradient(80% 60% at 18% 0%, rgb(255 255 255 / 0.14) 0%, transparent 55%),
+      linear-gradient(135deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0.02) 100%),
+      rgb(24 24 26 / 0.72);
+    color: #ffffff;
+    border-radius: 999px;
+    -webkit-backdrop-filter: url(#jemani-lente-fina) blur(14px) saturate(1.4) brightness(1.05);
+    backdrop-filter: url(#jemani-lente-fina) blur(14px) saturate(1.4) brightness(1.05);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.22),
+      inset 0 -1px 0 rgb(0 0 0 / 0.35),
+      0 0 0 0.5px rgb(201 168 124 / 0.28),
+      0 12px 28px rgb(0 0 0 / 0.4);
+  }
+
+  html[data-tema='escuro'] .btn-secundario:hover {
+    background:
+      radial-gradient(80% 60% at 18% 0%, rgb(255 255 255 / 0.2) 0%, transparent 55%),
+      rgb(32 32 34 / 0.78);
+    border-color: transparent;
+  }
+
+  /* ===== Botão primário — tinted liquid + lente ===== */
+  .btn-primario {
+    --vidro-specular: 0.55;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid transparent;
+    background:
+      radial-gradient(55% 40% at 22% 8%, rgb(255 255 255 / 0.32) 0%, transparent 65%),
+      linear-gradient(145deg, rgb(255 255 255 / 0.16) 0%, transparent 42%),
+      linear-gradient(135deg, rgb(22 30 48 / 0.9) 0%, rgb(12 18 34 / 0.94) 100%);
+    -webkit-backdrop-filter: url(#jemani-lente) blur(13px) saturate(1.4) brightness(1.04);
+    backdrop-filter: url(#jemani-lente) blur(13px) saturate(1.4) brightness(1.04);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.32),
+      inset 0 -1px 0 rgb(0 0 0 / 0.28),
+      0 0 0 0.5px rgb(184 149 108 / 0.35),
+      0 0 24px rgb(184 149 108 / 0.12),
+      0 14px 32px rgb(12 18 34 / 0.3);
+  }
+
+  .btn-primario::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      135deg,
+      rgb(255 255 255 / 0.65) 0%,
+      rgb(201 168 124 / 0.5) 38%,
+      rgb(120 160 200 / 0.22) 68%,
+      rgb(255 255 255 / 0.14) 100%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  .btn-primario::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(38% 26% at 24% 10%, rgb(255 255 255 / 0.5) 0%, transparent 70%),
+      radial-gradient(22% 16% at 78% 22%, rgb(201 168 124 / 0.35) 0%, transparent 75%);
+  }
+
+  .btn-primario:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.4),
+      0 0 28px rgb(184 149 108 / 0.18),
+      0 18px 40px rgb(12 18 34 / 0.36);
+  }
+
+  .btn-primario:active {
+    transform: translateY(1px) scale(0.985);
+  }
+
+  html[data-tema='escuro'] .btn-primario {
+    border-radius: 999px;
+    background:
+      radial-gradient(55% 40% at 22% 8%, rgb(255 255 255 / 0.42) 0%, transparent 65%),
+      linear-gradient(145deg, rgb(255 255 255 / 0.2) 0%, transparent 45%),
+      linear-gradient(135deg, rgb(245 245 245 / 0.92) 0%, rgb(220 220 220 / 0.94) 100%);
+    color: #000000;
+    -webkit-backdrop-filter: url(#jemani-lente) blur(12px) saturate(1.35);
+    backdrop-filter: url(#jemani-lente) blur(12px) saturate(1.35);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.85),
+      inset 0 -1px 0 rgb(0 0 0 / 0.08),
+      0 0 0 0.5px rgb(201 168 124 / 0.45),
+      0 0 28px rgb(201 168 124 / 0.16),
+      0 14px 34px rgb(0 0 0 / 0.45);
+  }
+
+  html[data-tema='escuro'] .btn-primario:hover {
+    background:
+      radial-gradient(55% 40% at 22% 8%, rgb(255 255 255 / 0.55) 0%, transparent 65%),
+      linear-gradient(135deg, #ffffff 0%, #ececec 100%);
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.95),
+      0 0 32px rgb(201 168 124 / 0.22),
+      0 18px 40px rgb(0 0 0 / 0.5);
+  }
+
+  /* ===== Botão ouro — tinted + specular forte ===== */
+  .btn-ouro {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid transparent;
+    background:
+      radial-gradient(50% 40% at 20% 6%, rgb(255 255 255 / 0.55) 0%, transparent 62%),
+      linear-gradient(145deg, rgb(255 248 236 / 0.45) 0%, transparent 42%),
+      linear-gradient(135deg, rgb(201 168 124 / 0.88) 0%, rgb(140 106 69 / 0.94) 100%);
+    -webkit-backdrop-filter: url(#jemani-lente) blur(12px) saturate(1.55) brightness(1.06);
+    backdrop-filter: url(#jemani-lente) blur(12px) saturate(1.55) brightness(1.06);
+    box-shadow:
+      inset 0 1px 0 rgb(255 248 236 / 0.65),
+      inset 0 -1px 0 rgb(100 70 40 / 0.28),
+      0 0 0 0.5px rgb(255 220 170 / 0.35),
+      0 0 26px rgb(184 149 108 / 0.28),
+      0 14px 30px rgb(140 106 69 / 0.34);
+  }
+
+  .btn-ouro::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      135deg,
+      rgb(255 255 255 / 0.85) 0%,
+      rgb(255 248 236 / 0.25) 42%,
+      rgb(120 160 200 / 0.18) 68%,
+      rgb(100 70 40 / 0.5) 100%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  .btn-ouro::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(40% 28% at 24% 10%, rgb(255 255 255 / 0.62) 0%, transparent 70%),
+      radial-gradient(20% 14% at 82% 20%, rgb(255 255 255 / 0.28) 0%, transparent 75%);
+  }
+
+  .btn-ouro:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgb(255 248 236 / 0.8),
+      0 0 32px rgb(184 149 108 / 0.38),
+      0 18px 36px rgb(140 106 69 / 0.42);
+  }
+
+  .btn-ouro:active {
+    transform: translateY(1px) scale(0.985);
+  }
+
+  html[data-tema='escuro'] .btn-ouro {
+    border-radius: 999px;
+    color: #000000;
+    background:
+      radial-gradient(50% 40% at 20% 6%, rgb(255 255 255 / 0.7) 0%, transparent 62%),
+      linear-gradient(135deg, rgb(230 200 155 / 0.95) 0%, rgb(201 168 124 / 0.98) 100%);
+    -webkit-backdrop-filter: url(#jemani-lente) blur(12px) saturate(1.5);
+    backdrop-filter: url(#jemani-lente) blur(12px) saturate(1.5);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.7),
+      0 0 0 0.5px rgb(255 220 170 / 0.4),
+      0 0 30px rgb(201 168 124 / 0.28),
+      0 14px 34px rgb(0 0 0 / 0.45);
+  }
+
+  html[data-tema='escuro'] .btn-ouro:hover {
+    transform: translateY(-1px);
+    background:
+      radial-gradient(50% 40% at 20% 6%, rgb(255 255 255 / 0.8) 0%, transparent 62%),
+      linear-gradient(135deg, #f0d9b0 0%, #c9a87c 100%);
+  }
+
+  .btn-perigo {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+      radial-gradient(70% 50% at 20% 0%, rgb(255 255 255 / 0.28) 0%, transparent 55%),
+      rgb(155 59 59 / 0.12);
+    -webkit-backdrop-filter: blur(9px) saturate(1.3);
+    backdrop-filter: blur(9px) saturate(1.3);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.4),
+      0 0 0 0.5px rgb(155 59 59 / 0.25),
+      0 8px 20px rgb(155 59 59 / 0.1);
+  }
+
+  html[data-tema='escuro'] .btn-perigo {
+    border-radius: 999px;
+    background:
+      radial-gradient(70% 50% at 20% 0%, rgb(255 255 255 / 0.1) 0%, transparent 55%),
+      rgb(255 90 95 / 0.14);
+    -webkit-backdrop-filter: blur(10px) saturate(1.35);
+    backdrop-filter: blur(10px) saturate(1.35);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.16),
+      0 0 0 0.5px rgb(255 90 95 / 0.35);
+  }
+
+  /* ===== Cards — frost moderado (não excesso) ===== */
+  .cartao {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+      radial-gradient(90% 60% at 12% 0%, rgb(255 255 255 / 0.4) 0%, transparent 55%),
+      linear-gradient(160deg, rgb(255 255 255 / 0.45) 0%, rgb(255 255 255 / 0.14) 45%, rgb(184 149 108 / 0.05) 100%),
+      rgb(255 252 247 / 0.58);
+    border-color: transparent;
+    -webkit-backdrop-filter: blur(12px) saturate(1.35) brightness(1.03);
+    backdrop-filter: blur(12px) saturate(1.35) brightness(1.03);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.72),
+      inset 0 -1px 0 rgb(184 149 108 / 0.1),
+      0 0 0 0.5px rgb(184 149 108 / 0.16),
+      0 18px 48px rgb(12 18 34 / 0.07);
+  }
+
+  .cartao::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      145deg,
+      rgb(255 255 255 / 0.9) 0%,
+      rgb(255 255 255 / 0.18) 42%,
+      rgb(184 149 108 / 0.38) 100%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  .cartao > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  html[data-tema='escuro'] .cartao {
+    color: #ffffff;
+    border-radius: 16px;
+    background:
+      radial-gradient(90% 55% at 10% 0%, rgb(255 255 255 / 0.1) 0%, transparent 50%),
+      linear-gradient(160deg, rgb(255 255 255 / 0.08) 0%, transparent 42%),
+      rgb(26 26 26 / 0.78);
+    border-color: transparent;
+    -webkit-backdrop-filter: blur(16px) saturate(1.35) brightness(1.04);
+    backdrop-filter: blur(16px) saturate(1.35) brightness(1.04);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      inset 0 -1px 0 rgb(0 0 0 / 0.35),
+      0 0 0 0.5px rgb(201 168 124 / 0.22),
+      0 18px 48px rgb(0 0 0 / 0.4);
+  }
+
+  /* ===== Nav / sidebar ===== */
+  .nav-inferior {
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.55) 0%, rgb(255 252 247 / 0.72) 100%),
+      rgb(255 252 247 / 0.58);
+    border-top-color: transparent;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.75),
+      0 -8px 28px rgb(12 18 34 / 0.06);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5) brightness(1.04);
+    backdrop-filter: blur(20px) saturate(1.5) brightness(1.04);
+  }
+
+  html[data-tema='escuro'] .nav-inferior {
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.08) 0%, transparent 40%),
+      rgb(10 10 10 / 0.78);
+    border-top-color: transparent;
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    backdrop-filter: blur(22px) saturate(1.4);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.12),
+      0 -10px 30px rgb(0 0 0 / 0.45);
+  }
+
+  .sidebar-link:hover,
+  .sidebar-link.ativo {
+    background: linear-gradient(135deg, rgb(255 255 255 / 0.16) 0%, rgb(255 255 255 / 0.05) 100%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2);
+    -webkit-backdrop-filter: blur(8px) saturate(1.3);
+    backdrop-filter: blur(8px) saturate(1.3);
+  }
+
+  html[data-tema='escuro'] .sidebar-link:hover {
+    background: linear-gradient(135deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0.04) 100%);
+    color: #ffffff;
+    -webkit-backdrop-filter: blur(10px) saturate(1.3);
+    backdrop-filter: blur(10px) saturate(1.3);
+  }
+
+  html[data-tema='escuro'] .sidebar-link.ativo {
+    background:
+      radial-gradient(80% 120% at 20% 0%, rgb(255 255 255 / 0.35) 0%, transparent 60%),
+      rgb(255 255 255 / 0.92);
+    color: #000000;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      0 0 0 0.5px rgb(201 168 124 / 0.35),
+      0 8px 20px rgb(0 0 0 / 0.35);
+    -webkit-backdrop-filter: blur(10px) saturate(1.25);
+    backdrop-filter: blur(10px) saturate(1.25);
+  }
+
+  /* ===== Frosted floating: menus / modais / painéis ===== */
+  :is(
+      .admin-empresa-popup-painel,
+      .veiculo-popup-painel,
+      .admin-historico-popup-painel,
+      .menu-conta-painel,
+      .aviso-atualizacao-cartao,
+      .painel-detalhe
+    ) {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+      radial-gradient(70% 45% at 15% 0%, rgb(255 255 255 / 0.55) 0%, transparent 55%),
+      linear-gradient(160deg, rgb(255 255 255 / 0.62) 0%, rgb(255 255 255 / 0.22) 48%, rgb(184 149 108 / 0.06) 100%),
+      rgb(255 252 247 / 0.68);
+    border-color: transparent;
+    -webkit-backdrop-filter: url(#jemani-lente-fina) blur(24px) saturate(1.55) brightness(1.05);
+    backdrop-filter: url(#jemani-lente-fina) blur(24px) saturate(1.55) brightness(1.05);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.82),
+      inset 0 -1px 0 rgb(184 149 108 / 0.12),
+      0 0 0 0.5px rgb(184 149 108 / 0.22),
+      0 28px 64px rgb(12 18 34 / 0.2);
+  }
+
+  :is(
+      .admin-empresa-popup-painel,
+      .veiculo-popup-painel,
+      .admin-historico-popup-painel,
+      .menu-conta-painel,
+      .aviso-atualizacao-cartao,
+      .painel-detalhe
+    )::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      145deg,
+      rgb(255 255 255 / 0.95) 0%,
+      rgb(201 168 124 / 0.35) 40%,
+      rgb(120 160 200 / 0.18) 70%,
+      rgb(184 149 108 / 0.42) 100%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  :is(
+      .admin-empresa-popup-painel,
+      .veiculo-popup-painel,
+      .admin-historico-popup-painel,
+      .menu-conta-painel,
+      .aviso-atualizacao-cartao,
+      .painel-detalhe
+    ) > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  html[data-tema='escuro'] :is(
+      .admin-empresa-popup-painel,
+      .veiculo-popup-painel,
+      .admin-historico-popup-painel,
+      .menu-conta-painel,
+      .aviso-atualizacao-cartao,
+      .painel-detalhe
+    ) {
+    color: #f5f5f5;
+    background:
+      radial-gradient(70% 45% at 15% 0%, rgb(255 255 255 / 0.14) 0%, transparent 55%),
+      linear-gradient(160deg, rgb(255 255 255 / 0.1) 0%, transparent 45%),
+      rgb(22 22 24 / 0.78);
+    -webkit-backdrop-filter: url(#jemani-lente-fina) blur(26px) saturate(1.45) brightness(1.05);
+    backdrop-filter: url(#jemani-lente-fina) blur(26px) saturate(1.45) brightness(1.05);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.16),
+      inset 0 -1px 0 rgb(0 0 0 / 0.4),
+      0 0 0 0.5px rgb(201 168 124 / 0.28),
+      0 28px 64px rgb(0 0 0 / 0.55);
+  }
+
+  /* Superfícies sempre escuras (motorista / finalizar) — vidro fumado */
+  :is(.finalizar-painel, .layout-motorista-lista) {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    color: #f6f1e8;
+    background:
+      radial-gradient(70% 45% at 15% 0%, rgb(255 255 255 / 0.14) 0%, transparent 55%),
+      linear-gradient(160deg, rgb(255 255 255 / 0.1) 0%, transparent 45%),
+      rgb(18 18 18 / 0.8);
+    border-color: transparent;
+    -webkit-backdrop-filter: url(#jemani-lente-fina) blur(24px) saturate(1.4) brightness(1.05);
+    backdrop-filter: url(#jemani-lente-fina) blur(24px) saturate(1.4) brightness(1.05);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.16),
+      inset 0 -1px 0 rgb(201 164 108 / 0.16),
+      0 0 0 0.5px rgb(201 168 124 / 0.28),
+      0 24px 56px rgb(0 0 0 / 0.5);
+  }
+
+  :is(.finalizar-painel, .layout-motorista-lista)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      145deg,
+      rgb(255 255 255 / 0.45) 0%,
+      rgb(201 168 124 / 0.35) 45%,
+      rgb(255 255 255 / 0.08) 100%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  :is(.finalizar-painel, .layout-motorista-lista) > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .menu-conta-botao {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-color: transparent;
+    background:
+      radial-gradient(80% 70% at 30% 10%, rgb(255 255 255 / 0.55) 0%, transparent 60%),
+      rgb(255 252 247 / 0.5);
+    -webkit-backdrop-filter: url(#jemani-lente-fina) blur(12px) saturate(1.4);
+    backdrop-filter: url(#jemani-lente-fina) blur(12px) saturate(1.4);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.75),
+      0 0 0 0.5px rgb(184 149 108 / 0.22),
+      0 8px 18px rgb(12 18 34 / 0.08);
+  }
+
+  .menu-conta-botao::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgb(255 255 255 / 0.9) 0%, rgb(184 149 108 / 0.4) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+
+  .menu-conta-botao > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  html[data-tema='escuro'] .menu-conta-botao,
+  .menu-conta--escuro .menu-conta-botao {
+    background:
+      radial-gradient(80% 70% at 30% 10%, rgb(255 255 255 / 0.16) 0%, transparent 60%),
+      rgb(28 28 30 / 0.72);
+    color: #fff;
+    -webkit-backdrop-filter: url(#jemani-lente-fina) blur(14px) saturate(1.35);
+    backdrop-filter: url(#jemani-lente-fina) blur(14px) saturate(1.35);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.2),
+      0 0 0 0.5px rgb(201 168 124 / 0.28),
+      0 8px 18px rgb(0 0 0 / 0.35);
+  }
+
+  .menu-conta-chip {
+    background: linear-gradient(145deg, rgb(255 255 255 / 0.55) 0%, rgb(246 243 236 / 0.72) 100%);
+    border-color: rgb(184 149 108 / 0.22);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.65);
+  }
+
+  html[data-tema='escuro'] .menu-conta-chip,
+  .menu-conta--escuro .menu-conta-chip {
+    background: rgb(255 255 255 / 0.08);
+    border-color: rgb(255 255 255 / 0.14);
+    color: #fff;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+  }
+}
+
+/* Scrim modal */
+.vidro-modal-scrim,
+.admin-empresa-popup,
+.veiculo-popup,
+.admin-historico-popup,
+.aviso-atualizacao,
+.finalizar-fundo,
+.painel-detalhe-fundo {
+  -webkit-backdrop-filter: blur(6px) saturate(1.12);
+  backdrop-filter: blur(6px) saturate(1.12);
+}
+
+html[data-tema='escuro'] .vidro-modal-scrim,
+html[data-tema='escuro'] .admin-empresa-popup,
+html[data-tema='escuro'] .veiculo-popup,
+html[data-tema='escuro'] .admin-historico-popup,
+html[data-tema='escuro'] .aviso-atualizacao,
+html[data-tema='escuro'] .finalizar-fundo,
+html[data-tema='escuro'] .painel-detalhe-fundo {
+  background: rgb(0 0 0 / 0.55);
+}
+
+/* Cliente topo / dock — reforço dual theme */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html[data-tema='escuro'] .layout-cliente-topo {
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.06) 0%, transparent 70%),
+      rgb(0 0 0 / 0.72);
+    box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.08);
+    -webkit-backdrop-filter: blur(18px) saturate(1.35);
+    backdrop-filter: blur(18px) saturate(1.35);
+  }
+
+  html[data-tema='escuro'] .layout-cliente-nav {
+    background:
+      radial-gradient(80% 80% at 20% 0%, rgb(255 255 255 / 0.12) 0%, transparent 50%),
+      linear-gradient(145deg, rgb(255 255 255 / 0.1) 0%, transparent 42%),
+      rgb(14 14 16 / 0.72);
+    -webkit-backdrop-filter: url(#jemani-lente-fina) blur(22px) saturate(1.5) brightness(1.05);
+    backdrop-filter: url(#jemani-lente-fina) blur(22px) saturate(1.5) brightness(1.05);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.2),
+      0 0 0 0.5px rgb(201 168 124 / 0.3),
+      0 18px 40px rgb(0 0 0 / 0.5);
+  }
+
+  html[data-tema='escuro'] .layout-cliente-nav a.ativo {
+    background:
+      radial-gradient(80% 80% at 30% 0%, rgb(255 255 255 / 0.18) 0%, transparent 60%),
+      linear-gradient(145deg, rgb(255 255 255 / 0.12) 0%, rgb(201 164 108 / 0.28) 100%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.28),
+      0 6px 14px rgb(0 0 0 / 0.3);
+  }
+}
+
+/* Mobile: blur menor */
+@media (max-width: 720px) {
+  :root {
+    --vidro-blur-mul: 0.7;
+  }
+
+  @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .cartao {
+      -webkit-backdrop-filter: blur(8px) saturate(1.25) !important;
+      backdrop-filter: blur(8px) saturate(1.25) !important;
+    }
+
+    .btn-primario,
+    .btn-ouro,
+    .btn-secundario {
+      -webkit-backdrop-filter: blur(9px) saturate(1.35) !important;
+      backdrop-filter: blur(9px) saturate(1.35) !important;
+    }
+  }
+}
+
+/* Acessibilidade */
+@media (prefers-reduced-transparency: reduce) {
+  .vidro,
+  .btn-secundario,
+  .btn-primario,
+  .btn-ouro,
+  .btn-perigo,
+  .cartao,
+  .nav-inferior,
+  .menu-conta-botao,
+  .layout-cliente-nav,
+  .layout-cliente-topo,
+  :is(
+      .admin-empresa-popup-painel,
+      .veiculo-popup-painel,
+      .admin-historico-popup-painel,
+      .menu-conta-painel,
+      .aviso-atualizacao-cartao,
+      .painel-detalhe,
+      .finalizar-painel,
+      .layout-motorista-lista
+    ) {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .vidro::before,
+  .vidro::after,
+  .btn-secundario::before,
+  .btn-secundario::after,
+  .btn-primario::before,
+  .btn-primario::after,
+  .btn-ouro::before,
+  .btn-ouro::after,
+  .cartao::before,
+  .menu-conta-botao::before,
+  :is(
+      .admin-empresa-popup-painel,
+      .veiculo-popup-painel,
+      .admin-historico-popup-painel,
+      .menu-conta-painel,
+      .aviso-atualizacao-cartao,
+      .painel-detalhe,
+      .finalizar-painel,
+      .layout-motorista-lista
+    )::before {
+    content: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vidro,
+  .vidro--interativo,
+  button.vidro,
+  a.vidro,
+  .btn-secundario,
+  .btn-primario,
+  .btn-ouro {
+    transition: none !important;
+  }
+
+  .vidro--interativo:hover,
+  .vidro--interativo:active,
+  .btn-secundario:hover,
+  .btn-secundario:active,
+  .btn-primario:hover,
+  .btn-primario:active,
+  .btn-ouro:hover,
+  .btn-ouro:active {
+    transform: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .vidro,
+  .vidro-placa,
+  .btn-secundario,
+  .btn-primario,
+  .btn-ouro,
+  .cartao {
+    background: Canvas !important;
+    color: CanvasText !important;
+    border: 1px solid CanvasText !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+
+  .vidro::before,
+  .vidro::after,
+  .btn-secundario::before,
+  .btn-secundario::after,
+  .btn-primario::before,
+  .btn-primario::after,
+  .btn-ouro::before,
+  .btn-ouro::after,
+  .cartao::before {
+    content: none !important;
+  }
+}

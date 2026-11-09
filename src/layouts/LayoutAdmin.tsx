@@ -79,13 +79,10 @@ export function LayoutAdmin() {
                 </span>
                 {alertaSolicitacoes && (
                   <i
-                    className={cn(
-                      'layout-admin-alerta',
-                      qtdSolicitacoes > 1 && 'layout-admin-alerta--contagem',
-                    )}
+                    className="layout-admin-alerta"
                     aria-label={t('admin.solicitacoes.alerta', { n: qtdSolicitacoes })}
                   >
-                    {qtdSolicitacoes > 9 ? '9+' : qtdSolicitacoes === 1 ? '!' : qtdSolicitacoes}
+                    {qtdSolicitacoes > 9 ? '9+!' : `${qtdSolicitacoes}!`}
                   </i>
                 )}
               </NavLink>

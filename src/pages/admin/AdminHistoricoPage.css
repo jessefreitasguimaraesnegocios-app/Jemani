@@ -89,7 +89,9 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgba(12, 14, 18, 0.55);
+  background: rgba(12, 14, 18, 0.42);
+  backdrop-filter: blur(6px) saturate(1.1);
+  -webkit-backdrop-filter: blur(6px) saturate(1.1);
 }
 
 .admin-historico-popup-painel {

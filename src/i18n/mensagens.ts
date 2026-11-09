@@ -497,6 +497,7 @@ const pt = {
 
   'empresa.dashboard.titulo': 'Dashboard',
   'empresa.solicitacoes.titulo': 'Novas solicitações',
+  'empresa.solicitacoes.alerta': '{n} novas solicitações',
   'empresa.aoVivo.titulo': 'Viagens',
   'empresa.aoVivo.col.aceitas': 'Aceitas',
   'empresa.aoVivo.sub': 'Corridas da sua empresa, ao vivo.',
@@ -1158,6 +1159,7 @@ const en: Record<ChaveTraducao, string> = {
 
   'empresa.dashboard.titulo': 'Dashboard',
   'empresa.solicitacoes.titulo': 'New requests',
+  'empresa.solicitacoes.alerta': '{n} new requests',
   'empresa.aoVivo.titulo': 'Trips',
   'empresa.aoVivo.col.aceitas': 'Accepted',
   'empresa.aoVivo.sub': 'Live trips for your company.',
@@ -1817,6 +1819,7 @@ const es: Record<ChaveTraducao, string> = {
 
   'empresa.dashboard.titulo': 'Dashboard',
   'empresa.solicitacoes.titulo': 'Nuevas solicitudes',
+  'empresa.solicitacoes.alerta': '{n} nuevas solicitudes',
   'empresa.aoVivo.titulo': 'Viajes',
   'empresa.aoVivo.col.aceitas': 'Aceptadas',
   'empresa.aoVivo.sub': 'Viajes en vivo de su empresa.',

@@ -6,19 +6,57 @@
   align-items: flex-end;
   justify-content: center;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.72);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px) saturate(1.1);
+  -webkit-backdrop-filter: blur(6px) saturate(1.1);
 }
 
 .finalizar-painel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   width: 100%;
   max-width: 32rem;
   display: grid;
   gap: 1rem;
   padding: 1.25rem;
   border-radius: 1.1rem;
-  background: #121212;
   color: #f6f1e8;
-  border: 1px solid #3a3428;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.1) 0%, rgb(255 255 255 / 0) 42%),
+    rgb(18 18 18 / 0.82);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.14),
+    inset 0 -1px 0 rgb(201 164 108 / 0.18),
+    0 24px 60px rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(22px) saturate(1.4) brightness(1.05);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4) brightness(1.05);
+}
+
+.finalizar-painel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    145deg,
+    rgb(255 255 255 / 0.4) 0%,
+    rgb(255 255 255 / 0.06) 45%,
+    rgb(201 164 108 / 0.45) 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.finalizar-painel > * {
+  position: relative;
+  z-index: 1;
 }
 
 .finalizar-painel h2 {

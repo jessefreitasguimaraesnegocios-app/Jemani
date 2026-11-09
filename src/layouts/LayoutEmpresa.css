@@ -1,0 +1,46 @@
+.layout-empresa-link {
+  position: relative;
+}
+
+.layout-empresa-link-linha {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.layout-empresa-alerta {
+  display: grid;
+  place-items: center;
+  min-width: 1.35rem;
+  height: 1.2rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #c9a46c;
+  color: #111;
+  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+  animation: layout-empresa-pulso 1.1s ease-in-out infinite;
+}
+
+@keyframes layout-empresa-pulso {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(201, 164, 108, 0.55);
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.92;
+    box-shadow: 0 0 0 6px rgba(201, 164, 108, 0);
+  }
+}
+
+.layout-empresa-link.ativo .layout-empresa-alerta {
+  background: #111;
+  color: #c9a46c;
+}

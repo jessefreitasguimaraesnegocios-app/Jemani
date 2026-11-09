@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AvisoAtualizacaoApp } from '@/components/AvisoAtualizacaoApp'
+import { FiltrosVidroSvg } from '@/components/FiltrosVidroSvg'
 import { SincronizarIdioma } from '@/components/SincronizarIdioma'
 import { PrepararAlertas } from '@/components/PrepararAlertas'
 import { VigilanciaAlertas } from '@/components/VigilanciaAlertas'
@@ -52,6 +53,7 @@ export default function App() {
     <AuthProvider>
       <SincronizarIdioma>
       <>
+      <FiltrosVidroSvg />
       <PrepararAlertas />
       <SincronizarNuvem />
       <VigilanciaHourly />

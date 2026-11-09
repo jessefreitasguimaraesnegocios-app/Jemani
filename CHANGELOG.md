@@ -6,14 +6,18 @@ Registro das mudanças do Jemani.
 
 ### Adicionado
 
+- **Optical Glass (claro + escuro)**: Liquid Glass (iOS 26) + glassmorphism + frost + refração SVG (`FiltrosVidroSvg` / `#jemani-lente`) + specular highlights; componentes `VidroLiquido` e tokens em `src/styles/liquid-glass.css`.
+- Chrome com vidro (botões, nav, menus, modais, cards); leitura densa permanece estável; blur reduzido no mobile; fallbacks `prefers-reduced-transparency` / motion / forced-colors.
 - **Sync completo Supabase**: motoristas (Auth + `drivers` via edge `criar-motorista`), extensões hourly (`trip_extensions` + edge `confirmar-extensao`), avaliações (`reviews`), notificações cross-user (RPC `enviar_notificacao`).
 - Realtime em `notifications`, `reviews`, `drivers` e poll de turnos/agendamentos/extensões/avaliações no `SincronizarNuvem`.
 - Coluna `drivers.eh_categoria_shield`; `notifications.referencia_id` como text.
 - Validação de sessão Auth no servidor (`sessaoAuth`: `getUser` + refresh) antes de listar/criar empresa e chamar Edge Functions.
 - Helper compartilhado `distribuirOfertasAposPagamento` nas edges de pagamento (simulado / Stripe webhook / verificar sessão).
+- Empresa: badge `1!` / `2!` / `3!` em **Novas solicitações** (igual ao admin).
 
 ### Alterado
 
+- Tema escuro deixa de anular o glass no chrome (vidro fumado + rampas de luminância no `body`).
 - `salvarMotorista` / `criarAvaliacao` / `solicitarExtensaoHourly` / `confirmarExtensaoHourlyPaga` persistem na nuvem com rollback se falhar.
 - Notificações para outros papéis sobem ao Postgres (não ficam só no aparelho de quem gerou).
 - Corrige admin com **Parceiras (0)** e **Sessão inválida**: JWT expirado no cache não passa mais por RLS/edge; hydrate nuvem deixa de reidratar seed de empresas.
@@ -22,7 +26,7 @@ Registro das mudanças do Jemani.
 - Pagamento: simulado/Stripe não fingem “pago” só no aparelho — exigem Edge (service role); sync não zera corridas ativas se a nuvem voltar vazia; checkout Vercel prefere `preco_total` do banco.
 - Corrige reserva que falhava ao salvar no Supabase (cliente_id ≠ auth.uid() / sessão); **Simular pagamento** volta a aparecer sempre na viagem pendente (Stripe não esconde mais).
 - Corrige insert de one-way com `paradas_liberadas` null (coluna NOT NULL).
-- APK **1.0.78**.
+- APK **1.0.81**.
 
 ## [2026-11-07]
 
