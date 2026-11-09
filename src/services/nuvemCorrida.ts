@@ -283,7 +283,13 @@ function paraLinha(viagem: Viagem): LinhaViagem {
     milhas_percorridas: viagem.milhas_percorridas ?? null,
     horario_vencido_em: viagem.horario_vencido_em ?? null,
     conclusao_efetiva_em: viagem.conclusao_efetiva_em ?? null,
-    paradas_liberadas: viagem.paradas_liberadas ?? null,
+    // Coluna NOT NULL no Postgres (default 5) — nunca enviar null no upsert.
+    paradas_liberadas:
+      viagem.paradas_liberadas != null
+        ? viagem.paradas_liberadas
+        : viagem.modalidade === 'hourly'
+          ? 5
+          : 0,
     paradas: viagem.paradas ?? [],
     passageiros: viagem.passageiros,
     malas: viagem.malas ?? null,

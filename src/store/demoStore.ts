@@ -848,7 +848,7 @@ export const useDemoStore = create<EstadoDemo>()(
           fim_agendado: janela?.fimIso,
           franquia_milhas: franquiaMilhas,
           paradas_liberadas:
-            modalidade === 'hourly' ? lerParadasPorBloco(state.configuracoes) : undefined,
+            modalidade === 'hourly' ? lerParadasPorBloco(state.configuracoes) : 0,
           paradas: modalidade === 'hourly' ? [] : undefined,
           passageiros: dados.passageiros,
           malas: dados.malas,
