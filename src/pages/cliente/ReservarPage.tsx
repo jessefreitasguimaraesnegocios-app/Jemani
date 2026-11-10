@@ -83,6 +83,11 @@ export function ReservarPage() {
   const [categoriaId, setCategoriaId] = useState(
     categorias.find((c) => c.slug === 'jemani-executive')?.id ?? '',
   )
+  const [veiculoId, setVeiculoId] = useState('')
+  const escolherFrota = useCallback((categoria: string, veiculo?: string) => {
+    setCategoriaId(categoria)
+    setVeiculoId(veiculo ?? '')
+  }, [])
   const [malas, setMalas] = useState(2)
   const [numeroVoo, setNumeroVoo] = useState('')
   const [terminal, setTerminal] = useState('')
@@ -711,10 +716,11 @@ export function ReservarPage() {
             <SeletorCategoria3D
               categorias={categorias}
               categoriaId={categoriaId}
+              veiculoId={veiculoId}
               passageiros={passageiros}
               veiculos={veiculos}
               empresas={empresas}
-              aoSelecionar={setCategoriaId}
+              aoSelecionar={escolherFrota}
               formatarAdicional={(valor) => formatarMoeda(valor, locale)}
             />
           </div>

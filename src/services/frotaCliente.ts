@@ -78,3 +78,36 @@ export function veiculoDestaqueDaCategoria(
   const base = disponiveis.length ? disponiveis : frota
   return base.find((veiculo) => veiculo.fotos[0]) ?? base[0]
 }
+
+/** Todos os carros das empresas elegíveis para o carrossel da reserva (não só 1 por categoria). */
+export function veiculosParaCarrosselReserva(
+  veiculos: Veiculo[],
+  empresas: Empresa[],
+  categorias: CategoriaVeiculo[],
+  passageiros = 1,
+): Array<Veiculo & { categoria: CategoriaVeiculo; serve: boolean }> {
+  const porCategoria = new Map(categorias.filter((c) => c.ativo).map((c) => [c.id, c]))
+  const frota = frotaAlinhada(veiculos, empresas, categorias)
+  const lista: Array<Veiculo & { categoria: CategoriaVeiculo; serve: boolean }> = []
+
+  for (const veiculo of frota) {
+    const categoria = porCategoria.get(veiculo.categoria_id)
+    if (!categoria) continue
+    const capacidade =
+      veiculo.capacidade > 0 ? veiculo.capacidade : categoria.capacidade_max
+    lista.push({
+      ...veiculo,
+      categoria,
+      serve: passageiros <= capacidade,
+    })
+  }
+
+  return lista.sort((a, b) => {
+    if (a.categoria.slug === 'jemani-shield' && b.categoria.slug !== 'jemani-shield') return -1
+    if (b.categoria.slug === 'jemani-shield' && a.categoria.slug !== 'jemani-shield') return 1
+    if (a.categoria.ordem !== b.categoria.ordem) return a.categoria.ordem - b.categoria.ordem
+    const nomeA = `${a.marca} ${a.modelo}`.toLowerCase()
+    const nomeB = `${b.marca} ${b.modelo}`.toLowerCase()
+    return nomeA.localeCompare(nomeB)
+  })
+}

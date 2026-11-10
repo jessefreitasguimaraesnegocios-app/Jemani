@@ -3,6 +3,7 @@ import {
   categoriasComFrotaDisponivel,
   veiculoDestaqueDaCategoria,
   veiculosOfereceiveis,
+  veiculosParaCarrosselReserva,
 } from '@/services/frotaCliente'
 import type { CategoriaVeiculo, Empresa, Veiculo } from '@/types'
 
@@ -128,5 +129,23 @@ describe('frotaCliente', () => {
   it('prioriza veículo com foto no destaque da categoria', () => {
     const destaque = veiculoDestaqueDaCategoria('cat-1', veiculos, [empresaAtiva])
     expect(destaque?.fotos[0]).toBe('/frota/escalade.jpg')
+  })
+
+  it('lista todos os carros das empresas no carrossel da reserva', () => {
+    const extra: Veiculo = {
+      ...veiculos[0],
+      id: 'v3',
+      marca: 'Kia',
+      modelo: 'EV9',
+      fotos: ['/frota/escalade.jpg'],
+    }
+    const lista = veiculosParaCarrosselReserva(
+      [...veiculos, extra],
+      [empresaAtiva, empresaInativa],
+      categorias,
+      2,
+    )
+    expect(lista.map((item) => item.id)).toEqual(['v1', 'v3'])
+    expect(lista.every((item) => item.serve)).toBe(true)
   })
 })

@@ -11,6 +11,7 @@ Registro das mudanças do Jemani.
 ### Alterado
 
 - Padrão do app: **tema escuro** e idioma **EN** (sem preferência salva no aparelho). APK **1.0.90**.
+- Reserva: carrossel mostra **todos os carros** cadastrados pelas empresas (não só 1 por categoria). SQL `docs/FROTA-CLIENTE-FIX.sql` para marketplace/frota no cliente. APK **1.0.91**.
 
 ## [2026-11-09]
 

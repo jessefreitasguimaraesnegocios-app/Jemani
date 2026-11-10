@@ -5,6 +5,26 @@
 -- =============================================================================
 
 -- A) Frota: cliente vê veículos de empresas ativas/habilitadas
+-- (security definer evita o EXISTS morrer quando companies_select fica restrito)
+create or replace function public.empresa_oferece_frota(p_empresa_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.companies c
+    where c.id = p_empresa_id
+      and c.status = 'ativa'
+      and c.habilitada_receber = true
+  );
+$$;
+
+revoke all on function public.empresa_oferece_frota(uuid) from public, anon;
+grant execute on function public.empresa_oferece_frota(uuid) to authenticated, service_role;
+
 drop policy if exists vehicles_select on public.vehicles;
 create policy vehicles_select on public.vehicles
   for select to authenticated
@@ -14,13 +34,7 @@ create policy vehicles_select on public.vehicles
     or empresa_id = public.empresa_do_motorista()
     or (
       status <> 'inativo'
-      and exists (
-        select 1
-        from public.companies c
-        where c.id = vehicles.empresa_id
-          and c.status = 'ativa'
-          and c.habilitada_receber = true
-      )
+      and public.empresa_oferece_frota(empresa_id)
     )
   );
 
@@ -254,14 +268,15 @@ create policy companies_select on public.companies
     or id = public.minha_empresa_id()
   );
 
-create or replace function public.empresas_marketplace()
+drop function if exists public.empresas_marketplace();
+create function public.empresas_marketplace()
 returns table (
   id uuid,
   nome_comercial text,
   cidade text,
   regioes_atendidas text[],
   categorias_ids uuid[],
-  status public.status_empresa,
+  status text,
   habilitada_receber boolean,
   avaliacao_media numeric,
   latitude double precision,
@@ -278,7 +293,7 @@ as $$
     c.cidade,
     c.regioes_atendidas,
     c.categorias_ids,
-    c.status,
+    c.status::text,
     c.habilitada_receber,
     c.avaliacao_media,
     c.latitude,
@@ -289,7 +304,8 @@ as $$
 $$;
 
 revoke all on function public.empresas_marketplace() from public, anon;
-grant execute on function public.empresas_marketplace() to authenticated;
+grant execute on function public.empresas_marketplace() to authenticated, service_role;
+notify pgrst, 'reload schema';
 
 -- F) Extensões: cliente não UPDATE status pago direto
 drop policy if exists trip_extensions_update on public.trip_extensions;

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { SLUG_SHIELD } from '@/data/seed'
-import { veiculoDestaqueDaCategoria } from '@/services/frotaCliente'
+import {
+  veiculoDestaqueDaCategoria,
+  veiculosParaCarrosselReserva,
+} from '@/services/frotaCliente'
 import type { CategoriaVeiculo, Empresa, Veiculo } from '@/types'
 import { fotoDaFrota, rotuloCurtoFrota } from './fotosFrota'
 import './SeletorCategoria3D.css'
@@ -9,14 +12,15 @@ import './SeletorCategoria3D.css'
 type Props = {
   categorias: CategoriaVeiculo[]
   categoriaId: string
+  veiculoId?: string
   passageiros: number
   veiculos?: Veiculo[]
   empresas?: Empresa[]
-  aoSelecionar: (id: string) => void
+  aoSelecionar: (categoriaId: string, veiculoId?: string) => void
   formatarAdicional: (valor: number) => string
 }
 
-type CartaoFrota = CategoriaVeiculo & { serve: boolean }
+type CartaoCategoria = CategoriaVeiculo & { serve: boolean }
 
 type EstadoArrasto = {
   pointerId: number
@@ -31,6 +35,7 @@ const GAP_CARTAO = 10
 export function SeletorCategoria3D({
   categorias,
   categoriaId,
+  veiculoId,
   passageiros,
   veiculos = [],
   empresas = [],
@@ -44,10 +49,12 @@ export function SeletorCategoria3D({
   const [movimento, setMovimento] = useState(true)
   const [temOverflow, setTemOverflow] = useState(false)
 
-  const selecionada = useMemo(
-    () => categorias.find((c) => c.id === categoriaId) ?? categorias[0],
-    [categorias, categoriaId],
+  const frota = useMemo(
+    () => veiculosParaCarrosselReserva(veiculos, empresas, categorias, passageiros),
+    [veiculos, empresas, categorias, passageiros],
   )
+
+  const usarVeiculos = frota.length > 0
 
   const categoriasValidas = useMemo(
     () =>
@@ -58,6 +65,62 @@ export function SeletorCategoria3D({
     [categorias, passageiros],
   )
 
+  const veiculoSelecionado = useMemo(() => {
+    if (usarVeiculos) {
+      if (veiculoId) {
+        const direto = frota.find((item) => item.id === veiculoId)
+        if (direto) return direto
+      }
+      return (
+        frota.find((item) => item.categoria_id === categoriaId && item.serve) ??
+        frota.find((item) => item.categoria_id === categoriaId) ??
+        frota.find((item) => item.serve) ??
+        frota[0] ??
+        null
+      )
+    }
+    const destaque = veiculoDestaqueDaCategoria(
+      categoriaId,
+      veiculos,
+      empresas,
+      categorias,
+    )
+    if (!destaque) return null
+    const categoria =
+      categorias.find((c) => c.id === destaque.categoria_id) ??
+      categorias.find((c) => c.id === categoriaId) ??
+      categorias[0]
+    if (!categoria) return null
+    return { ...destaque, categoria, serve: passageiros <= categoria.capacidade_max }
+  }, [
+    usarVeiculos,
+    veiculoId,
+    frota,
+    categoriaId,
+    veiculos,
+    empresas,
+    categorias,
+    passageiros,
+  ])
+
+  const selecionada = useMemo(() => {
+    if (veiculoSelecionado) return veiculoSelecionado.categoria
+    return categorias.find((c) => c.id === categoriaId) ?? categorias[0]
+  }, [veiculoSelecionado, categorias, categoriaId])
+
+  useEffect(() => {
+    if (!usarVeiculos || !frota.length) return
+    const atual = veiculoId ? frota.find((item) => item.id === veiculoId) : undefined
+    if (atual && (atual.serve || !frota.some((item) => item.serve))) return
+    const preferido =
+      frota.find((item) => item.categoria_id === categoriaId && item.serve) ??
+      frota.find((item) => item.serve) ??
+      frota[0]
+    if (!preferido) return
+    if (preferido.id === veiculoId && preferido.categoria_id === categoriaId) return
+    aoSelecionar(preferido.categoria_id, preferido.id)
+  }, [usarVeiculos, frota, veiculoId, categoriaId, aoSelecionar])
+
   function fotoCategoria(categoria: CategoriaVeiculo) {
     const destaque = veiculoDestaqueDaCategoria(categoria.id, veiculos, empresas, categorias)
     return destaque?.fotos[0] ?? fotoDaFrota(categoria.slug)
@@ -67,6 +130,10 @@ export function SeletorCategoria3D({
     const destaque = veiculoDestaqueDaCategoria(categoria.id, veiculos, empresas, categorias)
     if (destaque) return `${destaque.marca} ${destaque.modelo}`.trim()
     return rotuloCurtoFrota(categoria.slug, categoria.nome)
+  }
+
+  function fotoVeiculo(veiculo: Veiculo, categoria: CategoriaVeiculo) {
+    return veiculo.fotos[0] || fotoDaFrota(categoria.slug)
   }
 
   function pausarAuto(ms = 2200) {
@@ -104,7 +171,9 @@ export function SeletorCategoria3D({
     return () => media.removeEventListener('change', aplicar)
   }, [])
 
-  const chaveFaixa = categoriasValidas.map((c) => c.id).join('|')
+  const chaveFaixa = usarVeiculos
+    ? frota.map((item) => item.id).join('|')
+    : categoriasValidas.map((c) => c.id).join('|')
 
   useEffect(() => {
     const trilho = faixaRef.current
@@ -231,17 +300,13 @@ export function SeletorCategoria3D({
   if (!selecionada) return null
 
   const elite = selecionada.slug === SLUG_SHIELD
-  const veiculoSelecionado = veiculoDestaqueDaCategoria(
-    selecionada.id,
-    veiculos,
-    empresas,
-    categorias,
-  )
-  const foto = fotoCategoria(selecionada)
+  const foto = veiculoSelecionado
+    ? fotoVeiculo(veiculoSelecionado, selecionada)
+    : fotoCategoria(selecionada)
   const copias = movimento ? [0, 1] : [0]
   const mostrarSetas = temOverflow || movimento
 
-  function escolher(id: string, serve: boolean) {
+  function escolherCategoria(id: string, serve: boolean) {
     if (!serve) return
     if (bloqueiaClick.current || arrasto.current?.moveu) {
       bloqueiaClick.current = false
@@ -251,7 +316,19 @@ export function SeletorCategoria3D({
     aoSelecionar(id)
   }
 
-  function cartao(c: CartaoFrota, copia: number) {
+  function escolherVeiculo(
+    item: ReturnType<typeof veiculosParaCarrosselReserva>[number],
+  ) {
+    if (!item.serve) return
+    if (bloqueiaClick.current || arrasto.current?.moveu) {
+      bloqueiaClick.current = false
+      return
+    }
+    pausarAuto(1800)
+    aoSelecionar(item.categoria_id, item.id)
+  }
+
+  function cartaoCategoria(c: CartaoCategoria, copia: number) {
     const ativa = c.id === categoriaId
     return (
       <button
@@ -264,10 +341,42 @@ export function SeletorCategoria3D({
         className={`showroom-card ${ativa ? 'showroom-card--ativo' : ''} ${
           c.slug === SLUG_SHIELD ? 'showroom-card--elite' : ''
         }`}
-        onClick={() => escolher(c.id, c.serve)}
+        onClick={() => escolherCategoria(c.id, c.serve)}
       >
         <img src={fotoCategoria(c)} alt="" loading="lazy" decoding="async" draggable={false} />
         <span>{rotuloCategoria(c)}</span>
+      </button>
+    )
+  }
+
+  function cartaoVeiculo(
+    item: ReturnType<typeof veiculosParaCarrosselReserva>[number],
+    copia: number,
+  ) {
+    const ativa = veiculoSelecionado?.id === item.id
+    return (
+      <button
+        key={`${copia}-${item.id}`}
+        type="button"
+        role="option"
+        aria-selected={ativa}
+        tabIndex={copia === 1 ? -1 : undefined}
+        disabled={!item.serve}
+        className={`showroom-card ${ativa ? 'showroom-card--ativo' : ''} ${
+          item.categoria.slug === SLUG_SHIELD ? 'showroom-card--elite' : ''
+        }`}
+        onClick={() => escolherVeiculo(item)}
+      >
+        <img
+          src={fotoVeiculo(item, item.categoria)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+        />
+        <span>
+          {item.marca} {item.modelo}
+        </span>
       </button>
     )
   }
@@ -288,13 +397,24 @@ export function SeletorCategoria3D({
       </header>
 
       <div className="showroom-palco">
-        <img key={selecionada.id} className="showroom-foto" src={foto} alt={selecionada.nome} />
+        <img
+          key={veiculoSelecionado?.id ?? selecionada.id}
+          className="showroom-foto"
+          src={foto}
+          alt={
+            veiculoSelecionado
+              ? `${veiculoSelecionado.marca} ${veiculoSelecionado.modelo}`
+              : selecionada.nome
+          }
+        />
         <span className="showroom-anel" aria-hidden="true" />
       </div>
 
       <ul className="showroom-specs">
         <li>
-          <span className="showroom-spec-valor">até {selecionada.capacidade_max}</span>
+          <span className="showroom-spec-valor">
+            até {veiculoSelecionado?.capacidade || selecionada.capacidade_max}
+          </span>
           <span className="showroom-spec-rotulo">Passageiros</span>
         </li>
         <li>
@@ -329,7 +449,9 @@ export function SeletorCategoria3D({
               className="showroom-faixa-grupo"
               aria-hidden={copia === 1 ? true : undefined}
             >
-              {categoriasValidas.map((c) => cartao(c, copia))}
+              {usarVeiculos
+                ? frota.map((item) => cartaoVeiculo(item, copia))
+                : categoriasValidas.map((c) => cartaoCategoria(c, copia))}
             </div>
           ))}
         </div>
