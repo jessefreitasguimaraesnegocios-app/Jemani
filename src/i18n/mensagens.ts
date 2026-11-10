@@ -259,9 +259,9 @@ const pt = {
     'Corridas pagas aguardando oferta por e-mail às empresas mais próximas do embarque.',
   'admin.solicitacoes.comoTitulo': 'Como funciona',
   'admin.solicitacoes.como1':
-    'Corridas pagas entram na fila. O sistema ordena empresas pela distância até o embarque. Você envia o e-mail (Gmail) com um botão “Revisar corrida”; a corrida fica Oferta enviada por e-mail.',
+    'Corridas pagas entram na fila. O sistema ordena empresas pela distância até o embarque. Em Enviar e-mail, o Gmail abre com o botão “Revisar corrida” (cole com Ctrl+V).',
   'admin.solicitacoes.como2':
-    'Ao abrir o Gmail, cole a mensagem (Ctrl+V) para aparecer o botão. A empresa revisa no botão e só confirma na página. Abrir a revisão não aceita a proposta.',
+    'A empresa abre o link exclusivo, confere os dados e clica em Reservar. A Jemani é notificada, a corrida sai da fila disponível e vai para Parceiros externos no kanban.',
 
   'convite.subtituloPainel': 'Proposta de corrida',
   'convite.carregando': 'Carregando proposta…',
@@ -276,8 +276,8 @@ const pt = {
   'convite.valorCondicoes': 'Conforme proposta comercial',
   'convite.prazo': 'Prazo para aceitar',
   'convite.compromisso': 'Ao confirmar, sua empresa assume o compromisso com esta corrida.',
-  'convite.confirmar': 'Confirmar que aceito esta corrida',
-  'convite.confirmando': 'Confirmando…',
+  'convite.confirmar': 'Reservar',
+  'convite.confirmando': 'Reservando…',
   'convite.avisoLink':
     'O link é individual e expira no prazo informado. Se não reconhecer a proposta, feche esta página.',
   'convite.aceitaTitulo': 'Corrida aceita',
@@ -978,8 +978,8 @@ const en: Record<ChaveTraducao, string> = {
   'convite.valorCondicoes': 'As per commercial proposal',
   'convite.prazo': 'Accept by',
   'convite.compromisso': 'By confirming, your company commits to this trip.',
-  'convite.confirmar': 'Confirm that I accept this trip',
-  'convite.confirmando': 'Confirming…',
+  'convite.confirmar': 'Reserve',
+  'convite.confirmando': 'Reserving…',
   'convite.avisoLink':
     'This link is unique and expires at the stated time. If you do not recognize the proposal, close this page.',
   'convite.aceitaTitulo': 'Trip accepted',
@@ -1677,8 +1677,8 @@ const es: Record<ChaveTraducao, string> = {
   'convite.valorCondicoes': 'Según propuesta comercial',
   'convite.prazo': 'Plazo para aceptar',
   'convite.compromisso': 'Al confirmar, su empresa asume el compromiso con este viaje.',
-  'convite.confirmar': 'Confirmar que acepto este viaje',
-  'convite.confirmando': 'Confirmando…',
+  'convite.confirmar': 'Reservar',
+  'convite.confirmando': 'Reservando…',
   'convite.avisoLink':
     'El enlace es individual y expira en el plazo informado. Si no reconoce la propuesta, cierre esta página.',
   'convite.aceitaTitulo': 'Viaje aceptado',

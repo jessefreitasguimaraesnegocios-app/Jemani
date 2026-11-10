@@ -6,6 +6,8 @@ Registro das mudanças do Jemani.
 
 ### Adicionado
 
+- **Aceite por e-mail (parceiro externo):** Admin → Novas solicitações → Enviar e-mail abre o Gmail com botão **Revisar corrida** (link exclusivo `/convite/:token`). A empresa vê os dados e clica **Reservar**; a Jemani é notificada, a corrida sai da fila e vai para **Parceiros externos** no kanban. APK **1.0.86**.
+- SQL para ativar no remoto: `supabase/sql/aplicar_convite_parceiro_externo.sql` (rodar no SQL Editor do projeto Jemani).
 - Novo **ícone do app/APK** (preto + ouro, pin com carro) em web (`/icons`, favicon) e Android (`mipmap` / adaptive icon). APK **1.0.83**.
 
 ### Corrigido

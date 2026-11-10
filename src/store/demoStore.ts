@@ -139,10 +139,12 @@ import {
   situacaoConvite,
   type SituacaoConvite,
 } from '@/services/conviteOferta'
+import { nuvemAtiva } from '@/lib/nuvemAtiva'
 import {
   aceitarConviteNuvem,
   consultarConviteNuvem,
   gravarConviteNuvem,
+  revogarConvitesAbertosNuvem,
   type RespostaConsultaConvite,
 } from '@/services/nuvemConvite'
 import { enderecoProntoParaReserva } from '@/utils/endereco'
@@ -2095,9 +2097,19 @@ export const useDemoStore = create<EstadoDemo>()(
           urlRevisao: urlConvite,
           validoAte,
         }
+        if (nuvemAtiva()) {
+          await revogarConvitesAbertosNuvem(viagemId, empresaId)
+          const gravouConvite = await gravarConviteNuvem(convite)
+          if (!gravouConvite) {
+            throw new Error(
+              'Não foi possível gravar o link exclusivo na nuvem. Verifique se a migration de convites está aplicada.',
+            )
+          }
+        }
+
         const { colouHtml } = await abrirGmailCompose({
           para: empresa.email,
-          assunto: `Jemani — nova corrida ${viagem.codigo} (próxima da sua base)`,
+          assunto: `Jemani — Proposta de corrida ${viagem.codigo}`,
           corpo: corpoOfertaCorrida(dadosOferta),
           corpoHtml: corpoOfertaCorridaHtml(dadosOferta),
         })
@@ -2159,6 +2171,7 @@ export const useDemoStore = create<EstadoDemo>()(
                 distancia_km: distancia,
                 status_novo: 'oferta_enviada',
                 convite_id: convite.id,
+                url_convite: urlConvite,
               },
               created_at: agora,
             },
@@ -2193,7 +2206,6 @@ export const useDemoStore = create<EstadoDemo>()(
         )
         void gravarViagemNuvem(atualizada).then((gravou) => {
           if (gravou && ofertaFinal) void gravarOfertasNuvem([ofertaFinal])
-          if (gravou) void gravarConviteNuvem(convite)
         })
 
         return { viagem: atualizada, urlAberta: true, urlConvite, colouHtml }
@@ -2233,22 +2245,31 @@ export const useDemoStore = create<EstadoDemo>()(
         if (remoto?.ok) {
           const hash = await hashearTokenConvite(token)
           const agora = remoto.accepted_at ?? agoraIso()
+          const viagemId =
+            remoto.viagem_id ??
+            get().convitesOferta.find((item) => item.token_hash === hash)?.viagem_id
+          const empresaId = get().convitesOferta.find((item) => item.token_hash === hash)
+            ?.empresa_id
+          const empresaNome = remoto.empresa_nome ?? ''
+
           set((atual) => {
             const convite = atual.convitesOferta.find((item) => item.token_hash === hash)
-            if (!convite) return atual
+            const idViagem = viagemId ?? convite?.viagem_id
+            const idEmpresa = empresaId ?? convite?.empresa_id
+            if (!idViagem) return atual
             return {
               convitesOferta: atual.convitesOferta.map((item) => {
-                if (item.id === convite.id) return { ...item, accepted_at: agora }
-                if (item.viagem_id === convite.viagem_id && !item.accepted_at && !item.revoked_at) {
+                if (convite && item.id === convite.id) return { ...item, accepted_at: agora }
+                if (item.viagem_id === idViagem && !item.accepted_at && !item.revoked_at) {
                   return { ...item, revoked_at: agora }
                 }
                 return item
               }),
               viagens: atual.viagens.map((viagem) =>
-                viagem.id === convite.viagem_id
+                viagem.id === idViagem
                   ? {
                       ...viagem,
-                      empresa_id: convite.empresa_id,
+                      empresa_id: idEmpresa ?? viagem.empresa_id,
                       status: 'parceiro_externo' as StatusViagem,
                       version: viagem.version + 1,
                       updated_at: agora,
@@ -2256,8 +2277,8 @@ export const useDemoStore = create<EstadoDemo>()(
                   : viagem,
               ),
               atribuicoes: atual.atribuicoes.map((a) => {
-                if (a.viagem_id !== convite.viagem_id) return a
-                if (a.empresa_id === convite.empresa_id) {
+                if (a.viagem_id !== idViagem) return a
+                if (idEmpresa && a.empresa_id === idEmpresa) {
                   return { ...a, status: 'aceita' as const, respondido_em: agora }
                 }
                 if (a.status === 'oferecida') {
@@ -2267,6 +2288,33 @@ export const useDemoStore = create<EstadoDemo>()(
               }),
             }
           })
+
+          const viagemLocal = viagemId
+            ? get().viagens.find((item) => item.id === viagemId)
+            : undefined
+          for (const admin of get().perfis.filter((p) => p.tipo === 'admin' && p.ativo)) {
+            notificar(
+              set,
+              get,
+              admin.id,
+              'Parceiro externo aceitou',
+              `${empresaNome || 'Empresa'} reservou a corrida ${remoto.codigo ?? viagemLocal?.codigo ?? ''}.`,
+              'nova_solicitacao',
+              viagemId,
+            )
+          }
+          if (viagemLocal?.cliente_id) {
+            notificar(
+              set,
+              get,
+              viagemLocal.cliente_id,
+              'Parceiro confirmado',
+              `A empresa ${empresaNome || ''} reservou sua corrida ${viagemLocal.codigo}.`,
+              'status',
+              viagemId,
+            )
+          }
+
           return visaoDeRespostaNuvem(remoto)
         }
         if (remoto && !remoto.ok) {
@@ -2353,6 +2401,28 @@ export const useDemoStore = create<EstadoDemo>()(
             ...state.distribuicoes,
           ],
         })
+
+        for (const admin of get().perfis.filter((p) => p.tipo === 'admin' && p.ativo)) {
+          notificar(
+            set,
+            get,
+            admin.id,
+            'Parceiro externo aceitou',
+            `${empresa?.nome_comercial ?? 'Empresa'} reservou a corrida ${atualizada.codigo}.`,
+            'nova_solicitacao',
+            atualizada.id,
+          )
+        }
+        notificar(
+          set,
+          get,
+          atualizada.cliente_id,
+          'Parceiro confirmado',
+          `A empresa ${empresa?.nome_comercial ?? ''} reservou sua corrida ${atualizada.codigo}.`,
+          'status',
+          atualizada.id,
+        )
+
         void gravarViagemNuvem(atualizada)
         return {
           situacao: 'aceita',

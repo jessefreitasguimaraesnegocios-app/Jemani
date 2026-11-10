@@ -38,7 +38,16 @@ npx supabase functions deploy stripe-connect-onboarding --no-verify-jwt
 npx supabase functions deploy stripe-webhook --no-verify-jwt
 npx supabase functions deploy criar-empresa --no-verify-jwt
 npx supabase functions deploy places-proxy --no-verify-jwt
+npx supabase functions deploy convite-oferta --no-verify-jwt
 ```
+
+### Convite / Parceiros externos (obrigatório no SQL Editor)
+
+No projeto `qdiocaeoevxhdsrtcahn`, abra **SQL Editor** e execute o arquivo:
+
+`supabase/sql/aplicar_convite_parceiro_externo.sql`
+
+Isso cria o status `parceiro_externo`, a tabela `trip_offer_invites` e as RPCs `consultar_convite_oferta` / `aceitar_convite_oferta` (com notificação aos admins no aceite).
 
 Notas:
 

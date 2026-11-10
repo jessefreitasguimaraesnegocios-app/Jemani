@@ -60,7 +60,7 @@
   width: 1.55rem;
   height: 1.55rem;
   border-radius: 999px;
-  background: #2f6b4f;
+  background: #15633d;
   color: #fff;
   font-size: 0.85rem;
   font-weight: 700;
@@ -70,20 +70,23 @@
 .convite-banner-ok {
   margin: 0;
   padding: 0.65rem 0.8rem;
-  border-radius: 0.75rem;
-  background: rgba(47, 107, 79, 0.18);
-  color: #b7e0c8;
+  border-radius: 999px;
+  background: #d9f0e3;
+  color: #15633d;
   font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .convite-banner-ok {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  border-radius: 0.85rem;
 }
 
 .convite-banner-ok strong {
-  color: #dff5e8;
+  color: #0f5132;
 }
 
 .convite-titulo {
@@ -133,18 +136,18 @@
 
 .convite-compromisso {
   margin: 0;
-  padding: 0.7rem 0.8rem;
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.06);
-  font-size: 0.82rem;
-  color: rgba(246, 241, 232, 0.75);
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.85rem;
+  background: #fff;
+  color: #444;
+  font-size: 0.85rem;
 }
 
 .convite-botao {
   border: 0;
-  border-radius: 0.85rem;
+  border-radius: 999px;
   padding: 0.95rem 1rem;
-  background: #2f6b4f;
+  background: #15633d;
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
@@ -195,11 +198,12 @@
   display: inline-flex;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  background: rgba(47, 107, 79, 0.25);
-  color: #b7e0c8;
+  background: #d9f0e3;
+  color: #15633d;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .convite-empresa {
