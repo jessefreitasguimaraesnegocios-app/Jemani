@@ -25,6 +25,9 @@ type EstadoArrasto = {
   moveu: boolean
 }
 
+const LARGURA_CARTAO = 128
+const GAP_CARTAO = 10
+
 export function SeletorCategoria3D({
   categorias,
   categoriaId,
@@ -39,8 +42,7 @@ export function SeletorCategoria3D({
   const arrasto = useRef<EstadoArrasto | null>(null)
   const bloqueiaClick = useRef(false)
   const [movimento, setMovimento] = useState(true)
-  const [podeVoltar, setPodeVoltar] = useState(false)
-  const [podeAvancar, setPodeAvancar] = useState(true)
+  const [temOverflow, setTemOverflow] = useState(false)
 
   const selecionada = useMemo(
     () => categorias.find((c) => c.id === categoriaId) ?? categorias[0],
@@ -67,34 +69,31 @@ export function SeletorCategoria3D({
     return rotuloCurtoFrota(categoria.slug, categoria.nome)
   }
 
-  function pausarAuto(ms = 2000) {
+  function pausarAuto(ms = 2200) {
     pausaAte.current = Date.now() + ms
   }
 
-  function atualizarSetas() {
+  function medirOverflow() {
     const trilho = faixaRef.current
     if (!trilho) return
-    const max = Math.max(0, trilho.scrollWidth - trilho.clientWidth)
-    setPodeVoltar(trilho.scrollLeft > 4)
-    setPodeAvancar(max > 4 && trilho.scrollLeft < max - 4)
-  }
-
-  function normalizarLoop() {
-    const trilho = faixaRef.current
-    if (!trilho || !movimento) return
-    const metade = trilho.scrollWidth / 2
-    if (metade <= 0) return
-    if (trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
-    if (trilho.scrollLeft < 0) trilho.scrollLeft += metade
+    setTemOverflow(trilho.scrollWidth > trilho.clientWidth + 8)
   }
 
   function deslizar(direcao: -1 | 1) {
     const trilho = faixaRef.current
     if (!trilho) return
-    const passo = Math.max(180, Math.floor(trilho.clientWidth * 0.75))
-    trilho.scrollBy({ left: direcao * passo, behavior: 'smooth' })
-    pausarAuto(2800)
-    window.setTimeout(atualizarSetas, 320)
+    const passo = LARGURA_CARTAO + GAP_CARTAO
+    const alvo = trilho.scrollLeft + direcao * passo
+    trilho.scrollTo({ left: alvo, behavior: 'smooth' })
+    pausarAuto(3200)
+    window.setTimeout(() => {
+      const metade = trilho.scrollWidth / 2
+      if (movimento && metade > 0) {
+        if (trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
+        if (trilho.scrollLeft < 0) trilho.scrollLeft += metade
+      }
+      medirOverflow()
+    }, 360)
   }
 
   useEffect(() => {
@@ -117,16 +116,12 @@ export function SeletorCategoria3D({
     const andar = () => {
       if (!vivo) return
       if (movimento && !arrasto.current && Date.now() >= pausaAte.current) {
-        normalizarLoop()
-        trilho.scrollLeft += 0.55
+        const metade = trilho.scrollWidth / 2
+        if (metade > 0 && trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
+        trilho.scrollLeft += 0.6
       }
-      atualizarSetas()
+      medirOverflow()
       quadro = window.requestAnimationFrame(andar)
-    }
-
-    const aoScroll = () => {
-      normalizarLoop()
-      atualizarSetas()
     }
 
     const aoWheel = (evento: WheelEvent) => {
@@ -136,9 +131,13 @@ export function SeletorCategoria3D({
       if (delta === 0) return
       evento.preventDefault()
       trilho.scrollLeft += delta
-      normalizarLoop()
+      const metade = trilho.scrollWidth / 2
+      if (movimento && metade > 0) {
+        if (trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
+        if (trilho.scrollLeft < 0) trilho.scrollLeft += metade
+      }
       pausarAuto(1800)
-      atualizarSetas()
+      medirOverflow()
     }
 
     const aoPointerDown = (evento: PointerEvent) => {
@@ -170,8 +169,19 @@ export function SeletorCategoria3D({
       if (!estado.moveu) return
       evento.preventDefault()
       trilho.scrollLeft = estado.scrollInicio - delta
-      normalizarLoop()
-      atualizarSetas()
+      const metade = trilho.scrollWidth / 2
+      if (movimento && metade > 0) {
+        if (trilho.scrollLeft >= metade) {
+          trilho.scrollLeft -= metade
+          estado.scrollInicio = trilho.scrollLeft
+          estado.inicioX = evento.clientX
+        } else if (trilho.scrollLeft < 0) {
+          trilho.scrollLeft += metade
+          estado.scrollInicio = trilho.scrollLeft
+          estado.inicioX = evento.clientX
+        }
+      }
+      medirOverflow()
     }
 
     const soltar = (evento: PointerEvent) => {
@@ -184,15 +194,16 @@ export function SeletorCategoria3D({
       } catch {
         /* ignore */
       }
-      pausarAuto(estado.moveu ? 2400 : 900)
-      atualizarSetas()
+      pausarAuto(estado.moveu ? 2600 : 900)
+      medirOverflow()
     }
 
-    trilho.scrollLeft = 0
-    pausaAte.current = 0
-    atualizarSetas()
+    const aoResize = () => medirOverflow()
 
-    trilho.addEventListener('scroll', aoScroll, { passive: true })
+    trilho.scrollLeft = movimento ? 4 : 0
+    pausaAte.current = 0
+    medirOverflow()
+
     trilho.addEventListener('wheel', aoWheel, { passive: false })
     trilho.addEventListener('pointerdown', aoPointerDown)
     trilho.addEventListener('pointermove', aoPointerMove)
@@ -200,12 +211,12 @@ export function SeletorCategoria3D({
     trilho.addEventListener('pointercancel', soltar)
     window.addEventListener('pointerup', soltar)
     window.addEventListener('pointercancel', soltar)
+    window.addEventListener('resize', aoResize)
     quadro = window.requestAnimationFrame(andar)
 
     return () => {
       vivo = false
       window.cancelAnimationFrame(quadro)
-      trilho.removeEventListener('scroll', aoScroll)
       trilho.removeEventListener('wheel', aoWheel)
       trilho.removeEventListener('pointerdown', aoPointerDown)
       trilho.removeEventListener('pointermove', aoPointerMove)
@@ -213,6 +224,7 @@ export function SeletorCategoria3D({
       trilho.removeEventListener('pointercancel', soltar)
       window.removeEventListener('pointerup', soltar)
       window.removeEventListener('pointercancel', soltar)
+      window.removeEventListener('resize', aoResize)
     }
   }, [movimento, chaveFaixa])
 
@@ -227,6 +239,7 @@ export function SeletorCategoria3D({
   )
   const foto = fotoCategoria(selecionada)
   const copias = movimento ? [0, 1] : [0]
+  const mostrarSetas = temOverflow || movimento
 
   function escolher(id: string, serve: boolean) {
     if (!serve) return
@@ -298,16 +311,17 @@ export function SeletorCategoria3D({
         </li>
       </ul>
 
-      <div className="showroom-faixa-envolve">
-        <button
-          type="button"
-          className="showroom-seta showroom-seta--esquerda"
-          aria-label="Ver veículos anteriores"
-          disabled={!podeVoltar}
-          onClick={() => deslizar(-1)}
-        >
-          <ChevronLeft size={18} />
-        </button>
+      <div className={`showroom-faixa-envolve ${mostrarSetas ? 'showroom-faixa-envolve--setas' : ''}`}>
+        {mostrarSetas && (
+          <button
+            type="button"
+            className="showroom-seta showroom-seta--esquerda"
+            aria-label="Ver veículos anteriores"
+            onClick={() => deslizar(-1)}
+          >
+            <ChevronLeft size={18} />
+          </button>
+        )}
         <div className="showroom-faixa" ref={faixaRef} role="listbox" aria-label="Frota">
           {copias.map((copia) => (
             <div
@@ -319,15 +333,16 @@ export function SeletorCategoria3D({
             </div>
           ))}
         </div>
-        <button
-          type="button"
-          className="showroom-seta showroom-seta--direita"
-          aria-label="Ver próximos veículos"
-          disabled={!podeAvancar}
-          onClick={() => deslizar(1)}
-        >
-          <ChevronRight size={18} />
-        </button>
+        {mostrarSetas && (
+          <button
+            type="button"
+            className="showroom-seta showroom-seta--direita"
+            aria-label="Ver próximos veículos"
+            onClick={() => deslizar(1)}
+          >
+            <ChevronRight size={18} />
+          </button>
+        )}
       </div>
     </section>
   )

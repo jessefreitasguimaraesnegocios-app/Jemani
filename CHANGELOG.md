@@ -12,6 +12,8 @@ Registro das mudanças do Jemani.
 
 ### Corrigido
 
+- Menu ☰: painel de tema/idioma não corta mais fora da tela; só **Claro/Escuro** (sem System); idiomas em **PT / EN / ES**. APK **1.0.88**.
+- Carrossel do step 3 (frota): setas sobrepostas, cartões maiores e rolagem estável no PC.
 - Histórico no **tema escuro**: selo “Avaliar com estrelas / Rate with stars” com contraste legível.
 - Carrossel da frota no **PC**: não pausa mais no hover (bug que travava só no desktop); arrastar com mouse, roda e setas. APK **1.0.85**.
 - Planilha de corridas no **tema escuro**: painel, meses e textos deixam de ficar branco sobre bege.

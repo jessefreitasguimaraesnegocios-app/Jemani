@@ -55,10 +55,13 @@
 }
 
 .layout-cliente-marca-linha {
+  position: relative;
+  z-index: 60;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
+  overflow: visible;
 }
 
 .layout-cliente-marca-titulo {

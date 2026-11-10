@@ -42,10 +42,9 @@ export function AdminConfiguracoesPage() {
     }
   }
 
-  const temas: Array<{ valor: TemaAparencia; rotulo: string }> = [
+  const temas: Array<{ valor: Exclude<TemaAparencia, 'sistema'>; rotulo: string }> = [
     { valor: 'claro', rotulo: t('config.temaClaro') },
     { valor: 'escuro', rotulo: t('config.temaEscuro') },
-    { valor: 'sistema', rotulo: t('config.temaSistema') },
   ]
 
   return (

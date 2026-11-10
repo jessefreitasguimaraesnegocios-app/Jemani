@@ -9,10 +9,16 @@ import { cn } from '@/utils/format'
 import './MenuContaTopo.css'
 
 const IDIOMAS: Array<{ valor: IdiomaApp; rotulo: string }> = [
-  { valor: 'pt-BR', rotulo: 'Português' },
-  { valor: 'en', rotulo: 'English' },
-  { valor: 'es', rotulo: 'Español' },
+  { valor: 'pt-BR', rotulo: 'PT' },
+  { valor: 'en', rotulo: 'EN' },
+  { valor: 'es', rotulo: 'ES' },
 ]
+
+const TEMAS: Array<{ valor: Exclude<TemaAparencia, 'sistema'>; chave: 'config.temaClaro' | 'config.temaEscuro' }> =
+  [
+    { valor: 'claro', chave: 'config.temaClaro' },
+    { valor: 'escuro', chave: 'config.temaEscuro' },
+  ]
 
 type Props = {
   variante: 'completo' | 'admin'
@@ -29,11 +35,19 @@ export function MenuContaTopo({ variante, aoSair, className, tom = 'claro' }: Pr
   const raizRef = useRef<HTMLDivElement>(null)
   const painelId = useId()
 
-  const temas: Array<{ valor: TemaAparencia; rotulo: string }> = [
-    { valor: 'claro', rotulo: t('config.temaClaro') },
-    { valor: 'escuro', rotulo: t('config.temaEscuro') },
-    { valor: 'sistema', rotulo: t('config.temaSistema') },
-  ]
+  const temaAtivo: Exclude<TemaAparencia, 'sistema'> =
+    temaAtual === 'escuro'
+      ? 'escuro'
+      : temaAtual === 'claro'
+        ? 'claro'
+        : typeof window !== 'undefined' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'escuro'
+          : 'claro'
+
+  useEffect(() => {
+    if (temaAtual === 'sistema') definirTema(temaAtivo)
+  }, [temaAtual, temaAtivo, definirTema])
 
   useEffect(() => {
     if (!aberto) return
@@ -85,20 +99,24 @@ export function MenuContaTopo({ variante, aoSair, className, tom = 'claro' }: Pr
                   <Moon size={14} aria-hidden />
                   {t('config.aparencia')}
                 </p>
-                <div className="menu-conta-opcoes" role="group" aria-label={t('config.aparencia')}>
-                  {temas.map((opcao) => (
+                <div
+                  className="menu-conta-opcoes menu-conta-opcoes--2"
+                  role="group"
+                  aria-label={t('config.aparencia')}
+                >
+                  {TEMAS.map((opcao) => (
                     <button
                       key={opcao.valor}
                       type="button"
                       role="menuitemradio"
-                      aria-checked={temaAtual === opcao.valor}
+                      aria-checked={temaAtivo === opcao.valor}
                       className={cn(
                         'menu-conta-chip',
-                        temaAtual === opcao.valor && 'menu-conta-chip--ativo',
+                        temaAtivo === opcao.valor && 'menu-conta-chip--ativo',
                       )}
                       onClick={() => definirTema(opcao.valor)}
                     >
-                      {opcao.rotulo}
+                      {t(opcao.chave)}
                     </button>
                   ))}
                 </div>
@@ -109,7 +127,11 @@ export function MenuContaTopo({ variante, aoSair, className, tom = 'claro' }: Pr
                   <Languages size={14} aria-hidden />
                   {t('config.idioma')}
                 </p>
-                <div className="menu-conta-opcoes" role="group" aria-label={t('config.idioma')}>
+                <div
+                  className="menu-conta-opcoes menu-conta-opcoes--3"
+                  role="group"
+                  aria-label={t('config.idioma')}
+                >
                   {IDIOMAS.map((opcao) => (
                     <button
                       key={opcao.valor}
@@ -142,7 +164,12 @@ export function MenuContaTopo({ variante, aoSair, className, tom = 'claro' }: Pr
             </Link>
           )}
 
-          <button type="button" role="menuitem" className="menu-conta-item menu-conta-item--sair" onClick={() => void sair()}>
+          <button
+            type="button"
+            role="menuitem"
+            className="menu-conta-item menu-conta-item--sair"
+            onClick={() => void sair()}
+          >
             <LogOut size={16} aria-hidden />
             {t('comum.sair')}
           </button>
