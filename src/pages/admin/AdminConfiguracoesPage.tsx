@@ -6,6 +6,7 @@ import { usarIdioma } from '@/i18n/usarIdioma'
 import type { IdiomaApp } from '@/i18n/tipos'
 import type { TemaAparencia } from '@/lib/preferenciasConta'
 import { useDemoStore } from '@/store/demoStore'
+import { dispararFeedbackAlerta } from '@/utils/feedbackAlerta'
 import './AdminConfiguracoesPage.css'
 
 const IDIOMAS: Array<{ valor: IdiomaApp; rotulo: string }> = [
@@ -31,7 +32,14 @@ export function AdminConfiguracoesPage() {
   }
 
   function alternar(chave: string) {
-    atualizarConfiguracao(chave, ligado(chave) ? 'false' : 'true')
+    const proximo = ligado(chave) ? 'false' : 'true'
+    atualizarConfiguracao(chave, proximo)
+    if (proximo === 'true' && (chave === 'som_notificacao' || chave === 'vibracao')) {
+      dispararFeedbackAlerta(
+        configuracoes.map((item) => (item.chave === chave ? { ...item, valor: 'true' } : item)),
+        chave === 'vibracao' ? 'status' : 'mensagem',
+      )
+    }
   }
 
   const temas: Array<{ valor: TemaAparencia; rotulo: string }> = [

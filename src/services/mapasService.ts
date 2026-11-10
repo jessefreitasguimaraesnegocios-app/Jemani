@@ -167,7 +167,29 @@ type MapboxFeature = {
   text?: string
   address?: string
   center?: [number, number]
+  place_type?: string[]
+  relevance?: number
   context?: MapboxContext[]
+}
+
+export type SugestaoPlaces = {
+  description: string
+  place_id: string
+  tipo?: 'address' | 'poi' | 'airport' | 'recent' | 'nearby' | 'popular'
+}
+
+export type OpcoesBuscaPlaces = {
+  latitude?: number
+  longitude?: number
+}
+
+function tipoDaFeature(feature: MapboxFeature): SugestaoPlaces['tipo'] {
+  const tipos = feature.place_type ?? []
+  if (tipos.includes('address')) return 'address'
+  if (tipos.some((t) => t === 'poi' || t === 'poi.landmark')) {
+    return (feature.relevance ?? 0) >= 0.85 ? 'popular' : 'poi'
+  }
+  return 'poi'
 }
 
 function contextoMapbox(feature: MapboxFeature, prefixo: string) {
@@ -208,7 +230,11 @@ export function interpretarFeatureMapbox(feature: MapboxFeature): EnderecoLocal 
   return endereco
 }
 
-async function geocodeMapboxDireto(query: string, types = 'address,poi'): Promise<MapboxFeature[]> {
+async function geocodeMapboxDireto(
+  query: string,
+  types = 'address,poi',
+  opcoes?: OpcoesBuscaPlaces,
+): Promise<MapboxFeature[]> {
   const token = tokenMapbox()
   if (!token) throw new Error('VITE_MAPBOX_ACCESS_TOKEN não configurada')
   const url = new URL(
@@ -220,6 +246,14 @@ async function geocodeMapboxDireto(query: string, types = 'address,poi'): Promis
   url.searchParams.set('language', 'en')
   url.searchParams.set('limit', '8')
   url.searchParams.set('autocomplete', 'true')
+  if (
+    typeof opcoes?.latitude === 'number' &&
+    typeof opcoes?.longitude === 'number' &&
+    Number.isFinite(opcoes.latitude) &&
+    Number.isFinite(opcoes.longitude)
+  ) {
+    url.searchParams.set('proximity', `${opcoes.longitude},${opcoes.latitude}`)
+  }
   const resp = await fetch(url)
   const data = await resp.json()
   if (!resp.ok) {
@@ -476,33 +510,42 @@ function ordenarFeaturesPorNumero(features: MapboxFeature[], termo: string): Map
   })
 }
 
-function juntarSugestoes(
-  termo: string,
-  remotas: Array<{ description: string; place_id: string }>,
-): Array<{ description: string; place_id: string }> {
-  const aeros = sugerirAeroportos(termo)
+function juntarSugestoes(termo: string, remotas: SugestaoPlaces[]): SugestaoPlaces[] {
+  const aeros = sugerirAeroportos(termo).map((item) => ({
+    ...item,
+    tipo: 'airport' as const,
+  }))
   const ids = new Set(aeros.map((item) => item.place_id))
   const ruas = remotas.filter(
     (item) => !ids.has(item.place_id) && !descricaoEhPontoFixoDeAeroporto(item.description),
   )
-  return [...aeros, ...ruas].slice(0, 8)
+  return [...aeros, ...ruas].slice(0, 10)
 }
 
-export async function buscarSugestoesPlaces(termo: string): Promise<
-  Array<{ description: string; place_id: string }>
-> {
+export async function buscarSugestoesPlaces(
+  termo: string,
+  opcoes?: OpcoesBuscaPlaces,
+): Promise<SugestaoPlaces[]> {
   if (!termo.trim()) return []
 
   // Preferir proxy autenticado (rate limit no servidor) em vez do token no browser.
   if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
     try {
       const data = await chamarPlacesProxy<{
-        sugestoes: Array<{ description: string; place_id: string }>
+        sugestoes: SugestaoPlaces[]
       }>({
         acao: 'autocomplete',
         termo,
+        latitude: opcoes?.latitude,
+        longitude: opcoes?.longitude,
       })
-      return juntarSugestoes(termo, data.sugestoes ?? [])
+      return juntarSugestoes(
+        termo,
+        (data.sugestoes ?? []).map((s) => ({
+          ...s,
+          tipo: s.tipo ?? (descricaoEhPontoFixoDeAeroporto(s.description) ? 'airport' : 'address'),
+        })),
+      )
     } catch {
       /* fallback Mapbox direto / DEV */
     }
@@ -511,14 +554,20 @@ export async function buscarSugestoesPlaces(termo: string): Promise<
   if (tokenMapbox()) {
     try {
       const features = ordenarFeaturesPorNumero(
-        await geocodeMapboxDireto(termo, 'address,poi'),
+        await geocodeMapboxDireto(termo, 'address,poi', opcoes),
         termo,
       )
       const remotas = features.flatMap((feature) => {
         const endereco = interpretarFeatureMapbox(feature)
         if (!endereco) return []
         guardarEndereco(feature.id, endereco)
-        return [{ description: feature.place_name || endereco.formatted, place_id: feature.id }]
+        return [
+          {
+            description: feature.place_name || endereco.formatted,
+            place_id: feature.id,
+            tipo: tipoDaFeature(feature),
+          },
+        ]
       })
       return juntarSugestoes(termo, remotas)
     } catch {
@@ -531,8 +580,42 @@ export async function buscarSugestoesPlaces(termo: string): Promise<
     buscarSugestoesDev(termo).map((p) => ({
       description: p.formatted,
       place_id: p.place_id ?? p.formatted,
+      tipo: 'address' as const,
     })),
   )
+}
+
+export async function buscarPertoDaLocalizacao(
+  latitude: number,
+  longitude: number,
+): Promise<SugestaoPlaces[]> {
+  if (!tokenMapbox()) {
+    return buscarSugestoesDev('').slice(0, 5).map((p) => ({
+      description: p.formatted,
+      place_id: p.place_id ?? p.formatted,
+      tipo: 'nearby' as const,
+    }))
+  }
+  try {
+    const features = await geocodeMapboxDireto(`${longitude},${latitude}`, 'address,poi', {
+      latitude,
+      longitude,
+    })
+    return features.flatMap((feature) => {
+      const endereco = interpretarFeatureMapbox(feature)
+      if (!endereco) return []
+      guardarEndereco(feature.id, endereco)
+      return [
+        {
+          description: feature.place_name || endereco.formatted,
+          place_id: feature.id,
+          tipo: 'nearby' as const,
+        },
+      ]
+    })
+  } catch {
+    return []
+  }
 }
 
 export async function resolverPlaceId(placeId: string, descricao?: string): Promise<EnderecoLocal> {

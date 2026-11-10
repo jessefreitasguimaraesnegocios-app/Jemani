@@ -2,6 +2,20 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-11-09]
+
+### Corrigido
+
+- Planilha de corridas no **tema escuro**: painel, meses e textos deixam de ficar branco sobre bege.
+- Autocomplete de endereço: lista não corta mais no card; sugestões em tempo real com selos (recente / popular / POI / aeroporto / perto).
+- i18n da reserva: Continuar, Voltar, Confirmar, labels de embarque/destino e placeholders seguem o idioma.
+
+### Adicionado
+
+- Endereço: histórico recente, detecção de localização do usuário (GPS + proximity Mapbox) e POIs (hotéis, aeroportos, pontos).
+- Admin Configurações: ao ligar **som** ou **vibração**, toca/vibra imediatamente (igual cliente/motorista).
+- APK **1.0.82**.
+
 ## [2026-11-08]
 
 ### Adicionado

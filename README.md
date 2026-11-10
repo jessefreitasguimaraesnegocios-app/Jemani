@@ -4,6 +4,14 @@ Marketplace de transporte executivo nos **Estados Unidos** e no **mundo** — en
 
 A plataforma capta clientes, distribui solicitações para empresas parceiras e registra a comissão.
 
+## Novidades — 09/11/2026
+
+- Planilha mensal corrigida no tema escuro.
+- Autocomplete de endereço: sugestões em tempo real, POIs, histórico recente e GPS.
+- Reserva/i18n: botões e labels mudam com o idioma (PT/EN/ES).
+- Admin: som e vibração com feedback ao ligar.
+- APK **1.0.82**.
+
 ## Novidades — 08/11/2026
 
 ### Optical Glass (claro + escuro)
@@ -17,7 +25,7 @@ A plataforma capta clientes, distribui solicitações para empresas parceiras e 
 
 - Corridas pagas chegam no admin e nas empresas via sync + distribuição na nuvem.
 - Badge `1!` / `2!` / `3!` em **Novas solicitações** (admin e empresa).
-- APK atual: **1.0.81** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
+- APK atual: **1.0.82** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
 
 Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
 

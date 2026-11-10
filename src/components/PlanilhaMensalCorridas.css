@@ -325,3 +325,99 @@
     padding-right: 0.9rem;
   }
 }
+
+/* Tema escuro — painel e texto alinhados (evita branco sobre bege) */
+html[data-tema='escuro'] .planilha-mensal-fundo {
+  background:
+    radial-gradient(circle at top right, rgba(201, 168, 124, 0.16), transparent 42%),
+    rgba(0, 0, 0, 0.72);
+}
+
+html[data-tema='escuro'] .planilha-mensal-painel {
+  border-color: #333333;
+  background:
+    linear-gradient(180deg, rgba(32, 32, 34, 0.98), rgba(18, 18, 18, 0.98));
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+  color: #f5f5f5;
+}
+
+html[data-tema='escuro'] .planilha-mensal-cabeca,
+html[data-tema='escuro'] .planilha-mensal-rodape {
+  border-color: #2f2f2f;
+  background: rgba(18, 18, 18, 0.92);
+}
+
+html[data-tema='escuro'] .planilha-mensal-titulo,
+html[data-tema='escuro'] .planilha-mensal-mes-nome,
+html[data-tema='escuro'] .planilha-mensal-empresa-nome,
+html[data-tema='escuro'] .planilha-mensal-codigo {
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .planilha-mensal-sub,
+html[data-tema='escuro'] .planilha-mensal-mes-qtd,
+html[data-tema='escuro'] .planilha-mensal-empresa-meta,
+html[data-tema='escuro'] .planilha-mensal-rota,
+html[data-tema='escuro'] .planilha-mensal-vazio,
+html[data-tema='escuro'] .planilha-mensal-dica {
+  color: #c2c2c2;
+}
+
+html[data-tema='escuro'] .planilha-mensal-passo,
+html[data-tema='escuro'] .planilha-mensal-ano,
+html[data-tema='escuro'] .planilha-mensal-chip {
+  background: #1a1a1a;
+  border-color: #3a3a3a;
+  color: #d0d0d0;
+}
+
+html[data-tema='escuro'] .planilha-mensal-passo--ativo,
+html[data-tema='escuro'] .planilha-mensal-ano--ativo {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #000000;
+}
+
+html[data-tema='escuro'] .planilha-mensal-passo--feito,
+html[data-tema='escuro'] .planilha-mensal-empresa-selo {
+  background: rgba(201, 168, 124, 0.2);
+  border-color: rgba(201, 168, 124, 0.45);
+  color: #e6c692;
+}
+
+html[data-tema='escuro'] .planilha-mensal-mes,
+html[data-tema='escuro'] .planilha-mensal-empresa {
+  background: #1a1a1a;
+  border-color: #333333;
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .planilha-mensal-mes:hover:not(:disabled),
+html[data-tema='escuro'] .planilha-mensal-empresa:hover {
+  border-color: #c9a87c;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+html[data-tema='escuro'] .planilha-mensal-tabela-envolve {
+  background: #121212;
+  border-color: #333333;
+}
+
+html[data-tema='escuro'] .planilha-mensal-tabela th {
+  background: #1a1a1a;
+  color: #ffffff;
+  border-bottom-color: #333333;
+}
+
+html[data-tema='escuro'] .planilha-mensal-tabela td {
+  color: #e8e8e8;
+  border-bottom-color: #2f2f2f;
+}
+
+html[data-tema='escuro'] .planilha-mensal-tabela tbody tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+html[data-tema='escuro'] .planilha-mensal-tabela tbody tr:hover td {
+  background: rgba(201, 168, 124, 0.12);
+}

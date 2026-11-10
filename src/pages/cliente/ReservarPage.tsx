@@ -456,8 +456,8 @@ export function ReservarPage() {
 
       {!modalidadeConfirmada ? (
         <div className="reserva-escolha">
-          <p className="reserva-escolha-texto">Escolha o tipo de viagem para começar:</p>
-          <div className="reserva-modalidade" role="group" aria-label="Modalidade da reserva">
+          <p className="reserva-escolha-texto">{t('reserva.escolherTipo')}</p>
+          <div className="reserva-modalidade" role="group" aria-label={t('reserva.tipoViagem')}>
             <button
               type="button"
               className={`reserva-modalidade-btn ${!ehHourly ? 'reserva-modalidade-btn--ativo' : ''}`}
@@ -475,10 +475,7 @@ export function ReservarPage() {
             </button>
           </div>
           {!hourlyOk && (
-            <p className="reserva-hourly-aviso">
-              Hourly Chauffeur ainda sem preço por hora na tabela administrativa. ONE-WAY continua
-              disponível.
-            </p>
+            <p className="reserva-hourly-aviso">{t('reserva.hourlySemPreco')}</p>
           )}
           <button
             type="button"
@@ -489,19 +486,21 @@ export function ReservarPage() {
               setErro('')
             }}
           >
-            Continuar com {ehHourly ? 'Hourly Chauffeur' : 'One-Way Ride'}
+            {t('reserva.continuarCom', {
+              tipo: ehHourly ? 'Hourly Chauffeur' : 'One-Way Ride',
+            })}
           </button>
         </div>
       ) : (
         <>
       <div className="reserva-modalidade-travada">
         <p>
-          <span>Tipo de viagem</span>
+          <span>{t('reserva.tipoViagem')}</span>
           <strong>{ehHourly ? 'HOURLY CHAUFFEUR' : 'ONE-WAY RIDE'}</strong>
         </p>
         {etapa === 0 && (
           <button type="button" className="reserva-trocar-modalidade" onClick={reiniciarEscolhaModalidade}>
-            Trocar tipo
+            {t('reserva.trocarTipo')}
           </button>
         )}
       </div>
@@ -519,23 +518,22 @@ export function ReservarPage() {
         {etapa === 0 && (
           <>
             <CampoEndereco
-              rotulo={ehHourly ? 'Embarque (pickup)' : 'Embarque (origem)'}
+              rotulo={ehHourly ? t('reserva.embarquePickup') : t('reserva.embarque')}
               valor={origemEndereco}
               onChange={definirOrigem}
-              placeholder="Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU..."
+              placeholder={t('reserva.placeholderEndereco')}
               papel="origem"
             />
             {embarqueAeroporto && (
               <p className="text-xs text-[var(--color-success)]">
-                Embarque no aeroporto: o carro busca no nível de desembarque (chegadas) do terminal.
-                Os dados do voo entram na próxima etapa.
+                {t('reserva.embarqueAeroportoDica')}
               </p>
             )}
             <CampoEndereco
-              rotulo={ehHourly ? 'Desembarque (onde deixar o passageiro)' : 'Destino'}
+              rotulo={ehHourly ? t('reserva.desembarque') : t('reserva.destino')}
               valor={destinoEndereco}
               onChange={definirDestino}
-              placeholder="Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU..."
+              placeholder={t('reserva.placeholderEndereco')}
               papel="destino"
             />
             {ehHourly && (
@@ -904,16 +902,16 @@ export function ReservarPage() {
         <div className="flex flex-wrap gap-2 pt-2">
           {etapa > 0 && (
             <button type="button" className="btn-secundario" onClick={voltar}>
-              Voltar
+              {t('comum.voltar')}
             </button>
           )}
           {etapa < ETAPAS.length - 1 ? (
             <button type="button" className="btn-primario" onClick={avancar}>
-              Continuar
+              {t('reserva.continuar')}
             </button>
           ) : (
             <button type="submit" className="btn-ouro" disabled={enviando || !preco}>
-              {enviando ? 'Confirmando...' : 'Confirmar viagem'}
+              {enviando ? t('reserva.confirmando') : t('reserva.confirmar')}
             </button>
           )}
         </div>

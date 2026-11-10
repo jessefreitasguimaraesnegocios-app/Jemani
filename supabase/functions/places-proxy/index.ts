@@ -20,6 +20,8 @@ type MapboxFeature = {
   text?: string
   address?: string
   center?: [number, number]
+  place_type?: string[]
+  relevance?: number
   context?: MapboxContext[]
 }
 
@@ -93,15 +95,28 @@ function enderecoDeFeatureMapbox(feature: MapboxFeature) {
   }
 }
 
-async function geocodeMapbox(token: string, query: string, types = 'address') {
+async function geocodeMapbox(
+  token: string,
+  query: string,
+  types = 'address',
+  proximity?: { latitude?: number; longitude?: number },
+) {
   const url = new URL(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
   )
   url.searchParams.set('access_token', token)
   url.searchParams.set('types', types)
   url.searchParams.set('language', 'en')
-  url.searchParams.set('limit', '6')
+  url.searchParams.set('limit', '8')
   url.searchParams.set('autocomplete', 'true')
+  if (
+    typeof proximity?.latitude === 'number' &&
+    typeof proximity?.longitude === 'number' &&
+    Number.isFinite(proximity.latitude) &&
+    Number.isFinite(proximity.longitude)
+  ) {
+    url.searchParams.set('proximity', `${proximity.longitude},${proximity.latitude}`)
+  }
 
   const resp = await fetch(url)
   const data = await resp.json()
@@ -109,6 +124,15 @@ async function geocodeMapbox(token: string, query: string, types = 'address') {
     throw new Error(data.message ?? `Mapbox geocode falhou (${resp.status})`)
   }
   return (data.features ?? []) as MapboxFeature[]
+}
+
+function tipoSugestao(feature: MapboxFeature) {
+  const tipos = feature.place_type ?? []
+  if (tipos.includes('address')) return 'address'
+  if (tipos.some((t) => t === 'poi' || t === 'poi.landmark')) {
+    return (feature.relevance ?? 0) >= 0.85 ? 'popular' : 'poi'
+  }
+  return 'poi'
 }
 
 Deno.serve(async (req: Request) => {
@@ -147,6 +171,8 @@ Deno.serve(async (req: Request) => {
       estado?: string
       cep?: string
       complemento?: string
+      latitude?: number
+      longitude?: number
     }
     try {
       payload = await req.json()
@@ -161,11 +187,15 @@ Deno.serve(async (req: Request) => {
       if (termo.length < 2) return json({ sugestoes: [] })
       if (termo.length > 140) return json({ erro: 'Endereço longo demais.' }, 400)
       try {
-        const features = await geocodeMapbox(mapboxToken, termo, 'address,poi')
+        const features = await geocodeMapbox(mapboxToken, termo, 'address,poi', {
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+        })
         return json({
           sugestoes: features.map((f) => ({
             description: f.place_name,
             place_id: f.id,
+            tipo: tipoSugestao(f),
           })),
         })
       } catch (e) {

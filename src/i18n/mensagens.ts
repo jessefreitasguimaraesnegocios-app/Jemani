@@ -659,6 +659,45 @@ const pt = {
   'reserva.etapaResumo': 'Resumo',
   'reserva.etapaDe': 'Etapa {atual} de {total}: {nome}',
   'reserva.seloShield': 'Top 1 · Proteção de elite',
+  'reserva.escolherTipo': 'Escolha o tipo de viagem para começar:',
+  'reserva.continuarCom': 'Continuar com {tipo}',
+  'reserva.tipoViagem': 'Tipo de viagem',
+  'reserva.trocarTipo': 'Trocar tipo',
+  'reserva.continuar': 'Continuar',
+  'reserva.confirmar': 'Confirmar viagem',
+  'reserva.confirmando': 'Confirmando...',
+  'reserva.hourlySemPreco':
+    'Hourly Chauffeur ainda sem preço por hora na tabela administrativa. ONE-WAY continua disponível.',
+  'reserva.embarque': 'Embarque (origem)',
+  'reserva.embarquePickup': 'Embarque (pickup)',
+  'reserva.destino': 'Destino',
+  'reserva.desembarque': 'Desembarque (onde deixar o passageiro)',
+  'reserva.placeholderEndereco':
+    'Rua e número em qualquer cidade, ou JFK, LAX, LHR, GRU...',
+  'reserva.embarqueAeroportoDica':
+    'Embarque no aeroporto: o carro busca no nível de desembarque (chegadas) do terminal. Os dados do voo entram na próxima etapa.',
+
+  'endereco.placeholder': 'Ex.: 350 5th Ave, New York ou JFK, LHR, GRU...',
+  'endereco.buscando': 'Buscando sugestões...',
+  'endereco.devDica':
+    'Modo DEV: sugestões locais de exemplo. Configure VITE_MAPBOX_ACCESS_TOKEN no .env para endereços e aeroportos no mundo todo.',
+  'endereco.usarLocalizacao': 'Usar minha localização',
+  'endereco.localizando': 'Detectando localização...',
+  'endereco.recentes': 'Recentes',
+  'endereco.sugeridos': 'Sugestões',
+  'endereco.perto': 'Perto de você',
+  'endereco.popular': 'Popular',
+  'endereco.poi': 'Local',
+  'endereco.aeroporto': 'Aeroporto',
+  'endereco.rua': 'Rua',
+  'endereco.numero': 'Número *',
+  'endereco.complemento': 'Complemento (opcional)',
+  'endereco.complementoAero': 'Portão ou ponto de encontro (opcional)',
+  'endereco.terminal': 'Terminal *',
+  'endereco.nivel': 'Nível *',
+  'endereco.selecioneTerminal': 'Selecione o terminal',
+  'endereco.validando': 'Validando se o número existe neste endereço...',
+  'comum.continuar': 'Continuar',
 } as const
 
 export type ChaveTraducao = keyof typeof pt
@@ -1320,6 +1359,45 @@ const en: Record<ChaveTraducao, string> = {
   'reserva.etapaResumo': 'Summary',
   'reserva.etapaDe': 'Step {atual} of {total}: {nome}',
   'reserva.seloShield': 'Top 1 · Elite protection',
+  'reserva.escolherTipo': 'Choose the trip type to start:',
+  'reserva.continuarCom': 'Continue with {tipo}',
+  'reserva.tipoViagem': 'Trip type',
+  'reserva.trocarTipo': 'Change type',
+  'reserva.continuar': 'Continue',
+  'reserva.confirmar': 'Confirm trip',
+  'reserva.confirmando': 'Confirming...',
+  'reserva.hourlySemPreco':
+    'Hourly Chauffeur still has no hourly rate in the admin price table. ONE-WAY remains available.',
+  'reserva.embarque': 'Pickup (origin)',
+  'reserva.embarquePickup': 'Pickup',
+  'reserva.destino': 'Drop-off',
+  'reserva.desembarque': 'Drop-off (where to leave the passenger)',
+  'reserva.placeholderEndereco':
+    'Street and number in any city, or JFK, LAX, LHR, GRU...',
+  'reserva.embarqueAeroportoDica':
+    'Airport pickup: the car meets you at arrivals (baggage claim) for the terminal. Flight details come in the next step.',
+
+  'endereco.placeholder': 'Ex.: 350 5th Ave, New York or JFK, LHR, GRU...',
+  'endereco.buscando': 'Searching suggestions...',
+  'endereco.devDica':
+    'DEV mode: local sample suggestions. Set VITE_MAPBOX_ACCESS_TOKEN in .env for worldwide addresses and airports.',
+  'endereco.usarLocalizacao': 'Use my location',
+  'endereco.localizando': 'Detecting location...',
+  'endereco.recentes': 'Recent',
+  'endereco.sugeridos': 'Suggestions',
+  'endereco.perto': 'Near you',
+  'endereco.popular': 'Popular',
+  'endereco.poi': 'Place',
+  'endereco.aeroporto': 'Airport',
+  'endereco.rua': 'Street',
+  'endereco.numero': 'Number *',
+  'endereco.complemento': 'Apt / suite (optional)',
+  'endereco.complementoAero': 'Gate or meeting point (optional)',
+  'endereco.terminal': 'Terminal *',
+  'endereco.nivel': 'Level *',
+  'endereco.selecioneTerminal': 'Select terminal',
+  'endereco.validando': 'Checking if this number exists on the street...',
+  'comum.continuar': 'Continue',
 }
 
 const es: Record<ChaveTraducao, string> = {
@@ -1981,6 +2059,45 @@ const es: Record<ChaveTraducao, string> = {
   'reserva.etapaResumo': 'Resumen',
   'reserva.etapaDe': 'Paso {atual} de {total}: {nome}',
   'reserva.seloShield': 'Top 1 · Protección de élite',
+  'reserva.escolherTipo': 'Elija el tipo de viaje para empezar:',
+  'reserva.continuarCom': 'Continuar con {tipo}',
+  'reserva.tipoViagem': 'Tipo de viaje',
+  'reserva.trocarTipo': 'Cambiar tipo',
+  'reserva.continuar': 'Continuar',
+  'reserva.confirmar': 'Confirmar viaje',
+  'reserva.confirmando': 'Confirmando...',
+  'reserva.hourlySemPreco':
+    'Hourly Chauffeur aún sin precio por hora en la tabla administrativa. ONE-WAY sigue disponible.',
+  'reserva.embarque': 'Embarque (origen)',
+  'reserva.embarquePickup': 'Embarque (pickup)',
+  'reserva.destino': 'Destino',
+  'reserva.desembarque': 'Desembarque (dónde dejar al pasajero)',
+  'reserva.placeholderEndereco':
+    'Calle y número en cualquier ciudad, o JFK, LAX, LHR, GRU...',
+  'reserva.embarqueAeroportoDica':
+    'Embarque en aeropuerto: el auto busca en llegadas (desembarque) del terminal. Los datos del vuelo entran en el siguiente paso.',
+
+  'endereco.placeholder': 'Ej.: 350 5th Ave, New York o JFK, LHR, GRU...',
+  'endereco.buscando': 'Buscando sugerencias...',
+  'endereco.devDica':
+    'Modo DEV: sugerencias locales de ejemplo. Configure VITE_MAPBOX_ACCESS_TOKEN en .env para direcciones y aeropuertos en todo el mundo.',
+  'endereco.usarLocalizacao': 'Usar mi ubicación',
+  'endereco.localizando': 'Detectando ubicación...',
+  'endereco.recentes': 'Recientes',
+  'endereco.sugeridos': 'Sugerencias',
+  'endereco.perto': 'Cerca de usted',
+  'endereco.popular': 'Popular',
+  'endereco.poi': 'Lugar',
+  'endereco.aeroporto': 'Aeropuerto',
+  'endereco.rua': 'Calle',
+  'endereco.numero': 'Número *',
+  'endereco.complemento': 'Complemento (opcional)',
+  'endereco.complementoAero': 'Puerta o punto de encuentro (opcional)',
+  'endereco.terminal': 'Terminal *',
+  'endereco.nivel': 'Nivel *',
+  'endereco.selecioneTerminal': 'Seleccione el terminal',
+  'endereco.validando': 'Validando si el número existe en esta dirección...',
+  'comum.continuar': 'Continuar',
 }
 
 export const MENSAGENS: Record<IdiomaApp, Record<ChaveTraducao, string>> = {

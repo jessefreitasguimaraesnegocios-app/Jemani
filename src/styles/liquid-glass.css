@@ -674,7 +674,8 @@ a.vidro:focus-visible {
   .cartao {
     position: relative;
     isolation: isolate;
-    overflow: hidden;
+    /* visible: não cortar dropdown de endereço / popovers */
+    overflow: visible;
     background:
       radial-gradient(90% 60% at 12% 0%, rgb(255 255 255 / 0.4) 0%, transparent 55%),
       linear-gradient(160deg, rgb(255 255 255 / 0.45) 0%, rgb(255 255 255 / 0.14) 45%, rgb(184 149 108 / 0.05) 100%),

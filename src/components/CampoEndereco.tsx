@@ -12,11 +12,19 @@ import {
   type PapelEndereco,
 } from '@/services/aeroportos'
 import {
+  buscarPertoDaLocalizacao,
   buscarSugestoesPlaces,
   googleMapsConfigurado,
   resolverPlaceId,
   validarNumeroNoEndereco,
+  type SugestaoPlaces,
 } from '@/services/mapasService'
+import {
+  filtrarRecentes,
+  gravarEnderecoRecente,
+  type SugestaoEndereco,
+} from '@/lib/enderecosRecentes'
+import { usarIdioma } from '@/i18n/usarIdioma'
 import type { EnderecoLocal } from '@/types'
 import {
   aplicarNumeroNoEndereco,
@@ -37,7 +45,10 @@ interface Props {
   papel?: PapelEndereco
 }
 
+type PosicaoUsuario = { latitude: number; longitude: number }
+
 export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: Props) {
+  const { t } = usarIdioma()
   const id = useId()
   const idNumero = `${id}-numero`
   const idComplemento = `${id}-complemento`
@@ -46,10 +57,13 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
   const [texto, setTexto] = useState(valor?.formatted ?? '')
   const [numero, setNumero] = useState(valor?.numero ?? '')
   const [complemento, setComplemento] = useState(valor?.complemento ?? '')
-  const [sugestoes, setSugestoes] = useState<Array<{ description: string; place_id: string }>>([])
+  const [sugestoes, setSugestoes] = useState<SugestaoEndereco[]>([])
   const [carregando, setCarregando] = useState(false)
   const [validandoNumero, setValidandoNumero] = useState(false)
+  const [localizando, setLocalizando] = useState(false)
+  const [posicao, setPosicao] = useState<PosicaoUsuario | null>(null)
   const [erro, setErro] = useState('')
+  const [listaAberta, setListaAberta] = useState(false)
 
   valorRef.current = valor
 
@@ -72,19 +86,29 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
   }, [valor?.formatted, valor?.numero, valor?.complemento])
 
   useEffect(() => {
+    if (!listaAberta) return
     if (!texto.trim() || valor?.formatted === texto) {
-      setSugestoes([])
+      const recentes = filtrarRecentes('')
+      setSugestoes(recentes)
       return
     }
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setCarregando(true)
-      void buscarSugestoesPlaces(texto)
-        .then(setSugestoes)
-        .catch(() => setSugestoes([]))
+      const recentes = filtrarRecentes(texto)
+      void buscarSugestoesPlaces(texto, posicao ?? undefined)
+        .then((remotas) => {
+          const ids = new Set(recentes.map((r) => r.place_id))
+          const misturadas: SugestaoEndereco[] = [
+            ...recentes,
+            ...remotas.filter((r) => !ids.has(r.place_id)),
+          ]
+          setSugestoes(misturadas.slice(0, 12))
+        })
+        .catch(() => setSugestoes(recentes))
         .finally(() => setCarregando(false))
-    }, 280)
-    return () => window.clearTimeout(t)
-  }, [texto, valor?.formatted])
+    }, 220)
+    return () => window.clearTimeout(timer)
+  }, [texto, valor?.formatted, posicao, listaAberta])
 
   useEffect(() => {
     if (!valor || ehAeroporto) return
@@ -94,11 +118,10 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
 
     const chave = `${valor.rua}|${num}|${valor.cidade ?? ''}`
     if (ultimaValidacaoRef.current === chave && !valor.numero_confirmado) {
-      // já tentou este número e falhou — não loopa
       return
     }
 
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       const base = valorRef.current
       if (!base?.rua) return
       setValidandoNumero(true)
@@ -121,11 +144,12 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
           setTexto(r.endereco.formatted)
           setNumero(r.endereco.numero ?? num)
           onChange(r.endereco)
+          gravarEnderecoRecente(r.endereco)
         })
         .finally(() => setValidandoNumero(false))
     }, 550)
 
-    return () => window.clearTimeout(t)
+    return () => window.clearTimeout(timer)
   }, [numero, complemento, valor?.rua, valor?.place_id, valor?.cidade, valor?.numero_confirmado, ehAeroporto, onChange, valor])
 
   function aplicarAeroporto(endereco: EnderecoLocal, aviso = '') {
@@ -133,13 +157,25 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
     setTexto(endereco.formatted)
     setNumero('')
     setSugestoes([])
+    setListaAberta(false)
     setErro(aviso)
+    gravarEnderecoRecente(endereco)
   }
 
-  async function selecionar(placeId: string, description: string) {
+  async function selecionar(placeId: string, description: string, recente?: EnderecoLocal) {
     setErro('')
     setCarregando(true)
     try {
+      if (recente) {
+        onChange(recente)
+        setTexto(recente.formatted)
+        setNumero(recente.numero ?? '')
+        setSugestoes([])
+        setListaAberta(false)
+        gravarEnderecoRecente(recente)
+        return
+      }
+
       const jaAeroporto = selecaoAeroporto(placeId, description, papel)
       if (jaAeroporto) {
         aplicarAeroporto(
@@ -197,7 +233,6 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
         }
       }
 
-      // Se veio da sugestão com número do Google/DEV, confirma; senão exige digitação
       if (endereco.numero && !enderecoEhAeroporto(endereco)) {
         if (endereco.source === 'dev_fallback' && endereco.numero) {
           endereco = { ...endereco, numero_confirmado: true }
@@ -216,6 +251,8 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
       setTexto(endereco.formatted)
       setNumero(endereco.numero ?? '')
       setSugestoes([])
+      setListaAberta(false)
+      gravarEnderecoRecente(endereco)
 
       if (!enderecoEhAeroporto(endereco) && !endereco.numero) {
         setErro('Informe o número do endereço abaixo.')
@@ -226,6 +263,42 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
     } finally {
       setCarregando(false)
     }
+  }
+
+  function detectarLocalizacao() {
+    if (!navigator.geolocation) {
+      setErro('Geolocalização não disponível neste aparelho.')
+      return
+    }
+    setLocalizando(true)
+    setErro('')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }
+        setPosicao(coords)
+        setListaAberta(true)
+        void buscarPertoDaLocalizacao(coords.latitude, coords.longitude)
+          .then((lista) => {
+            setSugestoes(
+              lista.map((item) => ({
+                ...item,
+                tipo: item.tipo ?? 'nearby',
+              })),
+            )
+            if (lista[0]) setTexto(lista[0].description)
+          })
+          .catch(() => setErro('Não foi possível buscar endereços perto de você.'))
+          .finally(() => setLocalizando(false))
+      },
+      () => {
+        setLocalizando(false)
+        setErro('Permita o acesso à localização para sugerir endereços perto de você.')
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60_000 },
+    )
   }
 
   function atualizarNumero(novoNumero: string) {
@@ -308,48 +381,78 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
     )
   }
 
+  function rotuloTipo(tipo?: SugestaoPlaces['tipo']) {
+    if (tipo === 'recent') return t('endereco.recentes')
+    if (tipo === 'nearby') return t('endereco.perto')
+    if (tipo === 'popular') return t('endereco.popular')
+    if (tipo === 'poi') return t('endereco.poi')
+    if (tipo === 'airport') return t('endereco.aeroporto')
+    return t('endereco.sugeridos')
+  }
+
   return (
     <div className="campo-endereco">
-      <label className="rotulo" htmlFor={id}>
-        {rotulo}
-      </label>
-      <input
-        id={id}
-        className="campo"
-        value={texto}
-        placeholder={placeholder ?? 'Ex.: 350 5th Ave, New York ou JFK, LHR, GRU...'}
-        autoComplete="off"
-        onChange={(e) => {
-          setTexto(e.target.value)
-          if (valor) onChange(null)
-          setNumero('')
-          setComplemento('')
-          setErro('')
-        }}
-      />
+      <div className="campo-endereco-topo">
+        <label className="rotulo" htmlFor={id}>
+          {rotulo}
+        </label>
+        <button
+          type="button"
+          className="campo-endereco-gps"
+          onClick={detectarLocalizacao}
+          disabled={localizando}
+        >
+          {localizando ? t('endereco.localizando') : t('endereco.usarLocalizacao')}
+        </button>
+      </div>
+      <div className="campo-endereco-busca">
+        <input
+          id={id}
+          className="campo"
+          value={texto}
+          placeholder={placeholder ?? t('endereco.placeholder')}
+          autoComplete="off"
+          onFocus={() => {
+            setListaAberta(true)
+            if (!texto.trim()) setSugestoes(filtrarRecentes(''))
+          }}
+          onBlur={() => {
+            window.setTimeout(() => setListaAberta(false), 180)
+          }}
+          onChange={(e) => {
+            setTexto(e.target.value)
+            setListaAberta(true)
+            if (valor) onChange(null)
+            setNumero('')
+            setComplemento('')
+            setErro('')
+          }}
+        />
+        {listaAberta && sugestoes.length > 0 && (
+          <ul className="campo-endereco-lista" role="listbox">
+            {sugestoes.map((s) => (
+              <li key={`${s.tipo ?? 'x'}-${s.place_id}`}>
+                <button
+                  type="button"
+                  className="campo-endereco-item"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => void selecionar(s.place_id, s.description, s.endereco)}
+                >
+                  <span className={`campo-endereco-selo campo-endereco-selo--${s.tipo ?? 'address'}`}>
+                    {rotuloTipo(s.tipo)}
+                  </span>
+                  <span className="campo-endereco-item-texto">{s.description}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       {!googleMapsConfigurado() && (
-        <p className="campo-endereco-dica">
-          Modo DEV: sugestões locais de exemplo. Configure VITE_MAPBOX_ACCESS_TOKEN no .env para
-          endereços e aeroportos no mundo todo.
-        </p>
+        <p className="campo-endereco-dica">{t('endereco.devDica')}</p>
       )}
-      {carregando && <p className="campo-endereco-dica">Buscando...</p>}
+      {carregando && <p className="campo-endereco-dica">{t('endereco.buscando')}</p>}
       {erro && <p className="campo-endereco-erro">{erro}</p>}
-      {sugestoes.length > 0 && (
-        <ul className="campo-endereco-lista">
-          {sugestoes.map((s) => (
-            <li key={s.place_id}>
-              <button
-                type="button"
-                className="campo-endereco-item"
-                onClick={() => void selecionar(s.place_id, s.description)}
-              >
-                {s.description}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
 
       {valor && (
         <div className="campo-endereco-detalhe">
@@ -357,7 +460,7 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
             <div className="campo-endereco-aero">
               <div>
                 <label className="rotulo" htmlFor={`${id}-terminal`}>
-                  Terminal *
+                  {t('endereco.terminal')}
                 </label>
                 <select
                   id={`${id}-terminal`}
@@ -365,7 +468,7 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
                   value={valor.terminal_id ?? ''}
                   onChange={(e) => escolherTerminal(e.target.value)}
                 >
-                  <option value="">Selecione o terminal</option>
+                  <option value="">{t('endereco.selecioneTerminal')}</option>
                   {terminais.map((terminal) => (
                     <option key={terminal.id} value={terminal.id}>
                       {terminal.nome}
@@ -375,7 +478,7 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
               </div>
               <div>
                 <label className="rotulo" htmlFor={`${id}-nivel`}>
-                  Nível *
+                  {t('endereco.nivel')}
                 </label>
                 <select
                   id={`${id}-nivel`}
@@ -393,7 +496,7 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
             <div className="campo-endereco-grade">
               <div className="campo-endereco-rua">
                 <label className="rotulo" htmlFor={`${id}-rua`}>
-                  Rua
+                  {t('endereco.rua')}
                 </label>
                 <input
                   id={`${id}-rua`}
@@ -404,7 +507,7 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
               </div>
               <div className="campo-endereco-numero">
                 <label className="rotulo" htmlFor={idNumero}>
-                  Número *
+                  {t('endereco.numero')}
                 </label>
                 <input
                   id={idNumero}
@@ -422,7 +525,7 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
           )}
           <div>
             <label className="rotulo" htmlFor={idComplemento}>
-              {ehAeroporto ? 'Portão ou ponto de encontro (opcional)' : 'Complemento (opcional)'}
+              {ehAeroporto ? t('endereco.complementoAero') : t('endereco.complemento')}
             </label>
             <input
               id={idComplemento}
@@ -433,7 +536,7 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
             />
           </div>
           {validandoNumero && (
-            <p className="campo-endereco-dica">Validando se o número existe neste endereço...</p>
+            <p className="campo-endereco-dica">{t('endereco.validando')}</p>
           )}
           <p className={pontoAeroportoOk || numeroOk ? 'campo-endereco-ok' : 'campo-endereco-erro'}>
             {ehAeroporto
@@ -443,7 +546,7 @@ export function CampoEndereco({ rotulo, valor, onChange, placeholder, papel }: P
               : !numero.trim()
                 ? 'Falta o número do endereço'
                 : validandoNumero
-                  ? 'Validando número...'
+                  ? t('endereco.validando')
                   : numeroOk
                     ? `Endereço confirmado: ${valor.formatted}`
                     : `O número ${numero} não foi confirmado neste endereço`}
