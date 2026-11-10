@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { SLUG_SHIELD } from '@/data/seed'
 import { veiculoDestaqueDaCategoria } from '@/services/frotaCliente'
 import type { CategoriaVeiculo, Empresa, Veiculo } from '@/types'
@@ -17,6 +18,13 @@ type Props = {
 
 type CartaoFrota = CategoriaVeiculo & { serve: boolean }
 
+type EstadoArrasto = {
+  pointerId: number
+  inicioX: number
+  scrollInicio: number
+  moveu: boolean
+}
+
 export function SeletorCategoria3D({
   categorias,
   categoriaId,
@@ -27,8 +35,12 @@ export function SeletorCategoria3D({
   formatarAdicional,
 }: Props) {
   const faixaRef = useRef<HTMLDivElement>(null)
-  const pausaFaixa = useRef(0)
+  const pausaAte = useRef(0)
+  const arrasto = useRef<EstadoArrasto | null>(null)
+  const bloqueiaClick = useRef(false)
   const [movimento, setMovimento] = useState(true)
+  const [podeVoltar, setPodeVoltar] = useState(false)
+  const [podeAvancar, setPodeAvancar] = useState(true)
 
   const selecionada = useMemo(
     () => categorias.find((c) => c.id === categoriaId) ?? categorias[0],
@@ -39,7 +51,6 @@ export function SeletorCategoria3D({
     () =>
       categorias.map((c) => ({
         ...c,
-        // Sem mínimo: 1 passageiro pode escolher van, shuttle ou ônibus.
         serve: passageiros <= c.capacidade_max,
       })),
     [categorias, passageiros],
@@ -56,6 +67,36 @@ export function SeletorCategoria3D({
     return rotuloCurtoFrota(categoria.slug, categoria.nome)
   }
 
+  function pausarAuto(ms = 2000) {
+    pausaAte.current = Date.now() + ms
+  }
+
+  function atualizarSetas() {
+    const trilho = faixaRef.current
+    if (!trilho) return
+    const max = Math.max(0, trilho.scrollWidth - trilho.clientWidth)
+    setPodeVoltar(trilho.scrollLeft > 4)
+    setPodeAvancar(max > 4 && trilho.scrollLeft < max - 4)
+  }
+
+  function normalizarLoop() {
+    const trilho = faixaRef.current
+    if (!trilho || !movimento) return
+    const metade = trilho.scrollWidth / 2
+    if (metade <= 0) return
+    if (trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
+    if (trilho.scrollLeft < 0) trilho.scrollLeft += metade
+  }
+
+  function deslizar(direcao: -1 | 1) {
+    const trilho = faixaRef.current
+    if (!trilho) return
+    const passo = Math.max(180, Math.floor(trilho.clientWidth * 0.75))
+    trilho.scrollBy({ left: direcao * passo, behavior: 'smooth' })
+    pausarAuto(2800)
+    window.setTimeout(atualizarSetas, 320)
+  }
+
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
     const aplicar = () => setMovimento(!media.matches)
@@ -68,40 +109,110 @@ export function SeletorCategoria3D({
 
   useEffect(() => {
     const trilho = faixaRef.current
-    if (!trilho || !movimento || !chaveFaixa) return
+    if (!trilho || !chaveFaixa) return
+
     let quadro = 0
     let vivo = true
+
     const andar = () => {
       if (!vivo) return
-      if (Date.now() >= pausaFaixa.current) {
-        const metade = trilho.scrollWidth / 2
-        if (metade > 0 && trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
+      if (movimento && !arrasto.current && Date.now() >= pausaAte.current) {
+        normalizarLoop()
         trilho.scrollLeft += 0.55
       }
+      atualizarSetas()
       quadro = window.requestAnimationFrame(andar)
     }
-    const pausar = () => {
-      pausaFaixa.current = Number.POSITIVE_INFINITY
+
+    const aoScroll = () => {
+      normalizarLoop()
+      atualizarSetas()
     }
-    const seguir = () => {
-      pausaFaixa.current = 0
+
+    const aoWheel = (evento: WheelEvent) => {
+      if (trilho.scrollWidth <= trilho.clientWidth + 2) return
+      const delta =
+        Math.abs(evento.deltaY) > Math.abs(evento.deltaX) ? evento.deltaY : evento.deltaX
+      if (delta === 0) return
+      evento.preventDefault()
+      trilho.scrollLeft += delta
+      normalizarLoop()
+      pausarAuto(1800)
+      atualizarSetas()
     }
+
+    const aoPointerDown = (evento: PointerEvent) => {
+      if (evento.pointerType === 'mouse' && evento.button !== 0) return
+      arrasto.current = {
+        pointerId: evento.pointerId,
+        inicioX: evento.clientX,
+        scrollInicio: trilho.scrollLeft,
+        moveu: false,
+      }
+      bloqueiaClick.current = false
+      pausaAte.current = Number.POSITIVE_INFINITY
+      trilho.classList.add('showroom-faixa--arrastando')
+      try {
+        trilho.setPointerCapture(evento.pointerId)
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const aoPointerMove = (evento: PointerEvent) => {
+      const estado = arrasto.current
+      if (!estado || estado.pointerId !== evento.pointerId) return
+      const delta = evento.clientX - estado.inicioX
+      if (!estado.moveu && Math.abs(delta) > 5) {
+        estado.moveu = true
+        bloqueiaClick.current = true
+      }
+      if (!estado.moveu) return
+      evento.preventDefault()
+      trilho.scrollLeft = estado.scrollInicio - delta
+      normalizarLoop()
+      atualizarSetas()
+    }
+
+    const soltar = (evento: PointerEvent) => {
+      const estado = arrasto.current
+      if (!estado || estado.pointerId !== evento.pointerId) return
+      arrasto.current = null
+      trilho.classList.remove('showroom-faixa--arrastando')
+      try {
+        trilho.releasePointerCapture(evento.pointerId)
+      } catch {
+        /* ignore */
+      }
+      pausarAuto(estado.moveu ? 2400 : 900)
+      atualizarSetas()
+    }
+
     trilho.scrollLeft = 0
-    pausaFaixa.current = 0
-    trilho.addEventListener('pointerenter', pausar)
-    trilho.addEventListener('pointerleave', seguir)
-    trilho.addEventListener('pointerdown', pausar)
-    trilho.addEventListener('pointerup', seguir)
-    trilho.addEventListener('pointercancel', seguir)
+    pausaAte.current = 0
+    atualizarSetas()
+
+    trilho.addEventListener('scroll', aoScroll, { passive: true })
+    trilho.addEventListener('wheel', aoWheel, { passive: false })
+    trilho.addEventListener('pointerdown', aoPointerDown)
+    trilho.addEventListener('pointermove', aoPointerMove)
+    trilho.addEventListener('pointerup', soltar)
+    trilho.addEventListener('pointercancel', soltar)
+    window.addEventListener('pointerup', soltar)
+    window.addEventListener('pointercancel', soltar)
     quadro = window.requestAnimationFrame(andar)
+
     return () => {
       vivo = false
       window.cancelAnimationFrame(quadro)
-      trilho.removeEventListener('pointerenter', pausar)
-      trilho.removeEventListener('pointerleave', seguir)
-      trilho.removeEventListener('pointerdown', pausar)
-      trilho.removeEventListener('pointerup', seguir)
-      trilho.removeEventListener('pointercancel', seguir)
+      trilho.removeEventListener('scroll', aoScroll)
+      trilho.removeEventListener('wheel', aoWheel)
+      trilho.removeEventListener('pointerdown', aoPointerDown)
+      trilho.removeEventListener('pointermove', aoPointerMove)
+      trilho.removeEventListener('pointerup', soltar)
+      trilho.removeEventListener('pointercancel', soltar)
+      window.removeEventListener('pointerup', soltar)
+      window.removeEventListener('pointercancel', soltar)
     }
   }, [movimento, chaveFaixa])
 
@@ -119,7 +230,11 @@ export function SeletorCategoria3D({
 
   function escolher(id: string, serve: boolean) {
     if (!serve) return
-    pausaFaixa.current = Date.now() + 1800
+    if (bloqueiaClick.current || arrasto.current?.moveu) {
+      bloqueiaClick.current = false
+      return
+    }
+    pausarAuto(1800)
     aoSelecionar(id)
   }
 
@@ -138,7 +253,7 @@ export function SeletorCategoria3D({
         }`}
         onClick={() => escolher(c.id, c.serve)}
       >
-        <img src={fotoCategoria(c)} alt="" loading="lazy" decoding="async" />
+        <img src={fotoCategoria(c)} alt="" loading="lazy" decoding="async" draggable={false} />
         <span>{rotuloCategoria(c)}</span>
       </button>
     )
@@ -183,16 +298,36 @@ export function SeletorCategoria3D({
         </li>
       </ul>
 
-      <div className="showroom-faixa" ref={faixaRef} role="listbox" aria-label="Frota">
-        {copias.map((copia) => (
-          <div
-            key={copia}
-            className="showroom-faixa-grupo"
-            aria-hidden={copia === 1 ? true : undefined}
-          >
-            {categoriasValidas.map((c) => cartao(c, copia))}
-          </div>
-        ))}
+      <div className="showroom-faixa-envolve">
+        <button
+          type="button"
+          className="showroom-seta showroom-seta--esquerda"
+          aria-label="Ver veículos anteriores"
+          disabled={!podeVoltar}
+          onClick={() => deslizar(-1)}
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <div className="showroom-faixa" ref={faixaRef} role="listbox" aria-label="Frota">
+          {copias.map((copia) => (
+            <div
+              key={copia}
+              className="showroom-faixa-grupo"
+              aria-hidden={copia === 1 ? true : undefined}
+            >
+              {categoriasValidas.map((c) => cartao(c, copia))}
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          className="showroom-seta showroom-seta--direita"
+          aria-label="Ver próximos veículos"
+          disabled={!podeAvancar}
+          onClick={() => deslizar(1)}
+        >
+          <ChevronRight size={18} />
+        </button>
       </div>
     </section>
   )

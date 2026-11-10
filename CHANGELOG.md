@@ -10,6 +10,7 @@ Registro das mudanças do Jemani.
 
 ### Corrigido
 
+- Carrossel da frota no **PC**: não pausa mais no hover (bug que travava só no desktop); arrastar com mouse, roda e setas. APK **1.0.85**.
 - Planilha de corridas no **tema escuro**: painel, meses e textos deixam de ficar branco sobre bege.
 - Autocomplete de endereço: lista não corta mais no card; sugestões em tempo real com selos (recente / popular / POI / aeroporto / perto).
 - i18n da reserva: Continuar, Voltar, Confirmar, labels de embarque/destino e placeholders seguem o idioma.
