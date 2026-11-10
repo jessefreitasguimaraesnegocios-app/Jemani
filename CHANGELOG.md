@@ -4,6 +4,10 @@ Registro das mudanças do Jemani.
 
 ## [2026-11-09]
 
+### Adicionado
+
+- Novo **ícone do app/APK** (preto + ouro, pin com carro) em web (`/icons`, favicon) e Android (`mipmap` / adaptive icon). APK **1.0.83**.
+
 ### Corrigido
 
 - Planilha de corridas no **tema escuro**: painel, meses e textos deixam de ficar branco sobre bege.
@@ -14,7 +18,6 @@ Registro das mudanças do Jemani.
 
 - Endereço: histórico recente, detecção de localização do usuário (GPS + proximity Mapbox) e POIs (hotéis, aeroportos, pontos).
 - Admin Configurações: ao ligar **som** ou **vibração**, toca/vibra imediatamente (igual cliente/motorista).
-- APK **1.0.82**.
 
 ## [2026-11-08]
 
