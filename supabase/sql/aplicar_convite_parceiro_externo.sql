@@ -1,7 +1,7 @@
 -- Cole no SQL Editor do projeto Jemani (qdiocaeoevxhdsrtcahn) e execute uma vez.
 -- Cria status parceiro_externo, tabela de convites, RPCs e notificação no aceite.
 
-create extension if not exists pgcrypto;
+create extension if not exists pgcrypto with schema extensions;
 
 alter type public.status_viagem add value if not exists 'parceiro_externo';
 
@@ -31,15 +31,19 @@ create or replace function public.hash_token_convite(p_token text)
 returns text
 language sql
 immutable
+set search_path = public, extensions
 as $$
-  select encode(digest(convert_to(trim(p_token), 'UTF8'), 'sha256'), 'hex');
+  select encode(
+    extensions.digest(convert_to(trim(p_token), 'UTF8'), 'sha256'::text),
+    'hex'
+  );
 $$;
 
 create or replace function public.consultar_convite_oferta(p_token text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_hash text;
@@ -105,7 +109,7 @@ create or replace function public.aceitar_convite_oferta(p_token text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_hash text;

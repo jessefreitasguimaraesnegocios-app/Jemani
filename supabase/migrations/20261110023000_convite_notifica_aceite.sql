@@ -4,7 +4,7 @@ create or replace function public.aceitar_convite_oferta(p_token text)
 returns jsonb
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_hash text;
