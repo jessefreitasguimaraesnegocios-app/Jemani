@@ -6,12 +6,13 @@ Registro das mudanças do Jemani.
 
 ### Adicionado
 
-- **Aceite por e-mail (parceiro externo):** Admin → Novas solicitações → Enviar e-mail abre o Gmail com botão **Revisar corrida** (link exclusivo `/convite/:token`). A empresa vê os dados e clica **Reservar**; a Jemani é notificada, a corrida sai da fila e vai para **Parceiros externos** no kanban. APK **1.0.86**.
-- SQL para ativar no remoto: `supabase/sql/aplicar_convite_parceiro_externo.sql` (rodar no SQL Editor do projeto Jemani).
+- **Aceite por e-mail (parceiro externo):** Admin → Novas solicitações → Enviar e-mail envia a proposta automaticamente (Resend) com botão **Revisar corrida** (`/convite/:token`). Sem `RESEND_API_KEY`, abre o Gmail já preenchido (sem colar). A empresa clica **Reservar**; a Jemani é notificada e a corrida vai para **Parceiros externos**. APK **1.0.87**.
+- SQL de convite já aplicado no remoto Jemani.
 - Novo **ícone do app/APK** (preto + ouro, pin com carro) em web (`/icons`, favicon) e Android (`mipmap` / adaptive icon). APK **1.0.83**.
 
 ### Corrigido
 
+- Histórico no **tema escuro**: selo “Avaliar com estrelas / Rate with stars” com contraste legível.
 - Carrossel da frota no **PC**: não pausa mais no hover (bug que travava só no desktop); arrastar com mouse, roda e setas. APK **1.0.85**.
 - Planilha de corridas no **tema escuro**: painel, meses e textos deixam de ficar branco sobre bege.
 - Autocomplete de endereço: lista não corta mais no card; sugestões em tempo real com selos (recente / popular / POI / aeroporto / perto).

@@ -150,6 +150,7 @@ import {
 import { enderecoProntoParaReserva } from '@/utils/endereco'
 import { dispararFeedbackAlerta } from '@/utils/feedbackAlerta'
 import { agoraIso, gerarCodigoViagem, gerarId } from '@/utils/format'
+import { enviarOfertaEmailAutomatico } from '@/services/enviarOfertaEmail'
 import {
   abrirGmailCompose,
   corpoOfertaCorrida,
@@ -274,7 +275,7 @@ interface EstadoDemo {
     viagemId: string,
     empresaId: string,
     adminId?: string,
-  ) => Promise<{ viagem: Viagem; urlAberta: boolean; urlConvite: string; colouHtml: boolean }>
+  ) => Promise<{ viagem: Viagem; urlConvite: string; enviado: boolean; modo: 'automatico' | 'gmail' }>
   consultarConvitePublico: (token: string) => Promise<VisaoConvitePublico>
   aceitarConvitePublico: (token: string) => Promise<VisaoConvitePublico>
   aceitarViagem: (viagemId: string, empresaId: string) => Viagem
@@ -2097,22 +2098,44 @@ export const useDemoStore = create<EstadoDemo>()(
           urlRevisao: urlConvite,
           validoAte,
         }
-        if (nuvemAtiva()) {
-          await revogarConvitesAbertosNuvem(viagemId, empresaId)
-          const gravouConvite = await gravarConviteNuvem(convite)
-          if (!gravouConvite) {
-            throw new Error(
-              'Não foi possível gravar o link exclusivo na nuvem. Verifique se a migration de convites está aplicada.',
-            )
-          }
+        if (!nuvemAtiva()) {
+          throw new Error('Envio automático exige a nuvem Supabase ativa.')
+        }
+        await revogarConvitesAbertosNuvem(viagemId, empresaId)
+        const gravouConvite = await gravarConviteNuvem(convite)
+        if (!gravouConvite) {
+          throw new Error(
+            'Não foi possível gravar o link exclusivo na nuvem. Verifique se a migration de convites está aplicada.',
+          )
         }
 
-        const { colouHtml } = await abrirGmailCompose({
-          para: empresa.email,
-          assunto: `Jemani — Proposta de corrida ${viagem.codigo}`,
-          corpo: corpoOfertaCorrida(dadosOferta),
-          corpoHtml: corpoOfertaCorridaHtml(dadosOferta),
-        })
+        let modo: 'automatico' | 'gmail' = 'automatico'
+        try {
+          await enviarOfertaEmailAutomatico({
+            para: empresa.email,
+            assunto: `Jemani — Proposta de corrida ${viagem.codigo}`,
+            html: corpoOfertaCorridaHtml(dadosOferta),
+            texto: corpoOfertaCorrida(dadosOferta),
+            viagemId,
+            empresaId,
+          })
+        } catch (erroEnvio) {
+          // Sem RESEND_API_KEY (ou falha do provedor): abre Gmail já preenchido, sem colar HTML.
+          modo = 'gmail'
+          await abrirGmailCompose({
+            para: empresa.email,
+            assunto: `Jemani — Proposta de corrida ${viagem.codigo}`,
+            corpo: [
+              corpoOfertaCorrida(dadosOferta),
+              '',
+              'Revisar corrida:',
+              urlConvite,
+            ].join('\n'),
+          })
+          if (!(erroEnvio instanceof Error && /RESEND_API_KEY|503|não configurado/i.test(erroEnvio.message))) {
+            console.warn('[oferta-email] fallback Gmail', erroEnvio)
+          }
+        }
 
         const statusAnterior = viagem.status
         const atualizada: Viagem = {
@@ -2131,7 +2154,7 @@ export const useDemoStore = create<EstadoDemo>()(
                   status: 'oferecida',
                   distancia_km: distancia,
                   email_enviado_em: agora,
-                  motivo: 'email_oferta_gmail',
+                  motivo: modo === 'automatico' ? 'email_oferta_automatico' : 'email_oferta_gmail',
                 }
               : a,
           ),
@@ -2153,7 +2176,7 @@ export const useDemoStore = create<EstadoDemo>()(
               empresa_id: empresaId,
               distancia_km: distancia ?? -1,
               resultado: 'oferecida',
-              motivo: 'email_oferta_gmail',
+              motivo: modo === 'automatico' ? 'email_oferta_automatico' : 'email_oferta_gmail',
               created_at: agora,
             },
             ...state.distribuicoes,
@@ -2161,7 +2184,7 @@ export const useDemoStore = create<EstadoDemo>()(
           auditLogs: [
             {
               id: gerarId(),
-              acao: 'gmail_compose_aberto',
+              acao: modo === 'automatico' ? 'email_oferta_enviado' : 'gmail_compose_aberto',
               usuario_id: adminId,
               entidade_tipo: 'viagem',
               entidade_id: viagemId,
@@ -2172,6 +2195,7 @@ export const useDemoStore = create<EstadoDemo>()(
                 status_novo: 'oferta_enviada',
                 convite_id: convite.id,
                 url_convite: urlConvite,
+                modo,
               },
               created_at: agora,
             },
@@ -2208,7 +2232,7 @@ export const useDemoStore = create<EstadoDemo>()(
           if (gravou && ofertaFinal) void gravarOfertasNuvem([ofertaFinal])
         })
 
-        return { viagem: atualizada, urlAberta: true, urlConvite, colouHtml }
+        return { viagem: atualizada, urlConvite, enviado: true, modo }
       },
 
       consultarConvitePublico: async (token) => {

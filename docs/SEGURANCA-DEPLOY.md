@@ -39,6 +39,14 @@ npx supabase functions deploy stripe-webhook --no-verify-jwt
 npx supabase functions deploy criar-empresa --no-verify-jwt
 npx supabase functions deploy places-proxy --no-verify-jwt
 npx supabase functions deploy convite-oferta --no-verify-jwt
+npx supabase functions deploy enviar-oferta-email --no-verify-jwt
+```
+
+Secrets de e-mail (envio automático da oferta):
+
+```powershell
+npx supabase secrets set RESEND_API_KEY=re_xxxx --project-ref qdiocaeoevxhdsrtcahn
+npx supabase secrets set EMAIL_FROM="Jemani <onboarding@resend.dev>" --project-ref qdiocaeoevxhdsrtcahn
 ```
 
 ### Convite / Parceiros externos (obrigatório no SQL Editor)

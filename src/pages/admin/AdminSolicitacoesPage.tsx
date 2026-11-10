@@ -67,15 +67,14 @@ export function AdminSolicitacoesPage() {
     setErro('')
     setMsg('')
     try {
-      const { viagem, colouHtml } = await enviarOfertaEmailEmpresa(
-        viagemId,
-        empresaId,
-        usuario?.id,
-      )
+      const { viagem, modo } = await enviarOfertaEmailEmpresa(viagemId, empresaId, usuario?.id)
       setMsg(
-        t(colouHtml ? 'admin.solicitacoes.msgEnviadoColar' : 'admin.solicitacoes.msgEnviado', {
-          codigo: viagem.codigo,
-        }),
+        t(
+          modo === 'automatico'
+            ? 'admin.solicitacoes.msgEnviado'
+            : 'admin.solicitacoes.msgEnviadoGmail',
+          { codigo: viagem.codigo },
+        ),
       )
     } catch (e) {
       setErro(e instanceof Error ? e.message : t('admin.solicitacoes.erroEnviar'))

@@ -434,13 +434,13 @@
 .cliente-viagens-cartao-avaliar {
   display: inline-flex;
   margin: 0.45rem 0 0;
-  padding: 0.2rem 0.55rem;
+  padding: 0.28rem 0.7rem;
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  color: #6b4f2a;
-  background: rgba(201, 164, 108, 0.28);
+  color: #3f2c12;
+  background: rgba(201, 164, 108, 0.32);
 }
 
 @media (max-width: 640px) {
@@ -517,4 +517,10 @@ html[data-tema='escuro'] .cliente-viagens-vazio,
 html[data-tema='escuro'] .cliente-viagens-cartao-texto,
 html[data-tema='escuro'] .cliente-viagens-cartao-extra {
   color: #c2c2c2;
+}
+
+html[data-tema='escuro'] .cliente-viagens-cartao-avaliar {
+  color: #0a0a0a;
+  background: linear-gradient(135deg, #f0d7ae 0%, #c9a87c 100%);
+  box-shadow: 0 0 0 1px rgba(255, 220, 170, 0.35);
 }

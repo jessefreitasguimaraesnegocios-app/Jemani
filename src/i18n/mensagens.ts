@@ -259,7 +259,7 @@ const pt = {
     'Corridas pagas aguardando oferta por e-mail às empresas mais próximas do embarque.',
   'admin.solicitacoes.comoTitulo': 'Como funciona',
   'admin.solicitacoes.como1':
-    'Corridas pagas entram na fila. O sistema ordena empresas pela distância até o embarque. Em Enviar e-mail, o Gmail abre com o botão “Revisar corrida” (cole com Ctrl+V).',
+    'Corridas pagas entram na fila. O sistema ordena empresas pela distância até o embarque. Em Enviar e-mail, a proposta sai automaticamente com o botão “Revisar corrida”.',
   'admin.solicitacoes.como2':
     'A empresa abre o link exclusivo, confere os dados e clica em Reservar. A Jemani é notificada, a corrida sai da fila disponível e vai para Parceiros externos no kanban.',
 
@@ -300,9 +300,11 @@ const pt = {
   'admin.solicitacoes.emailEnviado': 'E-mail enviado',
   'admin.solicitacoes.enviarEmail': 'Enviar e-mail',
   'admin.solicitacoes.msgEnviado':
-    'Gmail aberto · oferta marcada como enviada · {codigo} agora está “Oferta enviada por e-mail”.',
+    'E-mail enviado automaticamente · {codigo} agora está “Oferta enviada por e-mail”.',
+  'admin.solicitacoes.msgEnviadoGmail':
+    'Gmail aberto já preenchido (só clicar em Enviar) · {codigo} marcada como oferta enviada. Para envio 100% automático, configure RESEND_API_KEY.',
   'admin.solicitacoes.msgEnviadoColar':
-    'Gmail aberto · cole no corpo com Ctrl+V para aparecer o botão “Revisar corrida” · {codigo} marcada como oferta enviada.',
+    'E-mail enviado automaticamente · {codigo} marcada como oferta enviada.',
   'admin.solicitacoes.erroEnviar': 'Falha ao enviar oferta',
   'admin.solicitacoes.alerta': '{n} novas solicitações',
 
@@ -961,9 +963,9 @@ const en: Record<ChaveTraducao, string> = {
     'Paid trips waiting for an email offer to the companies closest to pickup.',
   'admin.solicitacoes.comoTitulo': 'How it works',
   'admin.solicitacoes.como1':
-    'Paid trips enter the queue. The system ranks companies by distance to pickup. You send a Gmail with a “Review trip” button; the trip becomes Offer emailed.',
+    'Paid trips enter the queue. The system ranks companies by distance to pickup. Send email delivers the proposal automatically with a “Review trip” button.',
   'admin.solicitacoes.como2':
-    'When Gmail opens, paste the message (Ctrl+V) so the button appears. The company reviews via the button and only confirms on the page. Opening the review does not accept the offer.',
+    'The company opens the exclusive link, checks the details and taps Reserve. Jemani is notified, the trip leaves the available queue and moves to External partners on the board.',
 
   'convite.subtituloPainel': 'Trip proposal',
   'convite.carregando': 'Loading proposal…',
@@ -1002,9 +1004,11 @@ const en: Record<ChaveTraducao, string> = {
   'admin.solicitacoes.emailEnviado': 'Email sent',
   'admin.solicitacoes.enviarEmail': 'Send email',
   'admin.solicitacoes.msgEnviado':
-    'Gmail opened · offer marked as sent · {codigo} is now “Offer emailed”.',
+    'Email sent automatically · {codigo} is now “Offer emailed”.',
+  'admin.solicitacoes.msgEnviadoGmail':
+    'Gmail opened already filled (just click Send) · {codigo} marked as offer emailed. For fully automatic send, set RESEND_API_KEY.',
   'admin.solicitacoes.msgEnviadoColar':
-    'Gmail opened · paste into the body with Ctrl+V to show the “Review trip” button · {codigo} marked as offer emailed.',
+    'Email sent automatically · {codigo} marked as offer emailed.',
   'admin.solicitacoes.erroEnviar': 'Failed to send offer',
   'admin.solicitacoes.alerta': '{n} new requests',
 
@@ -1660,9 +1664,9 @@ const es: Record<ChaveTraducao, string> = {
     'Viajes pagados esperando oferta por correo a las empresas más cercanas al embarque.',
   'admin.solicitacoes.comoTitulo': 'Cómo funciona',
   'admin.solicitacoes.como1':
-    'Los viajes pagados entran en la cola. El sistema ordena empresas por distancia al embarque. Envías un Gmail con el botón “Revisar viaje”; el viaje queda Oferta enviada por correo.',
+    'Los viajes pagados entran en la cola. El sistema ordena empresas por distancia al embarque. Enviar correo entrega la propuesta automáticamente con el botón “Revisar viaje”.',
   'admin.solicitacoes.como2':
-    'Al abrir Gmail, pegue el mensaje (Ctrl+V) para que aparezca el botón. La empresa revisa con el botón y solo confirma en la página. Abrir la revisión no acepta la oferta.',
+    'La empresa abre el enlace exclusivo, revisa los datos y toca Reservar. Jemani es notificada, el viaje sale de la cola disponible y va a Socios externos en el tablero.',
 
   'convite.subtituloPainel': 'Propuesta de viaje',
   'convite.carregando': 'Cargando propuesta…',
@@ -1701,9 +1705,11 @@ const es: Record<ChaveTraducao, string> = {
   'admin.solicitacoes.emailEnviado': 'Correo enviado',
   'admin.solicitacoes.enviarEmail': 'Enviar correo',
   'admin.solicitacoes.msgEnviado':
-    'Gmail abierto · oferta marcada como enviada · {codigo} ahora está “Oferta enviada por correo”.',
+    'Correo enviado automáticamente · {codigo} ahora está “Oferta enviada por correo”.',
+  'admin.solicitacoes.msgEnviadoGmail':
+    'Gmail abierto ya rellenado (solo Enviar) · {codigo} marcada como oferta enviada. Para envío 100% automático, configure RESEND_API_KEY.',
   'admin.solicitacoes.msgEnviadoColar':
-    'Gmail abierto · pegue en el cuerpo con Ctrl+V para ver el botón “Revisar viaje” · {codigo} marcada como oferta enviada.',
+    'Correo enviado automáticamente · {codigo} marcada como oferta enviada.',
   'admin.solicitacoes.erroEnviar': 'Error al enviar la oferta',
   'admin.solicitacoes.alerta': '{n} nuevas solicitudes',
 
