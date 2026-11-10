@@ -16,11 +16,11 @@ function chaveStorage(usuarioId?: string | null) {
 
 function normalizarTema(valor?: string | null): TemaAparencia {
   if (valor === 'escuro' || valor === 'claro' || valor === 'sistema') return valor
-  return 'claro'
+  return 'escuro'
 }
 
 export function preferenciasPadrao(): PreferenciasConta {
-  return { idioma: 'pt-BR', tema: 'claro' }
+  return { idioma: 'en', tema: 'escuro' }
 }
 
 /** Preferências de aparência/idioma só desta conta neste aparelho. */

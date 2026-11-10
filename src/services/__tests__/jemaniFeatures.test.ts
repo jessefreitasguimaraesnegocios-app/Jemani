@@ -37,11 +37,11 @@ import type { Empresa, Veiculo, Viagem } from '@/types'
 import { statusPeloGps } from '@/services/statusPeloGps'
 
 describe('idioma', () => {
-  it('normaliza valores conhecidos e cai em pt-BR', () => {
+  it('normaliza valores conhecidos e cai em en', () => {
     expect(normalizarIdioma('en')).toBe('en')
     expect(normalizarIdioma('es')).toBe('es')
     expect(normalizarIdioma('pt')).toBe('pt-BR')
-    expect(normalizarIdioma('xyz')).toBe('pt-BR')
+    expect(normalizarIdioma('xyz')).toBe('en')
   })
 })
 import {

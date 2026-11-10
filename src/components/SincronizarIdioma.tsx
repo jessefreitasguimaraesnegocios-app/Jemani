@@ -3,7 +3,7 @@ import { usarTemaConta } from '@/hooks/usarPreferenciasConta'
 import { usarIdioma } from '@/i18n/usarIdioma'
 
 function aplicarTema(valor?: string) {
-  const tema = valor === 'escuro' || valor === 'claro' || valor === 'sistema' ? valor : 'claro'
+  const tema = valor === 'escuro' || valor === 'claro' || valor === 'sistema' ? valor : 'escuro'
   let resolvido = tema
   if (tema === 'sistema') {
     resolvido = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'

@@ -22,12 +22,24 @@ export function ClienteInicioPage() {
   return (
     <div className="cliente-inicio animar-entrada">
       <section className="cliente-inicio-hero">
-        <p className="fonte-display cliente-inicio-hero-marca">Jemani</p>
-        <p className="cliente-inicio-hero-texto">{t('landing.tagline')}</p>
-        <Link to="/app/reservar" className="cliente-inicio-cta">
-          {t('landing.ctaReservar')}
-          <ArrowRight size={18} />
-        </Link>
+        <div className="cliente-inicio-hero-cena" aria-hidden="true">
+          <div className="cliente-inicio-cartao-3d">
+            <div className="cliente-inicio-cartao-face cliente-inicio-cartao-frente">
+              <img src="/images/jemani-cartao-frente.png" alt="" draggable={false} />
+            </div>
+            <div className="cliente-inicio-cartao-face cliente-inicio-cartao-verso">
+              <img src="/images/jemani-cartao-verso.png" alt="" draggable={false} />
+            </div>
+          </div>
+        </div>
+        <div className="cliente-inicio-hero-conteudo">
+          <p className="fonte-display cliente-inicio-hero-marca">Jemani</p>
+          <p className="cliente-inicio-hero-texto">{t('landing.tagline')}</p>
+          <Link to="/app/reservar" className="cliente-inicio-cta">
+            {t('landing.ctaReservar')}
+            <ArrowRight size={18} />
+          </Link>
+        </div>
       </section>
 
       <section>

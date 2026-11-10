@@ -2,6 +2,16 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-11-10]
+
+### Adicionado
+
+- Home do cliente: cartão Jemani (frente/verso) como fundo do hero **Book a trip**, com giro 3D a cada 6s em loop. APK **1.0.89**.
+
+### Alterado
+
+- Padrão do app: **tema escuro** e idioma **EN** (sem preferência salva no aparelho). APK **1.0.90**.
+
 ## [2026-11-09]
 
 ### Adicionado
