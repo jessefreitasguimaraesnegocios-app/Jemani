@@ -20,6 +20,8 @@ Registro das mudanças do Jemani.
 - Admin e Empresa: Sair na última aba lateral; Perfil do admin na sidebar; Configuração da empresa com idioma/tema (sem menu dos 3 tracinhos). APK **1.0.97**.
 - Reserva passo 3: exige escolher o veículo e Continuar antes de ir ao pagamento. APK **1.0.98**.
 - Indicador de etapas da reserva com trilho dourado discreto e marcadores em losango. APK **1.0.99**.
+- Etapas concluídas da reserva ganham check verde ao lado do nome. APK **1.0.100**.
+- Reserva passo 2: seletor grande de data (chips) e grade de horários no lugar do date/select nativo. APK **1.0.101**.
 
 ## [2026-11-09]
 

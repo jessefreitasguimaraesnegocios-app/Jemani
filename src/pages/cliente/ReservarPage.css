@@ -81,6 +81,14 @@
     transform 0.35s ease;
 }
 
+.reserva-progresso-rotulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
 .reserva-progresso-nome {
   font-size: 0.68rem;
   line-height: 1.25;
@@ -93,9 +101,30 @@
   transition: color 0.35s ease;
 }
 
+.reserva-progresso-check {
+  flex-shrink: 0;
+  color: var(--color-success, #2f6b4f);
+  animation: reserva-progresso-check-entra 0.35s ease;
+}
+
+@keyframes reserva-progresso-check-entra {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .reserva-progresso-passo--feito .reserva-progresso-indice,
 .reserva-progresso-passo--atual .reserva-progresso-indice {
   color: var(--color-gold-deep);
+}
+
+.reserva-progresso-passo--feito .reserva-progresso-nome {
+  color: color-mix(in srgb, var(--color-ink) 72%, var(--color-success, #2f6b4f));
 }
 
 .reserva-progresso-passo--feito .reserva-progresso-preenchimento,
@@ -158,6 +187,10 @@
     animation: none;
   }
 
+  .reserva-progresso-check {
+    animation: none;
+  }
+
   .reserva-progresso-preenchimento,
   .reserva-progresso-indice,
   .reserva-progresso-nome,
@@ -192,6 +225,14 @@ html[data-tema='escuro'] .reserva-progresso-passo--atual .reserva-progresso-indi
 
 html[data-tema='escuro'] .reserva-progresso-passo--atual .reserva-progresso-nome {
   color: #f5f5f5;
+}
+
+html[data-tema='escuro'] .reserva-progresso-passo--feito .reserva-progresso-nome {
+  color: color-mix(in srgb, #f5f5f5 70%, var(--color-success, #06c167));
+}
+
+html[data-tema='escuro'] .reserva-progresso-check {
+  color: var(--color-success, #06c167);
 }
 
 html[data-tema='escuro'] .reserva-progresso-joia {

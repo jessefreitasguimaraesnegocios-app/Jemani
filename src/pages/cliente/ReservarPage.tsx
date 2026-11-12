@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CampoEndereco } from '@/components/CampoEndereco'
 import { SeletorCategoria3D } from '@/components/cliente/SeletorCategoria3D'
+import { SeletorDataHorario } from '@/components/cliente/SeletorDataHorario'
 import { useAuth } from '@/contexts/AuthContext'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -544,7 +546,17 @@ export function ReservarPage() {
                 <i className="reserva-progresso-joia" />
                 <i className="reserva-progresso-preenchimento" />
               </span>
-              <span className="reserva-progresso-nome">{t(nome)}</span>
+              <span className="reserva-progresso-rotulo">
+                <span className="reserva-progresso-nome">{t(nome)}</span>
+                {estado === 'feito' && (
+                  <Check
+                    className="reserva-progresso-check"
+                    size={14}
+                    strokeWidth={2.75}
+                    aria-hidden
+                  />
+                )}
+              </span>
             </li>
           )
         })}
@@ -627,51 +639,20 @@ export function ReservarPage() {
 
         {etapa === 1 && (
           <>
-            <div>
-              <label className="rotulo" htmlFor="data-viagem">
-                Data
-              </label>
-              <input
-                id="data-viagem"
-                type="date"
-                className="campo"
-                value={dataViagem}
-                min={dataMinima}
-                onChange={(e) => setDataViagem(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="rotulo" htmlFor="horario-viagem">
-                Horário (mín. {antecedenciaHoras}h de antecedência · fuso LA)
-              </label>
-              <select
-                id="horario-viagem"
-                className="campo"
-                value={horariosDisponiveis.includes(horario) ? horario : ''}
-                onChange={(e) => setHorario(e.target.value)}
-                required
-                disabled={horariosDisponiveis.length === 0}
-              >
-                {horariosDisponiveis.length === 0 ? (
-                  <option value="">Sem horários neste dia</option>
-                ) : (
-                  horariosDisponiveis.map((h) => (
-                    <option key={h} value={h}>
-                      {h}
-                    </option>
-                  ))
-                )}
-              </select>
-              <p className="reserva-horario-dica">
-                No mesmo dia, a lista começa só após as {antecedenciaHoras}{' '}
-                {antecedenciaHoras === 1 ? 'hora mínima' : 'horas mínimas'} definidas pelo admin.
-                Horários anteriores não aparecem.
-                {horariosDisponiveis[0]
-                  ? ` Primeiro horário disponível: ${horariosDisponiveis[0]}.`
-                  : ''}
-              </p>
-            </div>
+            <SeletorDataHorario
+              data={dataViagem}
+              horario={horario}
+              dataMinima={dataMinima}
+              agora={agora}
+              antecedenciaHoras={antecedenciaHoras}
+              aoMudarData={setDataViagem}
+              aoMudarHorario={setHorario}
+              dicaHorario={
+                horariosDisponiveis[0]
+                  ? t('reserva.primeiroHorario', { hora: horariosDisponiveis[0] })
+                  : t('reserva.semHorarios')
+              }
+            />
             {embarqueAeroporto && (
               <p className="text-xs text-[var(--color-slate)]">
                 Para aeroporto, use o horário de pouso previsto — o motorista acompanha atrasos pelo
