@@ -78,13 +78,15 @@ export function ReservarPage() {
   const [horario, setHorario] = useState('18:00')
   const [agoraTick, setAgoraTick] = useState(() => Date.now())
   const [passageiros, setPassageiros] = useState(2)
-  const [categoriaId, setCategoriaId] = useState(
-    categorias.find((c) => c.slug === 'jemani-executive')?.id ?? '',
-  )
+  const [categoriaId, setCategoriaId] = useState('')
   const [veiculoId, setVeiculoId] = useState('')
+  const [frotaEscolhida, setFrotaEscolhida] = useState(false)
+  const [podeConfirmarEtapa, setPodeConfirmarEtapa] = useState(false)
   const escolherFrota = useCallback((categoria: string, veiculo?: string) => {
     setCategoriaId(categoria)
     setVeiculoId(veiculo ?? '')
+    setFrotaEscolhida(true)
+    setErro('')
   }, [])
   const [malas, setMalas] = useState(2)
   const [numeroVoo, setNumeroVoo] = useState('')
@@ -118,8 +120,14 @@ export function ReservarPage() {
   }, [ehHourly, pacotesHourly, duracaoMinutos])
 
   useEffect(() => {
-    if (!categoriaId && categorias[0]) setCategoriaId(categorias[0].id)
-  }, [categorias, categoriaId])
+    if (etapa !== 2) {
+      setPodeConfirmarEtapa(false)
+      return
+    }
+    setPodeConfirmarEtapa(false)
+    const timer = window.setTimeout(() => setPodeConfirmarEtapa(true), 450)
+    return () => window.clearTimeout(timer)
+  }, [etapa])
 
   const trechoComAeroporto = embarqueAeroporto || destinoAeroporto
   const pedirDadosVoo = trechoComAeroporto && !naoVouEmbarcar
@@ -236,6 +244,9 @@ export function ReservarPage() {
     setTerminal('')
     setNaoVouEmbarcar(false)
     setObservacoes('')
+    setCategoriaId('')
+    setVeiculoId('')
+    setFrotaEscolhida(false)
   }
 
   const categoria = categorias.find((c) => c.id === categoriaId)
@@ -385,8 +396,12 @@ export function ReservarPage() {
     setEtapa((e) => Math.max(e - 1, 0))
   }
 
-  async function confirmar(e: FormEvent) {
-    e.preventDefault()
+  async function confirmar(e?: FormEvent) {
+    e?.preventDefault()
+    if (etapa !== ETAPAS.length - 1 || !frotaEscolhida || !podeConfirmarEtapa) {
+      setErro(t('reserva.escolhaVeiculo'))
+      return
+    }
     if (!usuario || !preco || !origemEndereco || !destinoEndereco) return
     if (!ehHourly && !rota) return
     if (ehHourly && !hourlyOk) {
@@ -394,7 +409,7 @@ export function ReservarPage() {
       return
     }
     if (!categoriaId || !categoria) {
-      setErro('Escolha uma categoria')
+      setErro(t('reserva.escolhaVeiculo'))
       return
     }
     if (passageiros > categoria.capacidade_max) {
@@ -513,16 +528,35 @@ export function ReservarPage() {
         )}
       </div>
 
-      <div className="mt-4 mb-6 flex gap-1">
-        {ETAPAS.map((nome, i) => (
-          <div
-            key={nome}
-            className={`h-1.5 flex-1 rounded-full ${i <= etapa ? 'bg-[var(--color-gold)]' : 'bg-[var(--color-sand)]'}`}
-          />
-        ))}
-      </div>
+      <ol className="reserva-progresso" aria-label={t('reserva.progressoAria')}>
+        {ETAPAS.map((nome, i) => {
+          const estado = i < etapa ? 'feito' : i === etapa ? 'atual' : 'proximo'
+          return (
+            <li
+              key={nome}
+              className={`reserva-progresso-passo reserva-progresso-passo--${estado}`}
+              aria-current={estado === 'atual' ? 'step' : undefined}
+            >
+              <span className="reserva-progresso-indice" aria-hidden="true">
+                {String(i + 1).padStart(2, '0')}
+              </span>
+              <span className="reserva-progresso-trilho" aria-hidden="true">
+                <i className="reserva-progresso-joia" />
+                <i className="reserva-progresso-preenchimento" />
+              </span>
+              <span className="reserva-progresso-nome">{t(nome)}</span>
+            </li>
+          )
+        })}
+      </ol>
 
-      <form className="cartao space-y-4" onSubmit={confirmar}>
+      <form
+        className="cartao space-y-4"
+        onSubmit={(evento) => {
+          evento.preventDefault()
+          if (etapa === ETAPAS.length - 1) void confirmar(evento)
+        }}
+      >
         {etapa === 0 && (
           <>
             <CampoEndereco
@@ -795,7 +829,7 @@ export function ReservarPage() {
               aoSelecionar={escolherFrota}
               formatarAdicional={(valor) => formatarMoeda(valor, locale)}
             />
-            {preco && (
+            {frotaEscolhida && preco ? (
               <div className="reserva-revisao-pagamento">
                 <div className="reserva-revisao-pagamento-topo">
                   <div>
@@ -825,6 +859,8 @@ export function ReservarPage() {
                 </div>
                 <p className="reserva-revisao-pagamento-dica">{t('reserva.irPagamentoDica')}</p>
               </div>
+            ) : (
+              <p className="reserva-escolha-frota-dica">{t('reserva.escolhaVeiculo')}</p>
             )}
           </div>
         )}
@@ -842,8 +878,13 @@ export function ReservarPage() {
               {t('reserva.continuar')}
             </button>
           ) : (
-            <button type="submit" className="btn-ouro" disabled={enviando || !preco}>
-              {enviando ? t('reserva.confirmando') : t('reserva.irPagamento')}
+            <button
+              type="button"
+              className="btn-ouro"
+              disabled={enviando || !preco || !frotaEscolhida || !podeConfirmarEtapa}
+              onClick={() => void confirmar()}
+            >
+              {enviando ? t('reserva.confirmando') : t('reserva.continuar')}
             </button>
           )}
         </div>

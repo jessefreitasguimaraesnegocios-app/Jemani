@@ -72,6 +72,10 @@ export function SeletorCategoria3D({
         const direto = frota.find((item) => item.id === veiculoId)
         if (direto) return direto
       }
+      // Sem escolha do cliente: só preview visual, sem marcar cartão ativo.
+      if (!categoriaId) {
+        return frota.find((item) => item.serve) ?? frota[0] ?? null
+      }
       return (
         frota.find((item) => item.categoria_id === categoriaId && item.serve) ??
         frota.find((item) => item.categoria_id === categoriaId) ??
@@ -108,19 +112,6 @@ export function SeletorCategoria3D({
     if (veiculoSelecionado) return veiculoSelecionado.categoria
     return categorias.find((c) => c.id === categoriaId) ?? categorias[0]
   }, [veiculoSelecionado, categorias, categoriaId])
-
-  // Só preenche seleção inicial / inválida — não sobrescreve escolha do usuário.
-  useEffect(() => {
-    if (!usarVeiculos || !frota.length) return
-    const atual = veiculoId ? frota.find((item) => item.id === veiculoId) : undefined
-    if (atual) return
-    const preferido =
-      frota.find((item) => item.categoria_id === categoriaId && item.serve) ??
-      frota.find((item) => item.serve) ??
-      frota[0]
-    if (!preferido) return
-    aoSelecionar(preferido.categoria_id, preferido.id)
-  }, [usarVeiculos, frota, veiculoId, categoriaId, aoSelecionar])
 
   function fotoCategoria(categoria: CategoriaVeiculo) {
     const destaque = veiculoDestaqueDaCategoria(categoria.id, veiculos, empresas, categorias)
@@ -376,7 +367,7 @@ export function SeletorCategoria3D({
     item: ReturnType<typeof veiculosParaCarrosselReserva>[number],
     copia: number,
   ) {
-    const ativa = veiculoSelecionado?.id === item.id
+    const ativa = Boolean(veiculoId) && item.id === veiculoId
     return (
       <button
         key={`${copia}-${item.id}`}

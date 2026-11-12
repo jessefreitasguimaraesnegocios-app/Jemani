@@ -18,6 +18,8 @@ Registro das mudanças do Jemani.
 - Carrossel da frota na reserva: clique nos veículos e rolagem automática voltaram a funcionar. APK **1.0.95**.
 - Reserva do cliente: remove o passo Resumo; revisão + pagamento na tela da viagem (**3 passos**). APK **1.0.96**.
 - Admin e Empresa: Sair na última aba lateral; Perfil do admin na sidebar; Configuração da empresa com idioma/tema (sem menu dos 3 tracinhos). APK **1.0.97**.
+- Reserva passo 3: exige escolher o veículo e Continuar antes de ir ao pagamento. APK **1.0.98**.
+- Indicador de etapas da reserva com trilho dourado discreto e marcadores em losango. APK **1.0.99**.
 
 ## [2026-11-09]
 
