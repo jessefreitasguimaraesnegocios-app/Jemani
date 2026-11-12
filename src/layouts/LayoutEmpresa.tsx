@@ -5,13 +5,14 @@ import {
   CalendarDays,
   Car,
   LayoutDashboard,
+  LogOut,
   MapPinned,
+  Settings,
   Users,
   Wallet,
   Inbox,
   User,
 } from 'lucide-react'
-import { MenuContaTopo } from '@/components/MenuContaTopo'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarAvisoDoSistema } from '@/hooks/usarAvisoDoSistema'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -30,6 +31,7 @@ const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Car; end?: b
   { to: '/empresa/agenda', chave: 'nav.empresa.agenda', icon: CalendarDays },
   { to: '/empresa/financeiro', chave: 'nav.empresa.financeiro', icon: Wallet },
   { to: '/empresa/perfil', chave: 'nav.empresa.perfil', icon: User },
+  { to: '/empresa/configuracao', chave: 'nav.empresa.configuracao', icon: Settings },
 ]
 
 function contarSolicitacoesEmpresa(
@@ -75,21 +77,17 @@ export function LayoutEmpresa() {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
       <aside className="painel-lateral lg:flex lg:flex-col lg:p-6">
-        <div className="hidden lg:flex lg:items-start lg:justify-between lg:gap-3">
-          <div>
-            <p className="fonte-display text-3xl">Jemani</p>
-            <p className="mt-1 text-sm text-white/55">
-              {empresa?.nome_comercial ?? t('nav.empresa.fallback')}
-            </p>
-          </div>
-          <MenuContaTopo variante="completo" tom="escuro" aoSair={handleSair} />
+        <div className="hidden lg:block">
+          <p className="fonte-display text-3xl">Jemani</p>
+          <p className="mt-1 text-sm text-white/55">
+            {empresa?.nome_comercial ?? t('nav.empresa.fallback')}
+          </p>
         </div>
         <div className="flex items-center justify-between gap-3 p-4 lg:hidden">
           <div>
             <p className="fonte-display text-2xl">Jemani</p>
             <p className="text-xs text-white/55">{empresa?.nome_comercial}</p>
           </div>
-          <MenuContaTopo variante="completo" tom="escuro" aoSair={handleSair} />
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:mt-8 lg:flex-1 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0">
           {links.map((l) => {
@@ -121,6 +119,16 @@ export function LayoutEmpresa() {
               </NavLink>
             )
           })}
+          <button
+            type="button"
+            className="sidebar-link layout-empresa-link layout-empresa-sair whitespace-nowrap"
+            onClick={() => void handleSair()}
+          >
+            <span className="layout-empresa-link-linha">
+              <LogOut size={18} />
+              {t('comum.sair')}
+            </span>
+          </button>
         </nav>
       </aside>
       <main

@@ -5,14 +5,15 @@ import {
   Car,
   Inbox,
   LayoutDashboard,
+  LogOut,
   Settings,
   Tags,
+  User,
   Users,
   Wallet,
   Percent,
   BadgeDollarSign,
 } from 'lucide-react'
-import { MenuContaTopo } from '@/components/MenuContaTopo'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { ChaveTraducao } from '@/i18n/mensagens'
@@ -32,6 +33,7 @@ const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Car; end?: b
   { to: '/admin/categorias', chave: 'nav.admin.categorias', icon: Tags },
   { to: '/admin/precos', chave: 'nav.admin.precos', icon: BadgeDollarSign },
   { to: '/admin/configuracoes', chave: 'nav.admin.configuracoes', icon: Settings },
+  { to: '/admin/perfil', chave: 'nav.admin.perfil', icon: User },
 ]
 
 export function LayoutAdmin() {
@@ -54,12 +56,9 @@ export function LayoutAdmin() {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
       <aside className="painel-lateral">
-        <div className="flex items-center justify-between gap-3 p-4 lg:items-start lg:p-6">
-          <div>
-            <p className="fonte-display text-3xl">Jemani</p>
-            <p className="mt-1 text-sm text-white/55">{t('nav.admin.subtitle')}</p>
-          </div>
-          <MenuContaTopo variante="admin" tom="escuro" aoSair={handleSair} />
+        <div className="p-4 lg:p-6">
+          <p className="fonte-display text-3xl">Jemani</p>
+          <p className="mt-1 text-sm text-white/55">{t('nav.admin.subtitle')}</p>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:px-6 lg:pb-6">
           {links.map((l) => {
@@ -88,6 +87,16 @@ export function LayoutAdmin() {
               </NavLink>
             )
           })}
+          <button
+            type="button"
+            className="sidebar-link layout-admin-link layout-admin-sair whitespace-nowrap"
+            onClick={() => void handleSair()}
+          >
+            <span className="layout-admin-link-linha">
+              <LogOut size={18} />
+              {t('comum.sair')}
+            </span>
+          </button>
         </nav>
       </aside>
       <main

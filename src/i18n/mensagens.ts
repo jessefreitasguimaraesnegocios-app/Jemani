@@ -52,6 +52,7 @@ const pt = {
   'nav.admin.categorias': 'Categorias',
   'nav.admin.precos': 'Preços',
   'nav.admin.configuracoes': 'Configurações',
+  'nav.admin.perfil': 'Perfil',
 
   'nav.cliente.subtitle': 'Transporte executivo',
   'nav.cliente.inicio': 'Início',
@@ -70,6 +71,7 @@ const pt = {
   'nav.empresa.agenda': 'Agenda',
   'nav.empresa.financeiro': 'Financeiro',
   'nav.empresa.perfil': 'Perfil',
+  'nav.empresa.configuracao': 'Configuração',
   'nav.empresa.fallback': 'Empresa',
 
   'nav.motorista.subtitle': 'Área do motorista',
@@ -636,6 +638,8 @@ const pt = {
   'empresa.agenda.vazioServico': 'Nenhum serviço marcado.',
   'empresa.financeiro.titulo': 'Financeiro',
   'empresa.perfil.titulo': 'Perfil',
+  'empresa.configuracao.titulo': 'Configuração',
+  'empresa.configuracao.sub': 'Idioma e aparência desta conta neste aparelho.',
 
   'hist.proximas': 'Em andamento e próximas',
   'hist.realizadas': 'Realizadas',
@@ -668,6 +672,12 @@ const pt = {
   'reserva.continuar': 'Continuar',
   'reserva.confirmar': 'Confirmar viagem',
   'reserva.confirmando': 'Confirmando...',
+  'reserva.irPagamento': 'Revisar e pagar',
+  'reserva.irPagamentoDica':
+    'Na próxima tela você confere a corrida e conclui o pagamento (simular ou Stripe).',
+  'reserva.revisaoRapida': 'Resumo',
+  'reserva.termino': 'término',
+  'reserva.paxCurto': 'pax',
   'reserva.hourlySemPreco':
     'Hourly Chauffeur ainda sem preço por hora na tabela administrativa. ONE-WAY continua disponível.',
   'reserva.embarque': 'Embarque (origem)',
@@ -756,6 +766,7 @@ const en: Record<ChaveTraducao, string> = {
   'nav.admin.categorias': 'Categories',
   'nav.admin.precos': 'Pricing',
   'nav.admin.configuracoes': 'Settings',
+  'nav.admin.perfil': 'Profile',
 
   'nav.cliente.subtitle': 'Executive transport',
   'nav.cliente.inicio': 'Home',
@@ -774,6 +785,7 @@ const en: Record<ChaveTraducao, string> = {
   'nav.empresa.agenda': 'Schedule',
   'nav.empresa.financeiro': 'Finance',
   'nav.empresa.perfil': 'Profile',
+  'nav.empresa.configuracao': 'Settings',
   'nav.empresa.fallback': 'Company',
 
   'nav.motorista.subtitle': 'Driver area',
@@ -1338,6 +1350,8 @@ const en: Record<ChaveTraducao, string> = {
   'empresa.agenda.vazioServico': 'No service scheduled.',
   'empresa.financeiro.titulo': 'Finance',
   'empresa.perfil.titulo': 'Profile',
+  'empresa.configuracao.titulo': 'Settings',
+  'empresa.configuracao.sub': 'Language and appearance for this account on this device.',
 
   'hist.proximas': 'In progress and upcoming',
   'hist.realizadas': 'Completed',
@@ -1370,6 +1384,12 @@ const en: Record<ChaveTraducao, string> = {
   'reserva.continuar': 'Continue',
   'reserva.confirmar': 'Confirm trip',
   'reserva.confirmando': 'Confirming...',
+  'reserva.irPagamento': 'Review and pay',
+  'reserva.irPagamentoDica':
+    'Next you review the ride and complete payment (simulate or Stripe).',
+  'reserva.revisaoRapida': 'Summary',
+  'reserva.termino': 'ends',
+  'reserva.paxCurto': 'pax',
   'reserva.hourlySemPreco':
     'Hourly Chauffeur still has no hourly rate in the admin price table. ONE-WAY remains available.',
   'reserva.embarque': 'Pickup (origin)',
@@ -1456,6 +1476,7 @@ const es: Record<ChaveTraducao, string> = {
   'nav.admin.categorias': 'Categorías',
   'nav.admin.precos': 'Precios',
   'nav.admin.configuracoes': 'Configuración',
+  'nav.admin.perfil': 'Perfil',
 
   'nav.cliente.subtitle': 'Transporte ejecutivo',
   'nav.cliente.inicio': 'Inicio',
@@ -1474,6 +1495,7 @@ const es: Record<ChaveTraducao, string> = {
   'nav.empresa.agenda': 'Agenda',
   'nav.empresa.financeiro': 'Finanzas',
   'nav.empresa.perfil': 'Perfil',
+  'nav.empresa.configuracao': 'Configuración',
   'nav.empresa.fallback': 'Empresa',
 
   'nav.motorista.subtitle': 'Área del conductor',
@@ -2040,6 +2062,8 @@ const es: Record<ChaveTraducao, string> = {
   'empresa.agenda.vazioServico': 'Ningún servicio marcado.',
   'empresa.financeiro.titulo': 'Finanzas',
   'empresa.perfil.titulo': 'Perfil',
+  'empresa.configuracao.titulo': 'Configuración',
+  'empresa.configuracao.sub': 'Idioma y apariencia de esta cuenta en este aparato.',
 
   'hist.proximas': 'En curso y próximas',
   'hist.realizadas': 'Realizadas',
@@ -2072,6 +2096,12 @@ const es: Record<ChaveTraducao, string> = {
   'reserva.continuar': 'Continuar',
   'reserva.confirmar': 'Confirmar viaje',
   'reserva.confirmando': 'Confirmando...',
+  'reserva.irPagamento': 'Revisar y pagar',
+  'reserva.irPagamentoDica':
+    'En la siguiente pantalla revisas el viaje y pagas (simular o Stripe).',
+  'reserva.revisaoRapida': 'Resumen',
+  'reserva.termino': 'fin',
+  'reserva.paxCurto': 'pax',
   'reserva.hourlySemPreco':
     'Hourly Chauffeur aún sin precio por hora en la tabla administrativa. ONE-WAY sigue disponible.',
   'reserva.embarque': 'Embarque (origen)',

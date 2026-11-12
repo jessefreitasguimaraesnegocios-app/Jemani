@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Languages, LogOut, Menu, Moon, User, X } from 'lucide-react'
+import { Languages, LogOut, Menu, Moon, X } from 'lucide-react'
 import { usarTemaConta } from '@/hooks/usarPreferenciasConta'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { IdiomaApp } from '@/i18n/tipos'
@@ -21,14 +20,13 @@ const TEMAS: Array<{ valor: Exclude<TemaAparencia, 'sistema'>; chave: 'config.te
   ]
 
 type Props = {
-  variante: 'completo' | 'admin'
   aoSair: () => void | Promise<void>
   className?: string
   /** Estilo claro sobre fundo escuro (sidebar). */
   tom?: 'claro' | 'escuro'
 }
 
-export function MenuContaTopo({ variante, aoSair, className, tom = 'claro' }: Props) {
+export function MenuContaTopo({ aoSair, className, tom = 'claro' }: Props) {
   const { t, idioma, definirIdioma } = usarIdioma()
   const { tema: temaAtual, definirTema } = usarTemaConta()
   const [aberto, setAberto] = useState(false)
@@ -92,77 +90,61 @@ export function MenuContaTopo({ variante, aoSair, className, tom = 'claro' }: Pr
 
       {aberto && (
         <div id={painelId} className="menu-conta-painel" role="menu">
-          {variante === 'completo' && (
-            <>
-              <div className="menu-conta-bloco">
-                <p className="menu-conta-rotulo">
-                  <Moon size={14} aria-hidden />
-                  {t('config.aparencia')}
-                </p>
-                <div
-                  className="menu-conta-opcoes menu-conta-opcoes--2"
-                  role="group"
-                  aria-label={t('config.aparencia')}
-                >
-                  {TEMAS.map((opcao) => (
-                    <button
-                      key={opcao.valor}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={temaAtivo === opcao.valor}
-                      className={cn(
-                        'menu-conta-chip',
-                        temaAtivo === opcao.valor && 'menu-conta-chip--ativo',
-                      )}
-                      onClick={() => definirTema(opcao.valor)}
-                    >
-                      {t(opcao.chave)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="menu-conta-bloco">
-                <p className="menu-conta-rotulo">
-                  <Languages size={14} aria-hidden />
-                  {t('config.idioma')}
-                </p>
-                <div
-                  className="menu-conta-opcoes menu-conta-opcoes--3"
-                  role="group"
-                  aria-label={t('config.idioma')}
-                >
-                  {IDIOMAS.map((opcao) => (
-                    <button
-                      key={opcao.valor}
-                      type="button"
-                      role="menuitemradio"
-                      aria-checked={idioma === opcao.valor}
-                      className={cn(
-                        'menu-conta-chip',
-                        idioma === opcao.valor && 'menu-conta-chip--ativo',
-                      )}
-                      onClick={() => definirIdioma(opcao.valor)}
-                    >
-                      {opcao.rotulo}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
-          {variante === 'admin' && (
-            <Link
-              to="/admin/perfil"
-              role="menuitem"
-              className="menu-conta-item"
-              onClick={() => setAberto(false)}
+          <div className="menu-conta-bloco">
+            <p className="menu-conta-rotulo">
+              <Moon size={14} aria-hidden />
+              {t('config.aparencia')}
+            </p>
+            <div
+              className="menu-conta-opcoes menu-conta-opcoes--2"
+              role="group"
+              aria-label={t('config.aparencia')}
             >
-              <User size={16} aria-hidden />
-              {t('menu.perfil')}
-            </Link>
-          )}
+              {TEMAS.map((opcao) => (
+                <button
+                  key={opcao.valor}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={temaAtivo === opcao.valor}
+                  className={cn(
+                    'menu-conta-chip',
+                    temaAtivo === opcao.valor && 'menu-conta-chip--ativo',
+                  )}
+                  onClick={() => definirTema(opcao.valor)}
+                >
+                  {t(opcao.chave)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="menu-conta-bloco">
+            <p className="menu-conta-rotulo">
+              <Languages size={14} aria-hidden />
+              {t('config.idioma')}
+            </p>
+            <div
+              className="menu-conta-opcoes menu-conta-opcoes--3"
+              role="group"
+              aria-label={t('config.idioma')}
+            >
+              {IDIOMAS.map((opcao) => (
+                <button
+                  key={opcao.valor}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={idioma === opcao.valor}
+                  className={cn(
+                    'menu-conta-chip',
+                    idioma === opcao.valor && 'menu-conta-chip--ativo',
+                  )}
+                  onClick={() => definirIdioma(opcao.valor)}
+                >
+                  {opcao.rotulo}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <button
             type="button"

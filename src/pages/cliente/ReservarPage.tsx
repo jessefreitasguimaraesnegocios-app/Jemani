@@ -33,7 +33,6 @@ const ETAPAS: ChaveTraducao[] = [
   'reserva.etapaTrecho',
   'reserva.etapaQuando',
   'reserva.etapaCategoria',
-  'reserva.etapaResumo',
 ]
 const MAX_MALAS = 12
 
@@ -394,6 +393,16 @@ export function ReservarPage() {
       setErro('Hourly Chauffeur sem preço configurado.')
       return
     }
+    if (!categoriaId || !categoria) {
+      setErro('Escolha uma categoria')
+      return
+    }
+    if (passageiros > categoria.capacidade_max) {
+      setErro(
+        `${categoria.nome} comporta até ${categoria.capacidade_max} passageiros. Ajuste a quantidade ou escolha outra categoria.`,
+      )
+      return
+    }
     const check = validarAntecedenciaMinima(
       dataViagem,
       horario,
@@ -433,6 +442,7 @@ export function ReservarPage() {
         observacoes: montarObservacoes(),
         distancia_km: ehHourly ? undefined : rota?.distanciaKm,
       })
+      // Revisão + pagamento ficam na tela da viagem (sem passo 4 separado).
       navigate(`/app/viagens/${viagem.id}`)
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro ao confirmar')
@@ -785,89 +795,37 @@ export function ReservarPage() {
               aoSelecionar={escolherFrota}
               formatarAdicional={(valor) => formatarMoeda(valor, locale)}
             />
-          </div>
-        )}
-
-        {etapa === 3 && preco && (
-          <div className="space-y-3 text-sm">
-            <Linha
-              label="Modalidade"
-              valor={ehHourly ? 'HOURLY CHAUFFEUR' : 'ONE-WAY RIDE'}
-            />
-            <Linha label="Embarque" valor={origemEndereco?.formatted ?? '—'} />
-            <Linha
-              label={ehHourly ? 'Desembarque' : 'Destino'}
-              valor={destinoEndereco?.formatted ?? '—'}
-            />
-            <Linha label="Data" valor={dataViagem.split('-').reverse().join('/')} />
-            <Linha label={ehHourly ? 'Início' : 'Horário'} valor={horario} />
-            {ehHourly && (
-              <>
-                <Linha label="Duração" valor={rotuloDuracao(duracaoMinutos)} />
-                <Linha
-                  label="Término previsto"
-                  valor={
-                    janelaHourly
-                      ? janelaHourly.fim.toLocaleTimeString(locale, {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : '—'
-                  }
-                />
-                <Linha
-                  label="Franquia de milhas"
-                  valor={`${'franquia_milhas' in preco ? preco.franquia_milhas : 0} mi incluídas`}
-                />
-              </>
-            )}
-            <Linha label="Passageiros" valor={String(passageiros)} />
-            {!ehHourly && <Linha label="Malas" valor={String(malas)} />}
-            <Linha label="Passageiro" valor={nomePassageiro.trim() || '—'} />
-            {trechoComAeroporto && naoVouEmbarcar && (
-              <Linha label="Voo" valor="Não vou embarcar" />
-            )}
-            {pedirDadosVoo && numeroVoo.trim() && (
-              <Linha label="Voo" valor={numeroVoo.trim().toUpperCase()} />
-            )}
-            {pedirDadosVoo && terminal.trim() && (
-              <Linha label="Portão" valor={terminal.trim()} />
-            )}
-            <Linha label="Categoria" valor={categoria?.nome ?? '—'} />
-            {!ehHourly && (
-              <Linha
-                label="Distância"
-                valor={
-                  rota?.provedor === 'mapbox'
-                    ? `${preco.distancia_km} km · ${rota.tempoMinutos} min`
-                    : `${preco.distancia_km} km`
-                }
-              />
-            )}
-            <hr className="border-[var(--color-line)]" />
-            <Linha label="Total" valor={formatarMoeda(preco.total, locale)} destaque />
-            {ehHourly && regraPreco && (
-              <div className="reserva-hourly-regras text-xs text-[var(--color-slate)]">
-                <p>
-                  <strong>Extensão:</strong>{' '}
-                  {regraPreco.regra_extensao ??
-                    '+30 min / +1h / +2h com disponibilidade e pagamento confirmado.'}
-                </p>
-                <p>
-                  <strong>Cancelamento:</strong>{' '}
-                  {regraPreco.regra_cancelamento ?? 'Conforme política da plataforma.'}
-                </p>
-                <p>
-                  <strong>Cobranças extras:</strong>{' '}
-                  {regraPreco.cobrancas_adicionais ??
-                    'Pedágios, estacionamento e milhas acima da franquia.'}
-                </p>
+            {preco && (
+              <div className="reserva-revisao-pagamento">
+                <div className="reserva-revisao-pagamento-topo">
+                  <div>
+                    <p className="reserva-revisao-pagamento-rotulo">{t('reserva.revisaoRapida')}</p>
+                    <p className="reserva-revisao-pagamento-rota">
+                      {ehHourly
+                        ? `${origemEndereco?.formatted ?? '—'} · ${rotuloDuracao(duracaoMinutos)}`
+                        : `${origemEndereco?.formatted ?? '—'} → ${destinoEndereco?.formatted ?? '—'}`}
+                    </p>
+                    <p className="reserva-revisao-pagamento-meta">
+                      {dataViagem.split('-').reverse().join('/')} · {horario}
+                      {ehHourly && janelaHourly
+                        ? ` · ${t('reserva.termino')} ${janelaHourly.fim.toLocaleTimeString(locale, {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}`
+                        : ''}
+                      {' · '}
+                      {categoria?.nome ?? '—'}
+                      {' · '}
+                      {passageiros} {t('reserva.paxCurto')}
+                    </p>
+                  </div>
+                  <p className="fonte-display reserva-revisao-pagamento-total">
+                    {formatarMoeda(preco.total, locale)}
+                  </p>
+                </div>
+                <p className="reserva-revisao-pagamento-dica">{t('reserva.irPagamentoDica')}</p>
               </div>
             )}
-            <p className="text-xs text-[var(--color-slate)]">
-              Após confirmar, a reserva fica aguardando pagamento. Empresas só recebem a corrida
-              depois do pagamento aprovado.
-            </p>
           </div>
         )}
 
@@ -885,7 +843,7 @@ export function ReservarPage() {
             </button>
           ) : (
             <button type="submit" className="btn-ouro" disabled={enviando || !preco}>
-              {enviando ? t('reserva.confirmando') : t('reserva.confirmar')}
+              {enviando ? t('reserva.confirmando') : t('reserva.irPagamento')}
             </button>
           )}
         </div>
@@ -896,13 +854,3 @@ export function ReservarPage() {
   )
 }
 
-function Linha({ label, valor, destaque }: { label: string; valor: string; destaque?: boolean }) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="shrink-0 text-[var(--color-slate)]">{label}</span>
-      <span className={`text-right ${destaque ? 'fonte-display text-2xl' : 'font-medium'}`}>
-        {valor}
-      </span>
-    </div>
-  )
-}

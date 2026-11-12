@@ -60,7 +60,7 @@ export function LayoutCliente() {
             <p className="fonte-display layout-cliente-marca-titulo">Jemani</p>
             <p className="layout-cliente-marca-sub">{t('nav.cliente.subtitle')}</p>
           </div>
-          <MenuContaTopo variante="completo" tom="escuro" aoSair={handleSair} />
+          <MenuContaTopo tom="escuro" aoSair={handleSair} />
         </div>
         <nav className="flex flex-1 flex-col gap-1">
           {links.map((l) => (
@@ -91,11 +91,7 @@ export function LayoutCliente() {
               <p className="layout-cliente-topo-ola">{t('comum.ola')}</p>
               <h1 className="fonte-display layout-cliente-topo-nome">{usuario?.nome}</h1>
             </div>
-            <MenuContaTopo
-              variante="completo"
-              className="layout-cliente-topo-menu"
-              aoSair={handleSair}
-            />
+            <MenuContaTopo className="layout-cliente-topo-menu" aoSair={handleSair} />
           </header>
           <main className="layout-cliente-main">
             <Outlet />

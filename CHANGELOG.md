@@ -16,6 +16,8 @@ Registro das mudanças do Jemani.
 - Kanban da **empresa**: remove a coluna Parceiros externos (fica só no admin). APK **1.0.93**.
 - Reserva do cliente: junta **Quando** + **Detalhes** (4 passos em vez de 5). APK **1.0.94**.
 - Carrossel da frota na reserva: clique nos veículos e rolagem automática voltaram a funcionar. APK **1.0.95**.
+- Reserva do cliente: remove o passo Resumo; revisão + pagamento na tela da viagem (**3 passos**). APK **1.0.96**.
+- Admin e Empresa: Sair na última aba lateral; Perfil do admin na sidebar; Configuração da empresa com idioma/tema (sem menu dos 3 tracinhos). APK **1.0.97**.
 
 ## [2026-11-09]
 

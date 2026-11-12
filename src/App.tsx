@@ -32,6 +32,7 @@ import { EmpresaMotoristasPage } from '@/pages/empresa/EmpresaMotoristasPage'
 import { EmpresaVeiculosPage } from '@/pages/empresa/EmpresaVeiculosPage'
 import { EmpresaAgendaPage } from '@/pages/empresa/EmpresaAgendaPage'
 import { EmpresaFinanceiroPage } from '@/pages/empresa/EmpresaFinanceiroPage'
+import { EmpresaConfiguracaoPage } from '@/pages/empresa/EmpresaConfiguracaoPage'
 import { EmpresaPerfilPage } from '@/pages/empresa/EmpresaPerfilPage'
 import { MotoristaDashboardPage } from '@/pages/motorista/MotoristaDashboardPage'
 import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
@@ -94,6 +95,7 @@ export default function App() {
               <Route path="agenda" element={<EmpresaAgendaPage />} />
               <Route path="financeiro" element={<EmpresaFinanceiroPage />} />
               <Route path="perfil" element={<EmpresaPerfilPage />} />
+              <Route path="configuracao" element={<EmpresaConfiguracaoPage />} />
             </Route>
           </Route>
 
