@@ -43,6 +43,7 @@ export function SeletorCategoria3D({
   formatarAdicional,
 }: Props) {
   const faixaRef = useRef<HTMLDivElement>(null)
+  const grupoRef = useRef<HTMLDivElement>(null)
   const pausaAte = useRef(0)
   const arrasto = useRef<EstadoArrasto | null>(null)
   const bloqueiaClick = useRef(false)
@@ -108,16 +109,16 @@ export function SeletorCategoria3D({
     return categorias.find((c) => c.id === categoriaId) ?? categorias[0]
   }, [veiculoSelecionado, categorias, categoriaId])
 
+  // Só preenche seleção inicial / inválida — não sobrescreve escolha do usuário.
   useEffect(() => {
     if (!usarVeiculos || !frota.length) return
     const atual = veiculoId ? frota.find((item) => item.id === veiculoId) : undefined
-    if (atual && (atual.serve || !frota.some((item) => item.serve))) return
+    if (atual) return
     const preferido =
       frota.find((item) => item.categoria_id === categoriaId && item.serve) ??
       frota.find((item) => item.serve) ??
       frota[0]
     if (!preferido) return
-    if (preferido.id === veiculoId && preferido.categoria_id === categoriaId) return
     aoSelecionar(preferido.categoria_id, preferido.id)
   }, [usarVeiculos, frota, veiculoId, categoriaId, aoSelecionar])
 
@@ -140,25 +141,37 @@ export function SeletorCategoria3D({
     pausaAte.current = Date.now() + ms
   }
 
+  function larguraLoop() {
+    const grupo = grupoRef.current
+    if (!grupo) return 0
+    const estilo = window.getComputedStyle(grupo.parentElement ?? grupo)
+    const gap = Number.parseFloat(estilo.columnGap || estilo.gap || '0') || 0
+    return grupo.offsetWidth + gap
+  }
+
+  function normalizarScroll(trilho: HTMLDivElement) {
+    if (!movimento) return
+    const loop = larguraLoop()
+    if (loop <= 0) return
+    while (trilho.scrollLeft >= loop) trilho.scrollLeft -= loop
+    while (trilho.scrollLeft < 0) trilho.scrollLeft += loop
+  }
+
   function medirOverflow() {
     const trilho = faixaRef.current
     if (!trilho) return
-    setTemOverflow(trilho.scrollWidth > trilho.clientWidth + 8)
+    const overflow = trilho.scrollWidth > trilho.clientWidth + 8
+    setTemOverflow((atual) => (atual === overflow ? atual : overflow))
   }
 
   function deslizar(direcao: -1 | 1) {
     const trilho = faixaRef.current
     if (!trilho) return
     const passo = LARGURA_CARTAO + GAP_CARTAO
-    const alvo = trilho.scrollLeft + direcao * passo
-    trilho.scrollTo({ left: alvo, behavior: 'smooth' })
+    trilho.scrollBy({ left: direcao * passo, behavior: 'smooth' })
     pausarAuto(3200)
     window.setTimeout(() => {
-      const metade = trilho.scrollWidth / 2
-      if (movimento && metade > 0) {
-        if (trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
-        if (trilho.scrollLeft < 0) trilho.scrollLeft += metade
-      }
+      normalizarScroll(trilho)
       medirOverflow()
     }, 360)
   }
@@ -185,9 +198,8 @@ export function SeletorCategoria3D({
     const andar = () => {
       if (!vivo) return
       if (movimento && !arrasto.current && Date.now() >= pausaAte.current) {
-        const metade = trilho.scrollWidth / 2
-        if (metade > 0 && trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
-        trilho.scrollLeft += 0.6
+        trilho.scrollLeft += 0.55
+        normalizarScroll(trilho)
       }
       medirOverflow()
       quadro = window.requestAnimationFrame(andar)
@@ -200,17 +212,15 @@ export function SeletorCategoria3D({
       if (delta === 0) return
       evento.preventDefault()
       trilho.scrollLeft += delta
-      const metade = trilho.scrollWidth / 2
-      if (movimento && metade > 0) {
-        if (trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
-        if (trilho.scrollLeft < 0) trilho.scrollLeft += metade
-      }
+      normalizarScroll(trilho)
       pausarAuto(1800)
       medirOverflow()
     }
 
     const aoPointerDown = (evento: PointerEvent) => {
       if (evento.pointerType === 'mouse' && evento.button !== 0) return
+      // Clique em cartão: não captura o pointer (senão o click some).
+      const noCartao = (evento.target as HTMLElement | null)?.closest?.('.showroom-card')
       arrasto.current = {
         pointerId: evento.pointerId,
         inicioX: evento.clientX,
@@ -219,6 +229,7 @@ export function SeletorCategoria3D({
       }
       bloqueiaClick.current = false
       pausaAte.current = Number.POSITIVE_INFINITY
+      if (noCartao) return
       trilho.classList.add('showroom-faixa--arrastando')
       try {
         trilho.setPointerCapture(evento.pointerId)
@@ -231,21 +242,27 @@ export function SeletorCategoria3D({
       const estado = arrasto.current
       if (!estado || estado.pointerId !== evento.pointerId) return
       const delta = evento.clientX - estado.inicioX
-      if (!estado.moveu && Math.abs(delta) > 5) {
+      if (!estado.moveu && Math.abs(delta) > 6) {
         estado.moveu = true
         bloqueiaClick.current = true
+        trilho.classList.add('showroom-faixa--arrastando')
+        try {
+          trilho.setPointerCapture(evento.pointerId)
+        } catch {
+          /* ignore */
+        }
       }
       if (!estado.moveu) return
       evento.preventDefault()
       trilho.scrollLeft = estado.scrollInicio - delta
-      const metade = trilho.scrollWidth / 2
-      if (movimento && metade > 0) {
-        if (trilho.scrollLeft >= metade) {
-          trilho.scrollLeft -= metade
+      const loop = larguraLoop()
+      if (movimento && loop > 0) {
+        if (trilho.scrollLeft >= loop) {
+          trilho.scrollLeft -= loop
           estado.scrollInicio = trilho.scrollLeft
           estado.inicioX = evento.clientX
         } else if (trilho.scrollLeft < 0) {
-          trilho.scrollLeft += metade
+          trilho.scrollLeft += loop
           estado.scrollInicio = trilho.scrollLeft
           estado.inicioX = evento.clientX
         }
@@ -259,25 +276,33 @@ export function SeletorCategoria3D({
       arrasto.current = null
       trilho.classList.remove('showroom-faixa--arrastando')
       try {
-        trilho.releasePointerCapture(evento.pointerId)
+        if (trilho.hasPointerCapture?.(evento.pointerId)) {
+          trilho.releasePointerCapture(evento.pointerId)
+        }
       } catch {
         /* ignore */
       }
       pausarAuto(estado.moveu ? 2600 : 900)
+      // Libera o bloqueio no próximo tick para o click do cartão ainda passar.
+      if (estado.moveu) {
+        window.setTimeout(() => {
+          bloqueiaClick.current = false
+        }, 0)
+      } else {
+        bloqueiaClick.current = false
+      }
       medirOverflow()
     }
 
     const aoResize = () => medirOverflow()
 
-    trilho.scrollLeft = movimento ? 4 : 0
+    trilho.scrollLeft = movimento ? 2 : 0
     pausaAte.current = 0
     medirOverflow()
 
     trilho.addEventListener('wheel', aoWheel, { passive: false })
     trilho.addEventListener('pointerdown', aoPointerDown)
-    trilho.addEventListener('pointermove', aoPointerMove)
-    trilho.addEventListener('pointerup', soltar)
-    trilho.addEventListener('pointercancel', soltar)
+    window.addEventListener('pointermove', aoPointerMove)
     window.addEventListener('pointerup', soltar)
     window.addEventListener('pointercancel', soltar)
     window.addEventListener('resize', aoResize)
@@ -288,9 +313,7 @@ export function SeletorCategoria3D({
       window.cancelAnimationFrame(quadro)
       trilho.removeEventListener('wheel', aoWheel)
       trilho.removeEventListener('pointerdown', aoPointerDown)
-      trilho.removeEventListener('pointermove', aoPointerMove)
-      trilho.removeEventListener('pointerup', soltar)
-      trilho.removeEventListener('pointercancel', soltar)
+      window.removeEventListener('pointermove', aoPointerMove)
       window.removeEventListener('pointerup', soltar)
       window.removeEventListener('pointercancel', soltar)
       window.removeEventListener('resize', aoResize)
@@ -308,7 +331,7 @@ export function SeletorCategoria3D({
 
   function escolherCategoria(id: string, serve: boolean) {
     if (!serve) return
-    if (bloqueiaClick.current || arrasto.current?.moveu) {
+    if (bloqueiaClick.current) {
       bloqueiaClick.current = false
       return
     }
@@ -320,7 +343,7 @@ export function SeletorCategoria3D({
     item: ReturnType<typeof veiculosParaCarrosselReserva>[number],
   ) {
     if (!item.serve) return
-    if (bloqueiaClick.current || arrasto.current?.moveu) {
+    if (bloqueiaClick.current) {
       bloqueiaClick.current = false
       return
     }
@@ -446,6 +469,7 @@ export function SeletorCategoria3D({
           {copias.map((copia) => (
             <div
               key={copia}
+              ref={copia === 0 ? grupoRef : undefined}
               className="showroom-faixa-grupo"
               aria-hidden={copia === 1 ? true : undefined}
             >

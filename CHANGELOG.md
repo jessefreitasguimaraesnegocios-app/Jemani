@@ -15,6 +15,7 @@ Registro das mudanças do Jemani.
 - Home do cliente: cartão Jemani em tela cheia (frente/verso novo), texto fora do cartão e CTA no rodapé. APK **1.0.92**.
 - Kanban da **empresa**: remove a coluna Parceiros externos (fica só no admin). APK **1.0.93**.
 - Reserva do cliente: junta **Quando** + **Detalhes** (4 passos em vez de 5). APK **1.0.94**.
+- Carrossel da frota na reserva: clique nos veículos e rolagem automática voltaram a funcionar. APK **1.0.95**.
 
 ## [2026-11-09]
 
