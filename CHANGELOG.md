@@ -14,6 +14,7 @@ Registro das mudanças do Jemani.
 - Reserva: carrossel mostra **todos os carros** cadastrados pelas empresas (não só 1 por categoria). SQL `docs/FROTA-CLIENTE-FIX.sql` para marketplace/frota no cliente. APK **1.0.91**.
 - Home do cliente: cartão Jemani em tela cheia (frente/verso novo), texto fora do cartão e CTA no rodapé. APK **1.0.92**.
 - Kanban da **empresa**: remove a coluna Parceiros externos (fica só no admin). APK **1.0.93**.
+- Reserva do cliente: junta **Quando** + **Detalhes** (4 passos em vez de 5). APK **1.0.94**.
 
 ## [2026-11-09]
 

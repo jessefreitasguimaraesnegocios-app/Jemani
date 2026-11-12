@@ -33,7 +33,6 @@ const ETAPAS: ChaveTraducao[] = [
   'reserva.etapaTrecho',
   'reserva.etapaQuando',
   'reserva.etapaCategoria',
-  'reserva.etapaDetalhes',
   'reserva.etapaResumo',
 ]
 const MAX_MALAS = 12
@@ -354,26 +353,8 @@ export function ReservarPage() {
         )
         return
       }
-    }
-    if (etapa === 2) {
-      if (!categoriaId || !categoria) {
-        setErro('Escolha uma categoria')
-        return
-      }
-    }
-    if (etapa === 3) {
       if (passageiros < 1) {
         setErro('Informe a quantidade de passageiros')
-        return
-      }
-      if (!categoria) {
-        setErro('Escolha uma categoria')
-        return
-      }
-      if (passageiros > categoria.capacidade_max) {
-        setErro(
-          `${categoria.nome} comporta até ${categoria.capacidade_max} passageiros. Ajuste a quantidade ou escolha outra categoria.`,
-        )
         return
       }
       if (!nomePassageiro.trim()) {
@@ -382,6 +363,18 @@ export function ReservarPage() {
       }
       if (!ehHourly && (malas < 0 || malas > MAX_MALAS)) {
         setErro(`Quantidade de malas deve ser entre 0 e ${MAX_MALAS}.`)
+        return
+      }
+    }
+    if (etapa === 2) {
+      if (!categoriaId || !categoria) {
+        setErro('Escolha uma categoria')
+        return
+      }
+      if (passageiros > categoria.capacidade_max) {
+        setErro(
+          `${categoria.nome} comporta até ${categoria.capacidade_max} passageiros. Ajuste a quantidade ou escolha outra categoria.`,
+        )
         return
       }
     }
@@ -692,52 +685,10 @@ export function ReservarPage() {
                         placeholder="Ex.: 42B"
                       />
                     </div>
-                    <div>
-                      <label className="rotulo" htmlFor="observacoes-voo">
-                        Observações (opcional)
-                      </label>
-                      <textarea
-                        id="observacoes-voo"
-                        className="campo min-h-24"
-                        value={observacoes}
-                        onChange={(e) => setObservacoes(e.target.value)}
-                        placeholder="Ex.: placa com nome, cadeira infantil, atraso previsto..."
-                      />
-                    </div>
                   </>
                 )}
               </div>
             )}
-          </>
-        )}
-
-        {etapa === 2 && (
-          <div className="reserva-etapa-categoria">
-            <SeletorCategoria3D
-              categorias={categorias}
-              categoriaId={categoriaId}
-              veiculoId={veiculoId}
-              passageiros={passageiros}
-              veiculos={veiculos}
-              empresas={empresas}
-              aoSelecionar={escolherFrota}
-              formatarAdicional={(valor) => formatarMoeda(valor, locale)}
-            />
-          </div>
-        )}
-
-        {etapa === 3 && (
-          <>
-            <div className="rounded-2xl border border-[var(--color-line)] bg-[rgba(184,149,108,0.08)] p-3 text-sm">
-              <p className="font-medium text-[var(--color-ink)]">
-                {ehHourly ? 'HOURLY CHAUFFEUR' : 'ONE-WAY RIDE'}
-              </p>
-              <p className="mt-1 text-[var(--color-slate)]">
-                {ehHourly
-                  ? `${origemEndereco?.formatted ?? '—'} · ${rotuloDuracao(duracaoMinutos)}`
-                  : `${origemEndereco?.formatted ?? '—'} → ${destinoEndereco?.formatted ?? '—'}`}
-              </p>
-            </div>
 
             <div>
               <label className="rotulo" htmlFor="nome-passageiro">
@@ -803,24 +754,41 @@ export function ReservarPage() {
               </div>
             )}
 
-            {!trechoComAeroporto && (
-              <div>
-                <label className="rotulo" htmlFor="observacoes">
-                  Observações (opcional)
-                </label>
-                <textarea
-                  id="observacoes"
-                  className="campo min-h-24"
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Ex.: portaria, código do prédio, preferências..."
-                />
-              </div>
-            )}
+            <div>
+              <label className="rotulo" htmlFor="observacoes">
+                Observações (opcional)
+              </label>
+              <textarea
+                id="observacoes"
+                className="campo min-h-24"
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                placeholder={
+                  trechoComAeroporto
+                    ? 'Ex.: placa com nome, cadeira infantil, atraso previsto...'
+                    : 'Ex.: portaria, código do prédio, preferências...'
+                }
+              />
+            </div>
           </>
         )}
 
-        {etapa === 4 && preco && (
+        {etapa === 2 && (
+          <div className="reserva-etapa-categoria">
+            <SeletorCategoria3D
+              categorias={categorias}
+              categoriaId={categoriaId}
+              veiculoId={veiculoId}
+              passageiros={passageiros}
+              veiculos={veiculos}
+              empresas={empresas}
+              aoSelecionar={escolherFrota}
+              formatarAdicional={(valor) => formatarMoeda(valor, locale)}
+            />
+          </div>
+        )}
+
+        {etapa === 3 && preco && (
           <div className="space-y-3 text-sm">
             <Linha
               label="Modalidade"

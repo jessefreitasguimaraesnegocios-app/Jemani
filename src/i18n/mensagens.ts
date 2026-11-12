@@ -654,7 +654,7 @@ const pt = {
   'hist.voltarParaEmpresas': 'Voltar para empresas',
 
   'reserva.etapaTrecho': 'Trecho',
-  'reserva.etapaQuando': 'Quando',
+  'reserva.etapaQuando': 'Quando e detalhes',
   'reserva.etapaPassageiros': 'Passageiros',
   'reserva.etapaCategoria': 'Categoria',
   'reserva.etapaDetalhes': 'Detalhes',
@@ -1356,7 +1356,7 @@ const en: Record<ChaveTraducao, string> = {
   'hist.voltarParaEmpresas': 'Back to companies',
 
   'reserva.etapaTrecho': 'Route',
-  'reserva.etapaQuando': 'When',
+  'reserva.etapaQuando': 'When & details',
   'reserva.etapaPassageiros': 'Passengers',
   'reserva.etapaCategoria': 'Category',
   'reserva.etapaDetalhes': 'Details',
@@ -2058,7 +2058,7 @@ const es: Record<ChaveTraducao, string> = {
   'hist.voltarParaEmpresas': 'Volver a empresas',
 
   'reserva.etapaTrecho': 'Trayecto',
-  'reserva.etapaQuando': 'Cuándo',
+  'reserva.etapaQuando': 'Cuándo y detalles',
   'reserva.etapaPassageiros': 'Pasajeros',
   'reserva.etapaCategoria': 'Categoría',
   'reserva.etapaDetalhes': 'Detalles',
