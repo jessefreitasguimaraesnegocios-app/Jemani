@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { listarHorariosDisponiveis } from '@/services/reservaValidacao'
 import './SeletorDataHorario.css'
@@ -45,6 +45,11 @@ export function SeletorDataHorario({
 }: Props) {
   const { t, locale } = usarIdioma()
   const faixaRef = useRef<HTMLDivElement>(null)
+  const [listaHorariosAberta, setListaHorariosAberta] = useState(true)
+
+  useEffect(() => {
+    setListaHorariosAberta(true)
+  }, [data])
 
   const datas = useMemo(() => {
     const lista: string[] = []
@@ -75,6 +80,18 @@ export function SeletorDataHorario({
     ].filter((g) => g.itens.length > 0)
   }, [horarios, t])
 
+  const gruposVisiveis = useMemo(() => {
+    if (listaHorariosAberta || !horario || !horarios.includes(horario)) return grupos
+    const periodo = periodoDoHorario(horario)
+    const rotulo =
+      periodo === 'manha'
+        ? t('reserva.periodoManha')
+        : periodo === 'tarde'
+          ? t('reserva.periodoTarde')
+          : t('reserva.periodoNoite')
+    return [{ id: periodo, rotulo, itens: [horario] }]
+  }, [grupos, listaHorariosAberta, horario, horarios, t])
+
   useEffect(() => {
     const faixa = faixaRef.current
     if (!faixa) return
@@ -82,6 +99,15 @@ export function SeletorDataHorario({
     if (!ativo) return
     ativo.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
   }, [data, datas])
+
+  function escolherHorario(proximo: string) {
+    if (proximo === horario && !listaHorariosAberta) {
+      setListaHorariosAberta(true)
+      return
+    }
+    aoMudarHorario(proximo)
+    setListaHorariosAberta(false)
+  }
 
   function rotuloDia(iso: string) {
     const [ano, mes, dia] = iso.split('-').map(Number)
@@ -148,12 +174,18 @@ export function SeletorDataHorario({
         {horarios.length === 0 ? (
           <p className="seletor-agenda-vazio">{t('reserva.semHorarios')}</p>
         ) : (
-          <div className="seletor-agenda-periodos">
-            {grupos.map((grupo) => (
+          <div
+            className={`seletor-agenda-periodos ${
+              !listaHorariosAberta ? 'seletor-agenda-periodos--recolhido' : ''
+            }`}
+          >
+            {gruposVisiveis.map((grupo) => (
               <div key={grupo.id} className="seletor-agenda-periodo">
                 <p className="seletor-agenda-periodo-titulo">{grupo.rotulo}</p>
                 <div
-                  className="seletor-agenda-horas"
+                  className={`seletor-agenda-horas ${
+                    !listaHorariosAberta ? 'seletor-agenda-horas--recolhido' : ''
+                  }`}
                   role="listbox"
                   aria-label={grupo.rotulo}
                 >
@@ -166,7 +198,7 @@ export function SeletorDataHorario({
                         role="option"
                         aria-selected={ativo}
                         className={`seletor-agenda-hora ${ativo ? 'seletor-agenda-hora--ativo' : ''}`}
-                        onClick={() => aoMudarHorario(h)}
+                        onClick={() => escolherHorario(h)}
                       >
                         {h}
                       </button>

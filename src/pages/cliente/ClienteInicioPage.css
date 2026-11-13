@@ -119,22 +119,32 @@
   color: var(--color-slate);
 }
 
+.cliente-inicio-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
 .cliente-inicio-secao-topo {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.85rem;
 }
 
 .cliente-inicio-secao-titulo {
   margin: 0;
-  font-size: 1.55rem;
-  line-height: 1.1;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-ink);
 }
 
 .cliente-inicio-link {
-  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.84rem;
   color: var(--color-gold-deep);
   text-decoration: none;
   white-space: nowrap;
@@ -150,55 +160,156 @@
   background: rgba(255, 255, 255, 0.45);
 }
 
-.cliente-inicio-lista {
+.cliente-inicio-proxima {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 1rem;
+  padding: 1.1rem 1.05rem 1.05rem;
+  border-radius: 1.35rem;
+  background: #121212;
+  border: 1px solid #2a2a2a;
+  color: #ffffff;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.22);
 }
 
-.cliente-inicio-cartao {
-  display: block;
-  padding: 1rem 1.05rem;
-  border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(12, 18, 34, 0.06);
+.cliente-inicio-proxima-topo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.cliente-inicio-proxima-icone {
+  display: grid;
+  place-items: center;
+  width: 2.85rem;
+  height: 2.85rem;
+  border-radius: 999px;
+  color: #f3e7d2;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 236, 198, 0.35), transparent 55%),
+    linear-gradient(145deg, rgba(201, 168, 124, 0.35), rgba(140, 106, 69, 0.18));
+  box-shadow:
+    0 0 0 1px rgba(201, 168, 124, 0.35),
+    0 0 18px rgba(201, 168, 124, 0.28);
+}
+
+.cliente-inicio-proxima-textos {
+  min-width: 0;
+}
+
+.cliente-inicio-proxima-titulo {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #ffffff;
+}
+
+.cliente-inicio-proxima-sub {
+  margin: 0.28rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #b8b8b8;
+}
+
+.cliente-inicio-proxima-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  max-width: 7.5rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cliente-inicio-proxima-badge--ok {
+  color: #d8ffe8;
+  background: rgba(6, 193, 103, 0.16);
+  border: 1px solid rgba(6, 193, 103, 0.45);
+}
+
+.cliente-inicio-proxima-badge--pendente {
+  color: #ffe7b8;
+  background: rgba(201, 168, 124, 0.16);
+  border: 1px solid rgba(201, 168, 124, 0.45);
+}
+
+.cliente-inicio-proxima-badge--neutro {
+  color: #e8e8e8;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.cliente-inicio-proxima-metas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid #2a2a2a;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.cliente-inicio-proxima-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  min-width: 0;
+  color: var(--color-gold, #c9a87c);
+}
+
+.cliente-inicio-proxima-meta + .cliente-inicio-proxima-meta {
+  padding-left: 0.55rem;
+  border-left: 1px solid #2a2a2a;
+}
+
+.cliente-inicio-proxima-meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.cliente-inicio-proxima-meta span {
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  color: #9a9a9a;
+}
+
+.cliente-inicio-proxima-meta strong {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cliente-inicio-proxima-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+  border-radius: 0.95rem;
   text-decoration: none;
-  color: inherit;
-  box-shadow: 0 8px 20px rgba(12, 18, 34, 0.04);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111111;
+  background: linear-gradient(135deg, #e2c89a 0%, #c9a87c 48%, #a88755 100%);
+  box-shadow: 0 10px 22px rgba(201, 168, 124, 0.28);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.cliente-inicio-cartao:active {
+.cliente-inicio-proxima-cta:active {
   transform: scale(0.985);
-}
-
-.cliente-inicio-cartao-linha {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.65rem;
-}
-
-.cliente-inicio-cartao-codigo {
-  margin: 0;
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.cliente-inicio-cartao-rota {
-  margin: 0.4rem 0 0;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  color: var(--color-slate);
-  line-height: 1.35;
-}
-
-.cliente-inicio-cartao-meta {
-  margin: 0.35rem 0 0;
-  font-size: 0.8rem;
-  color: var(--color-slate);
 }
 
 html[data-tema='escuro'] .cliente-inicio-hero {
@@ -216,18 +327,50 @@ html[data-tema='escuro'] .cliente-inicio-cta {
   box-shadow: none;
 }
 
-html[data-tema='escuro'] .cliente-inicio-vazio,
-html[data-tema='escuro'] .cliente-inicio-cartao {
+html[data-tema='escuro'] .cliente-inicio-secao-titulo {
+  color: #ffffff;
+}
+
+html[data-tema='escuro'] .cliente-inicio-vazio {
   background: #121212;
   border-color: #2f2f2f;
-  color: #ffffff;
+  color: #c2c2c2;
   box-shadow: none;
 }
 
-html[data-tema='escuro'] .cliente-inicio-cartao-rota,
-html[data-tema='escuro'] .cliente-inicio-cartao-meta,
-html[data-tema='escuro'] .cliente-inicio-vazio {
-  color: #c2c2c2;
+html[data-tema='escuro'] .cliente-inicio-proxima {
+  background: #0f0f0f;
+  border-color: #2f2f2f;
+  box-shadow: none;
+}
+
+@media (max-width: 420px) {
+  .cliente-inicio-proxima-topo {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .cliente-inicio-proxima-badge {
+    grid-column: 2;
+    justify-self: start;
+    max-width: 100%;
+  }
+
+  .cliente-inicio-proxima-metas {
+    gap: 0.4rem;
+  }
+
+  .cliente-inicio-proxima-meta {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .cliente-inicio-proxima-meta + .cliente-inicio-proxima-meta {
+    padding-left: 0.4rem;
+  }
+
+  .cliente-inicio-proxima-meta strong {
+    font-size: 0.74rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

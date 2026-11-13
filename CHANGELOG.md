@@ -22,6 +22,8 @@ Registro das mudanças do Jemani.
 - Indicador de etapas da reserva com trilho dourado discreto e marcadores em losango. APK **1.0.99**.
 - Etapas concluídas da reserva ganham check verde ao lado do nome. APK **1.0.100**.
 - Reserva passo 2: seletor grande de data (chips) e grade de horários no lugar do date/select nativo. APK **1.0.101**.
+- Home do cliente: card premium do próximo agendamento (status, data, horário, destino e CTA). APK **1.0.102**.
+- Reserva: ao escolher um horário, as outras opções somem; clicar de novo no mesmo abre a lista. APK **1.0.103**.
 
 ## [2026-11-09]
 

@@ -139,6 +139,14 @@
   gap: 0.5rem;
 }
 
+.seletor-agenda-horas--recolhido {
+  grid-template-columns: minmax(0, 8.5rem);
+}
+
+.seletor-agenda-periodos--recolhido .seletor-agenda-periodo-titulo {
+  opacity: 0.85;
+}
+
 .seletor-agenda-hora {
   min-height: 3.15rem;
   padding: 0.7rem 0.4rem;
