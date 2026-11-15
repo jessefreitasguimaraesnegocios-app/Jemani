@@ -63,8 +63,9 @@ export function AdminFinanceiroPage() {
     return empresas.filter((e) => ids.has(e.id))
   }, [empresas, todosLancamentos])
 
-  const temSemEmpresa = todosLancamentos.some((l) => !l.empresa)
-
+  const temSemEmpresa = todosLancamentos.some(
+    (l) => !l.empresa && l.viagem?.status !== 'parceiro_externo',
+  )
   return (
     <div className="animar-entrada space-y-5">
       <div className="fin-topo">
@@ -104,6 +105,7 @@ export function AdminFinanceiroPage() {
             onChange={(e) => setEmpresaId(e.target.value)}
           >
             <option value="">{t('admin.financeiro.todasEmpresas')}</option>
+            <option value="parceiros_externos">{t('admin.financeiro.parceirosExternos')}</option>
             {temSemEmpresa && (
               <option value="sem_empresa">{t('admin.financeiro.semEmpresa')}</option>
             )}
@@ -174,6 +176,15 @@ export function AdminFinanceiroPage() {
           onClick={() => setEmpresaId('')}
         >
           {t('admin.financeiro.todas')}
+        </button>
+        <button
+          type="button"
+          className={`fin-chip ${empresaId === 'parceiros_externos' ? 'fin-chip--ativa' : ''}`}
+          onClick={() =>
+            setEmpresaId(empresaId === 'parceiros_externos' ? '' : 'parceiros_externos')
+          }
+        >
+          {t('admin.financeiro.parceirosExternos')}
         </button>
         {temSemEmpresa && (
           <button

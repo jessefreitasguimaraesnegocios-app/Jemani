@@ -22,11 +22,27 @@ export function AdminDashboardPage() {
   ).length
   const concluidas = viagens.filter((v) => v.status === 'viagem_finalizada').length
   const canceladas = viagens.filter((v) => v.status === 'cancelada').length
-  const valorTotal = viagens
-    .filter((v) => v.payment_status === 'paid' && v.status !== 'cancelada')
-    .reduce((a, v) => a + v.preco_total, 0)
-  const comissao = comissoes.reduce((a, c) => a + c.valor_plataforma, 0)
-  const empresasValor = comissoes.reduce((a, c) => a + c.valor_empresa, 0)
+  const viagensPagas = viagens.filter(
+    (v) =>
+      v.payment_status === 'paid' &&
+      v.status !== 'cancelada' &&
+      v.status !== 'expired',
+  )
+  const valorTotal = viagensPagas.reduce((a, v) => a + (Number(v.preco_total) || 0), 0)
+  // Preferência: valores gravados na viagem paga (inclui parceiros externos e corridas
+  // ainda em curso). Fallback: tabela de comissões das finalizadas.
+  const comissaoViagens = viagensPagas.reduce(
+    (a, v) => a + (Number(v.valor_plataforma) || 0),
+    0,
+  )
+  const empresasViagens = viagensPagas.reduce(
+    (a, v) => a + (Number(v.valor_empresa) || 0),
+    0,
+  )
+  const comissaoTabela = comissoes.reduce((a, c) => a + (Number(c.valor_plataforma) || 0), 0)
+  const empresasTabela = comissoes.reduce((a, c) => a + (Number(c.valor_empresa) || 0), 0)
+  const comissao = comissaoViagens > 0 ? comissaoViagens : comissaoTabela
+  const empresasValor = empresasViagens > 0 ? empresasViagens : empresasTabela
 
   const cards = [
     { label: t('admin.dashboard.clientes'), valor: String(clientes) },

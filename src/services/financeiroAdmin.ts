@@ -102,7 +102,9 @@ export function filtrarLancamentos(
   const termo = filtros.busca.trim().toLowerCase()
   return lancamentos.filter((item) => {
     if (filtros.empresaId === 'sem_empresa') {
-      if (item.empresa) return false
+      if (item.empresa || item.viagem?.status === 'parceiro_externo') return false
+    } else if (filtros.empresaId === 'parceiros_externos') {
+      if (item.viagem?.status !== 'parceiro_externo') return false
     } else if (filtros.empresaId && item.empresa?.id !== filtros.empresaId) {
       return false
     }
@@ -132,8 +134,10 @@ export function montarResumoFinanceiro(lancamentos: LancamentoFinanceiro[]): Res
 
   for (const item of lancamentos) {
     volume += item.pagamento.amount
-    comissao += item.pagamento.platform_fee
-    valorEmpresa += item.pagamento.company_amount
+    comissao +=
+      Number(item.pagamento.platform_fee) || Number(item.viagem?.valor_plataforma) || 0
+    valorEmpresa +=
+      Number(item.pagamento.company_amount) || Number(item.viagem?.valor_empresa) || 0
     if (item.pagamento.status === 'pago' || item.pagamento.status === 'teste') pagos += 1
     if (
       item.pagamento.status === 'pendente' ||
@@ -160,11 +164,21 @@ export function montarResumoFinanceiro(lancamentos: LancamentoFinanceiro[]): Res
 export function agruparPorEmpresa(lancamentos: LancamentoFinanceiro[]): GrupoFinanceiro[] {
   const mapa = new Map<string, GrupoFinanceiro>()
   for (const item of lancamentos) {
-    const id = item.empresa?.id ?? 'sem_empresa'
+    const parceiroExterno = item.viagem?.status === 'parceiro_externo'
+    const id = parceiroExterno
+      ? `parceiro:${item.empresa?.id ?? 'sem_empresa'}`
+      : (item.empresa?.id ?? 'sem_empresa')
+    const titulo = parceiroExterno
+      ? item.empresa
+        ? `Parceiro externo · ${item.empresa.nome_comercial}`
+        : 'Parceiros externos'
+      : (item.empresa?.nome_comercial ?? 'Sem empresa atribuída')
     const atual = mapa.get(id) ?? {
       id,
-      titulo: item.empresa?.nome_comercial ?? 'Sem empresa atribuída',
-      subtitulo: item.empresa?.cidade,
+      titulo,
+      subtitulo: parceiroExterno
+        ? 'Repasse manual · comissão da plataforma'
+        : item.empresa?.cidade,
       lancamentos: [],
       volume: 0,
       comissao: 0,
@@ -173,8 +187,10 @@ export function agruparPorEmpresa(lancamentos: LancamentoFinanceiro[]): GrupoFin
     }
     atual.lancamentos.push(item)
     atual.volume += item.pagamento.amount
-    atual.comissao += item.pagamento.platform_fee
-    atual.valorEmpresa += item.pagamento.company_amount
+    atual.comissao +=
+      Number(item.pagamento.platform_fee) || Number(item.viagem?.valor_plataforma) || 0
+    atual.valorEmpresa +=
+      Number(item.pagamento.company_amount) || Number(item.viagem?.valor_empresa) || 0
     atual.quantidade += 1
     mapa.set(id, atual)
   }
@@ -196,8 +212,10 @@ export function agruparPorTipo(lancamentos: LancamentoFinanceiro[]): GrupoFinanc
     }
     atual.lancamentos.push(item)
     atual.volume += item.pagamento.amount
-    atual.comissao += item.pagamento.platform_fee
-    atual.valorEmpresa += item.pagamento.company_amount
+    atual.comissao +=
+      Number(item.pagamento.platform_fee) || Number(item.viagem?.valor_plataforma) || 0
+    atual.valorEmpresa +=
+      Number(item.pagamento.company_amount) || Number(item.viagem?.valor_empresa) || 0
     atual.quantidade += 1
     mapa.set(id, atual)
   }

@@ -2,6 +2,14 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-11-14]
+
+### Alterado
+
+- Admin Financeiro: filtro **Parceiros externos** (dropdown + chip) para controle exclusivo de repasse e comissão.
+- Admin Dashboard: **Comissão plataforma** e **Valor empresas** passam a somar das viagens pagas (`valor_plataforma` / `valor_empresa`).
+- Aceite de parceiro externo recalcula o % da empresa no repasse e atualiza o pagamento. APK **1.0.104**.
+
 ## [2026-11-10]
 
 ### Adicionado

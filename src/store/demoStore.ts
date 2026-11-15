@@ -2281,6 +2281,17 @@ export const useDemoStore = create<EstadoDemo>()(
             const idViagem = viagemId ?? convite?.viagem_id
             const idEmpresa = empresaId ?? convite?.empresa_id
             if (!idViagem) return atual
+            const viagemAtual = atual.viagens.find((item) => item.id === idViagem)
+            const empresaParceira = idEmpresa
+              ? atual.empresas.find((item) => item.id === idEmpresa)
+              : undefined
+            const percentualParceiro = obterComissaoDaEmpresa(
+              empresaParceira,
+              lerComissaoPadrao(atual.configuracoes),
+            )
+            const repasseParceiro = viagemAtual
+              ? calcularRepasseComissao(viagemAtual.preco_total, percentualParceiro)
+              : null
             return {
               convitesOferta: atual.convitesOferta.map((item) => {
                 if (convite && item.id === convite.id) return { ...item, accepted_at: agora }
@@ -2295,11 +2306,30 @@ export const useDemoStore = create<EstadoDemo>()(
                       ...viagem,
                       empresa_id: idEmpresa ?? viagem.empresa_id,
                       status: 'parceiro_externo' as StatusViagem,
+                      ...(repasseParceiro
+                        ? {
+                            comissao_percentual: repasseParceiro.comissao_percentual,
+                            valor_plataforma: repasseParceiro.valor_plataforma,
+                            valor_empresa: repasseParceiro.valor_empresa,
+                          }
+                        : {}),
                       version: viagem.version + 1,
                       updated_at: agora,
                     }
                   : viagem,
               ),
+              pagamentos: repasseParceiro
+                ? atual.pagamentos.map((p) =>
+                    p.booking_id === idViagem
+                      ? {
+                          ...p,
+                          platform_fee: repasseParceiro.valor_plataforma,
+                          company_amount: repasseParceiro.valor_empresa,
+                          updated_at: agora,
+                        }
+                      : p,
+                  )
+                : atual.pagamentos,
               atribuicoes: atual.atribuicoes.map((a) => {
                 if (a.viagem_id !== idViagem) return a
                 if (idEmpresa && a.empresa_id === idEmpresa) {
@@ -2372,15 +2402,33 @@ export const useDemoStore = create<EstadoDemo>()(
         }
 
         const agora = agoraIso()
+        const percentual = obterComissaoDaEmpresa(
+          empresa,
+          lerComissaoPadrao(state.configuracoes),
+        )
+        const repasse = calcularRepasseComissao(viagem.preco_total, percentual)
         const atualizada: Viagem = {
           ...viagem,
           empresa_id: convite.empresa_id,
+          comissao_percentual: repasse.comissao_percentual,
+          valor_plataforma: repasse.valor_plataforma,
+          valor_empresa: repasse.valor_empresa,
           status: 'parceiro_externo',
           version: viagem.version + 1,
           updated_at: agora,
         }
         set({
           viagens: state.viagens.map((item) => (item.id === viagem.id ? atualizada : item)),
+          pagamentos: state.pagamentos.map((p) =>
+            p.booking_id === viagem.id
+              ? {
+                  ...p,
+                  platform_fee: repasse.valor_plataforma,
+                  company_amount: repasse.valor_empresa,
+                  updated_at: agora,
+                }
+              : p,
+          ),
           convitesOferta: state.convitesOferta.map((item) => {
             if (item.id === convite.id) return { ...item, accepted_at: agora }
             if (item.viagem_id === viagem.id && !item.accepted_at && !item.revoked_at) {
@@ -2425,6 +2473,7 @@ export const useDemoStore = create<EstadoDemo>()(
             ...state.distribuicoes,
           ],
         })
+        void gravarViagemNuvem(atualizada)
 
         for (const admin of get().perfis.filter((p) => p.tipo === 'admin' && p.ativo)) {
           notificar(
