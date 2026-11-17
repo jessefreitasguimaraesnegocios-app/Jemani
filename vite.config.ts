@@ -13,6 +13,23 @@ export default defineConfig({
       '@': path.resolve(raiz, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/mapbox-gl') || id.includes('node_modules\\mapbox-gl')) {
+            return 'mapbox'
+          }
+          if (
+            id.includes('node_modules/@supabase') ||
+            id.includes('node_modules\\@supabase')
+          ) {
+            return 'supabase'
+          }
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api-stripe': {

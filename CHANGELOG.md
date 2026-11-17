@@ -2,6 +2,12 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-11-17]
+
+### Alterado
+
+- Desempenho: páginas e layouts sob demanda (`React.lazy`); Mapbox e Supabase em chunks separados — carga inicial do admin sem mapbox/cliente/motorista. Auth, sync nuvem, GPS (motorista) e notificações permanecem no shell. APK **1.0.105**.
+
 ## [2026-11-14]
 
 ### Alterado
