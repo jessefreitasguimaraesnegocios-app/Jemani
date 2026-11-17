@@ -1,0 +1,17 @@
+# Jemani
+
+> Jemani is a premium executive mobility service. Public pages cover the marketing site, account entry, and the Android test APK. Authenticated product areas are not listed here.
+
+Jemani connects travelers with selected partner companies for airport transfers, business trips, and occasions that need extra care. The public web experience is available today; the Android APK is a test build (not on Google Play).
+
+## Public pages
+
+- [Home](https://jemani.vercel.app/): Marketing landing — fleet overview, how booking works, and links to sign in or create an account
+- [Sign in](https://jemani.vercel.app/entrar): Sign in to an existing Jemani account
+- [Create account](https://jemani.vercel.app/cadastrar): Register a new Jemani account
+- [Android test APK](https://jemani.vercel.app/downloads/jemani-android.apk): Download the public test APK for Android
+
+## Optional
+
+- [App version manifest](https://jemani.vercel.app/downloads/versao-android.json): Public JSON with the current Android APK version metadata
+- [AI catalog](https://jemani.vercel.app/ai-catalog.json): Machine-readable list of the same public discovery resources

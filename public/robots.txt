@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /entrar
+Allow: /cadastrar
+Allow: /downloads/
+Allow: /frota/
+Allow: /icons/
+Allow: /llms.txt
+Allow: /ai-catalog.json
+Allow: /.well-known/
+
+Disallow: /app/
+Disallow: /empresa/
+Disallow: /motorista/
+Disallow: /admin/
+Disallow: /convite/

@@ -1,0 +1,46 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "Jemani",
+    "identifier": "jemani.vercel.app",
+    "documentationUrl": "https://jemani.vercel.app/llms.txt",
+    "logoUrl": "https://jemani.vercel.app/icons/icon-512.png"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:jemani.vercel.app:context:llms-txt",
+      "displayName": "Jemani public summary for language models",
+      "description": "Short index of Jemani public pages only. No authenticated product routes.",
+      "type": "text/plain",
+      "url": "https://jemani.vercel.app/llms.txt"
+    },
+    {
+      "identifier": "urn:air:jemani.vercel.app:page:home",
+      "displayName": "Jemani home",
+      "description": "Public marketing landing page for executive mobility in Los Angeles and beyond.",
+      "type": "text/html",
+      "url": "https://jemani.vercel.app/"
+    },
+    {
+      "identifier": "urn:air:jemani.vercel.app:page:sign-in",
+      "displayName": "Sign in",
+      "description": "Public sign-in page for existing Jemani accounts.",
+      "type": "text/html",
+      "url": "https://jemani.vercel.app/entrar"
+    },
+    {
+      "identifier": "urn:air:jemani.vercel.app:page:create-account",
+      "displayName": "Create account",
+      "description": "Public registration page for new Jemani accounts.",
+      "type": "text/html",
+      "url": "https://jemani.vercel.app/cadastrar"
+    },
+    {
+      "identifier": "urn:air:jemani.vercel.app:download:android-apk",
+      "displayName": "Android test APK",
+      "description": "Public Jemani Android test APK download. Not published on Google Play.",
+      "type": "application/vnd.android.package-archive",
+      "url": "https://jemani.vercel.app/downloads/jemani-android.apk"
+    }
+  ]
+}
