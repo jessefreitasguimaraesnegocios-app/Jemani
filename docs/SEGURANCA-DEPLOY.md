@@ -124,3 +124,13 @@ Não cole secrets em chat, commit ou `.md`.
 4. Autocomplete de endereço logado (places-proxy).
 
 Se `401 Sessão de usuário obrigatória`: o app precisa estar com `VITE_DEMO_MODE=false` e sessão Auth real (não só store local).
+
+### Automação de e-mails de Novas solicitações
+
+Aplique `supabase/migrations/20261119200000_offer_email_automation.sql` antes de publicar o frontend. A migration cria a configuração pausada e agenda a execução a cada minuto.
+
+No Vault, configure `jemani_offer_email_endpoint` com a URL completa da Edge Function `automatizar-ofertas-email` no mesmo projeto. Gere um segredo exclusivo e use o mesmo valor em `jemani_offer_email_cron_secret` no Vault e em `OFFER_EMAIL_CRON_SECRET` nos secrets da Edge Function. A função também usa os secrets existentes do Resend.
+
+Publique com `npx supabase functions deploy automatizar-ofertas-email --no-verify-jwt`. A função autentica o agendamento com seu segredo dedicado.
+
+No painel **Admin → Novas solicitações → ⋯**, salve as cotas e a ordem de prioridade antes de ligar o envio. A fila considera viagens pagas futuras sem empresa confirmada. Cada corrida entra uma vez na automação. Reiniciar as cotas abre um novo ciclo para as próximas corridas.

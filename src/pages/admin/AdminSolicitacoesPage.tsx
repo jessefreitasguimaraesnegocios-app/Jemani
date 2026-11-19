@@ -9,6 +9,7 @@ import {
 import { useDemoStore } from '@/store/demoStore'
 import type { Empresa } from '@/types'
 import { formatarData, formatarMoeda } from '@/utils/format'
+import { AutomacaoEmailsSolicitacoes } from './AutomacaoEmailsSolicitacoes'
 import './AdminSolicitacoesPage.css'
 
 export function AdminSolicitacoesPage() {
@@ -83,9 +84,12 @@ export function AdminSolicitacoesPage() {
 
   return (
     <div className="animar-entrada space-y-6">
-      <div>
-        <h1 className="fonte-display text-3xl">{t('admin.solicitacoes.titulo')}</h1>
-        <p className="mt-1 text-sm text-[var(--color-slate)]">{t('admin.solicitacoes.sub')}</p>
+      <div className="admin-solicitacoes-cabecalho">
+        <div>
+          <h1 className="fonte-display text-3xl">{t('admin.solicitacoes.titulo')}</h1>
+          <p className="mt-1 text-sm text-[var(--color-slate)]">{t('admin.solicitacoes.sub')}</p>
+        </div>
+        <AutomacaoEmailsSolicitacoes empresas={empresas} />
       </div>
 
       <div className="admin-solicitacoes-intro">

@@ -99,3 +99,58 @@ html[data-tema='escuro'] .admin-solicitacao-ranking-item {
   background: #000000;
   border-color: #2f2f2f;
 }
+.admin-solicitacoes-cabecalho {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+}
+
+.admin-automacao-painel {
+  grid-column: 1 / -1;
+}
+
+.admin-automacao-painel,
+.admin-automacao-campos {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.admin-automacao-linha,
+.admin-automacao-check,
+.admin-automacao-cota {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.admin-automacao-linha input[type='number'],
+.admin-automacao-linha select {
+  min-height: 2.5rem;
+  max-width: 100%;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.65rem;
+  color: var(--color-ink);
+  background: var(--color-surface, var(--color-paper));
+}
+
+.admin-automacao-linha input[type='number'] {
+  width: 5.25rem;
+}
+
+.admin-automacao-menu,
+.admin-automacao-icone {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.4rem;
+}
+
+.admin-automacao-painel button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

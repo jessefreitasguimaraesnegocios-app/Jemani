@@ -69,6 +69,7 @@ type LinhaOferta = {
   status: AtribuicaoViagem['status']
   distancia_km: number | null
   motivo: string | null
+  email_enviado_em?: string | null
   respondido_em: string | null
   created_at: string
 }
@@ -378,6 +379,7 @@ export function ofertaDaLinha(linha: LinhaOferta): AtribuicaoViagem {
     status: linha.status,
     distancia_km: linha.distancia_km ?? undefined,
     motivo: linha.motivo ?? undefined,
+    ...(linha.email_enviado_em ? { email_enviado_em: linha.email_enviado_em } : {}),
     respondido_em: linha.respondido_em ?? undefined,
     created_at: linha.created_at,
   }
@@ -593,7 +595,7 @@ export const COLUNAS_VIAGEM =
   'id,codigo,cliente_id,empresa_id,motorista_id,veiculo_id,categoria_id,modalidade,origem,destino,origem_lat,origem_lng,destino_lat,destino_lng,origem_place_id,destino_place_id,data_viagem,horario,duracao_contratada_minutos,inicio_agendado,fim_agendado,franquia_milhas,milhas_percorridas,horario_vencido_em,conclusao_efetiva_em,paradas_liberadas,paradas,passageiros,malas,numero_voo,nome_passageiro,observacoes,distancia_km,preco_base,taxas,preco_total,comissao_percentual,valor_plataforma,valor_empresa,status,payment_status,motorista_lat,motorista_lng,finalizado_em,finalizado_por,version,created_at,updated_at'
 
 export const COLUNAS_OFERTA =
-  'id,viagem_id,empresa_id,status,distancia_km,motivo,respondido_em,created_at'
+  'id,viagem_id,empresa_id,status,distancia_km,motivo,respondido_em,created_at,email_enviado_em'
 
 /** Payload do Realtime está completo o bastante para montar a viagem sem REST. */
 export function linhaViagemUsavel(linha: Partial<LinhaViagem> | null | undefined): linha is LinhaViagem {
