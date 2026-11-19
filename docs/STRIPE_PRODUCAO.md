@@ -7,9 +7,9 @@
 
 - [ ] Stripe Dashboard em **modo Live** (não Test)
 - [ ] `STRIPE_SECRET_KEY=sk_live_...` nos secrets do Supabase
-- [ ] `VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...` na Vercel e no build do APK
+- [ ] `VITE_STRIPE_PUBLISHABLE_KEY=pk_live_...` no projeto Vercel **`jemani`** e no build do APK
 - [ ] Webhook live → `.../functions/v1/stripe-webhook` + novo `STRIPE_WEBHOOK_SECRET`
-- [ ] `APP_URL` = URL pública real do app
+- [ ] `APP_URL` = URL pública real (`https://jemani.vercel.app` ou domínio final)
 - [ ] `supabase functions deploy` de todas as functions Stripe
 - [ ] Connect Live ativo; empresas refazem onboarding se só tinham conta de teste
 - [ ] Sem `VITE_STRIPE_API_URL` / sem `stripe:local` em produção

@@ -83,7 +83,13 @@ No Dashboard → Edge Functions → Secrets:
 
 Não cole secrets em chat, commit ou `.md`.
 
-## 4) Depois do deploy
+## 4) Vercel (web)
+
+- Deploy automático do branch `main` → projeto **`jemani`** (`https://jemani.vercel.app`).
+- Confira env vars **só** nesse projeto (Supabase, Stripe publishable, Mapbox, `VITE_DEMO_MODE`, etc.).
+- Após push: `/robots.txt`, `/llms.txt` e `/ai-catalog.json` devem ser texto/JSON (não a landing HTML).
+
+## 5) Depois do deploy
 
 1. Login como **cliente** → reservar → pagar (Stripe teste).
 2. Login como **empresa** → Connect / aceite (repasse).

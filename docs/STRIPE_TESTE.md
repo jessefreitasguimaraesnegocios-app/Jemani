@@ -29,7 +29,7 @@ supabase functions deploy stripe-connect-onboarding
 supabase functions deploy stripe-transferir-empresa
 ```
 
-3. No `.env` do Vite:
+3. No `.env` do Vite **e** nas env vars do projeto Vercel **`jemani`** (não em outro projeto do mesmo repo):
 
 ```env
 VITE_SUPABASE_URL=https://SEU_PROJETO.supabase.co

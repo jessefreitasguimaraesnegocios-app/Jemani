@@ -4,9 +4,14 @@ Registro das mudanças do Jemani.
 
 ## [2026-11-17]
 
+### Adicionado
+
+- Arquivos públicos de descoberta: `/robots.txt`, `/llms.txt`, `/ai-catalog.json` e `/.well-known/ai-catalog.json` (só landing, entrar, cadastrar e APK). Headers `text/plain` / `application/json` no `vercel.json` para não cair no HTML da SPA.
+
 ### Alterado
 
 - Desempenho: páginas e layouts sob demanda (`React.lazy`); Mapbox e Supabase em chunks separados — carga inicial do admin sem mapbox/cliente/motorista. Auth, sync nuvem, GPS (motorista) e notificações permanecem no shell. APK **1.0.105**.
+- Vercel: removido o projeto duplicado **`main`** (`main-livid-ten.vercel.app`); produção fica só no projeto **`jemani`** → `jemani.vercel.app` (env vars e domínio canônicos).
 
 ## [2026-11-14]
 

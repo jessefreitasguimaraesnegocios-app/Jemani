@@ -46,12 +46,15 @@ DDoS volumétrico exige borda (Cloudflare / WAF). Rate limit em Edge Function **
 
 ### Vercel
 
-1. `VITE_DEMO_MODE=false` em Production.
+Projeto canônico: **`jemani`** → `https://jemani.vercel.app` (único ligado ao repo GitHub Jemani). Não recriar projeto `main` no mesmo repositório.
+
+1. `VITE_DEMO_MODE=false` em Production (somente nesse projeto).
 2. Não definir `VITE_ALLOW_DEV_PAYMENT`.
 3. Remover `VITE_AVIATIONSTACK_KEY` do frontend quando possível (mover para Edge Function).
 4. Restringir `VITE_MAPBOX_ACCESS_TOKEN` no painel Mapbox (URL/app) **ou** remover e usar só proxy.
 5. Ativar Deployment Protection / WAF se o plano permitir.
 6. Source maps: não expor em produção pública se configurável.
+7. Estáticos em `public/` (`robots.txt`, `llms.txt`, `ai-catalog.json`) devem responder com texto/JSON — não HTML da SPA (`vercel.json` headers + prioridade de arquivo estático).
 
 ### Stripe
 

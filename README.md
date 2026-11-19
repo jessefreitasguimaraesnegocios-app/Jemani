@@ -4,103 +4,27 @@ Marketplace de transporte executivo nos **Estados Unidos** e no **mundo** — en
 
 A plataforma capta clientes, distribui solicitações para empresas parceiras e registra a comissão.
 
-## Novidades — 09/11/2026
+## Estado atual — 17/11/2026
 
-- Planilha mensal corrigida no tema escuro.
-- Autocomplete de endereço: sugestões em tempo real, POIs, histórico recente e GPS.
-- Reserva/i18n: botões e labels mudam com o idioma (PT/EN/ES).
-- Admin: som e vibração com feedback ao ligar.
-- Novo ícone do app (preto/ouro).
-- APK **1.0.83**.
+- **APK:** **1.0.105** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
+- **Produção web:** projeto Vercel **`jemani`** → [jemani.vercel.app](https://jemani.vercel.app) (único projeto ligado ao repo; não use o projeto antigo `main`).
+- **Desempenho:** rotas e layouts sob demanda (`React.lazy`); Mapbox e Supabase em chunks separados; auth, sync Supabase, GPS do motorista e notificações no shell.
+- **Descoberta pública (sem HTML da SPA):** `/robots.txt`, `/llms.txt`, `/ai-catalog.json`, `/.well-known/ai-catalog.json` — só páginas públicas (landing, entrar, cadastrar, APK).
+- **Reserva do cliente:** **3 passos** (origem/destino → data/hora → frota → pagamento na viagem).
+- **Padrão do app:** tema **escuro** e idioma **EN** (sem preferência salva).
+- **Admin:** Novas solicitações + e-mail de parceiro externo (Resend); Financeiro com filtro Parceiros externos; Dashboard com comissão/valor das viagens pagas.
+- **Fonte de verdade:** Supabase (corridas, ofertas, GPS, frota, turnos, mensagens, notificações, comissões).
 
-## Novidades — 08/11/2026
+Histórico completo: [`CHANGELOG.md`](CHANGELOG.md).
 
-### Optical Glass (claro + escuro)
+### Pagamentos (Stripe — teste)
 
-- Acabamento inspirado no **Liquid Glass (iOS 26)**: glassmorphism, frost, refração SVG leve e specular highlights.
-- Aplicado em botões, nav, menus, modais e cards — sem transformar toda a UI em vidro.
-- Componentes reutilizáveis: `VidroLiquido`, `FiltrosVidroSvg`, tokens em `src/styles/liquid-glass.css`.
-- Tema escuro com vidro fumado e rampas de luz (não fica mais flat/opaco no chrome).
+- Checkout Session na plataforma; Connect no perfil da empresa; Transfer ao aceitar.
+- Guia: [`docs/STRIPE_TESTE.md`](docs/STRIPE_TESTE.md) · Produção: [`docs/STRIPE_PRODUCAO.md`](docs/STRIPE_PRODUCAO.md).
 
-### Sync, solicitações e APK
+### Segurança
 
-- Corridas pagas chegam no admin e nas empresas via sync + distribuição na nuvem.
-- Badge `1!` / `2!` / `3!` em **Novas solicitações** (admin e empresa).
-- APK atual: **1.0.83** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
-
-Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
-
-## Novidades — 07/11/2026
-
-### Admin, planilha e solicitações
-
-- Aba **Novas solicitações** (abaixo do Dashboard): corridas pagas, ranking de empresas e envio de e-mail, com alerta pulsante na lateral.
-- **Planilha mensal** no admin, na empresa, na ficha do motorista e no Histórico do motorista (CSV).
-- Empresas: só gestão de parceiras/frota; exclusão com confirmação digitada.
-
-### Motorista e Hourly
-
-- Histórico do motorista com métricas (horas, km, serviços) e **só as 5 corridas mais recentes**.
-- Reserva Hourly pede **desembarque** (onde deixar o passageiro); paradas extras entram depois na viagem.
-
-### Entre aparelhos (site + APK)
-
-- Mesma fonte **Supabase** para corridas, ofertas, GPS, veículos, turnos, mensagens, notificações e comissões.
-
-Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
-
-## Novidades — 26/10/2026
-
-### Hourly Chauffeur (roteiro + auditoria)
-
-- Cliente envia **próximos endereços** na corrida hourly (limite por bloco, padrão **5**; admin ajusta em Configurações).
-- Motorista vê a lista: endereço atual em destaque, concluídos transparentes, botão “Cheguei”.
-- Extensão de horas e pagamento da reserva só via **Stripe teste** (cartão `4242…`); sem “simular DEV”.
-- Minimizar Hourly no motorista; histórico do cliente com minimizar + Ver mais (10 em 10).
-- Cancelamento avisa empresa/motorista e bloqueia depois do embarque; GPS não marca “a caminho” sozinho.
-- Migrations: `20261026120000_hourly_paradas.sql` e `20261026190000_auditoria_correcoes.sql` (colar no SQL Editor do Jemani se ainda não rodou).
-
-Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
-
-### Próximos passos
-
-A ordem está no [`CHANGELOG.md`](CHANGELOG.md):
-
-6. Stripe em produção só quando for pedido. Continua em teste.
-7. Políticas de acesso antes de ligar o RLS em `company_users` e `pickup_locations`.
-8. Auth real de motorista/empresa na nuvem e claim atômico de aceite no servidor.
-
-## Novidades — 01/10/2026
-
-### Área do cliente (mobile / iPhone)
-
-- Layout mobile-first: nav inferior em vidro escuro com safe-area, header sticky e scroll suave (**Lenis**).
-- Início e Minhas viagens com cartões e botões pensados para toque.
-- Reserva → escolha da frota em **showroom com fotos** (Expedition, Volvo XC90, Classe S, Lucid Air, Escalade, Sprinter, shuttle e charter), fundo preto e faixa de seleção. O Stripe continua em modo teste.
-- Stack de referência: Blender → Spline → **Three.js** → **GSAP** → Tailwind → **Lenis**
-
-### Pagamentos (Stripe Connect — teste)
-
-- Cliente paga a plataforma via Checkout Session.
-- Empresa faz onboarding Connect no perfil.
-- Ao aceitar a corrida, a plataforma pode transferir o valor da empresa.
-- Edge Functions: `stripe-criar-checkout`, `stripe-verificar-sessao`, `stripe-webhook`, `stripe-connect-onboarding`, `stripe-transferir-empresa`.
-- Guia: [`docs/STRIPE_TESTE.md`](docs/STRIPE_TESTE.md)
-
-### Admin e plataforma
-
-- **Comissões por empresa** (salvar individual, padrão da plataforma, “Aplicar a todas”).
-- **Financeiro** redesenhado: filtros, visões por empresa/tipo e resumos.
-- **Configurações**: idioma (PT-BR / EN / ES) e aparência claro/escuro/sistema **por conta** neste aparelho; alertas (som, vibração, push) na plataforma.
-- **i18n** em todo o app; cada login guarda o próprio idioma/tema (não compartilha entre cliente, admin, motorista e empresa).
-- **Tema escuro** estilo Uber (alto contraste).
-
-### Empresa
-
-- Cadastro de motorista com **e-mail e senha** (login em `/entrar`).
-- Lista mostra o e-mail vinculado à conta.
-
-Detalhe completo no [`CHANGELOG.md`](CHANGELOG.md).
+- [`docs/SEGURANCA.md`](docs/SEGURANCA.md) · Deploy SQL/Edge: [`docs/SEGURANCA-DEPLOY.md`](docs/SEGURANCA-DEPLOY.md).
 
 ## 1. Instalar
 
@@ -132,8 +56,7 @@ Outras empresas: `empresa@pacificexec.app`, `empresa@westcoastmobility.app`
 ## 4. Fluxo de teste
 
 1. Entre como **cliente**
-2. Reserve: LAX Airport → Beverly Hills · amanhã · 15:00 · 4 passageiros · JEMANI VAN  
-   (na etapa de categoria, teste o showroom 3D)
+2. Reserve: LAX Airport → Beverly Hills · amanhã · 15:00 · 4 passageiros · frota (3 passos)
 3. Confirme e pague com **Pagar com Stripe (teste)** (`4242 4242 4242 4242`)
 4. Entre como **empresa** (`empresa@lapremier.app`)
 5. Aceite a solicitação e atribua motorista/veículo
@@ -144,8 +67,9 @@ Outras empresas: `empresa@pacificexec.app`, `empresa@westcoastmobility.app`
 
 Veja `.env.example`. Migrations em `supabase/migrations/`.
 
-Deploy sugerido: **Vercel**.  
-Repositório: [github.com/jessefreitasguimaraesnegocios-app/Jemani](https://github.com/jessefreitasguimaraesnegocios-app/Jemani)
+- **Vercel:** projeto **`jemani`** (team Apps' projects) → `https://jemani.vercel.app`
+- Repositório: [github.com/jessefreitasguimaraesnegocios-app/Jemani](https://github.com/jessefreitasguimaraesnegocios-app/Jemani)
+- Arquivos estáticos em `public/` (APK, `robots.txt`, `llms.txt`, catálogos) têm prioridade sobre o rewrite SPA em `vercel.json`
 
 ## Cobertura de reservas
 
@@ -163,7 +87,7 @@ Com Android Studio, Android SDK, Java 21 e Node 22 instalados, execute:
 npm run android:apk
 ```
 
-O comando cria um APK debug e o copia para `public/downloads/jemani-android.apk`, que é o arquivo servido pelo botão de download na página inicial. O APK atual é para instalação/teste manual; ainda não é uma versão assinada para publicação na Google Play.
+O comando cria um APK debug e o copia para `public/downloads/jemani-android.apk`, que é o arquivo servido pelo botão de download na página inicial. Também atualiza `public/downloads/versao-android.json` (`versionCode`). O APK atual é para instalação/teste manual; ainda não é uma versão assinada para publicação na Google Play.
 
 ## iOS
 
