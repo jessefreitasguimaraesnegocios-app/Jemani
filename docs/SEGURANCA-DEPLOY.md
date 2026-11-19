@@ -133,4 +133,6 @@ No Vault, configure `jemani_offer_email_endpoint` com a URL completa da Edge Fun
 
 Publique com `npx supabase functions deploy automatizar-ofertas-email --no-verify-jwt`. A função autentica o agendamento com seu segredo dedicado.
 
-No painel **Admin → Novas solicitações → ⋯**, salve as cotas e a ordem de prioridade antes de ligar o envio. A fila considera viagens pagas futuras sem empresa confirmada. Cada corrida entra uma vez na automação. Reiniciar as cotas abre um novo ciclo para as próximas corridas.
+No painel **Admin → Novas solicitações → ⋯**, salve as cotas e a ordem de prioridade antes de ligar o envio. A fila considera viagens pagas futuras sem empresa confirmada. Depois do primeiro envio, aguarda 15 minutos e oferece à próxima empresa elegível se a corrida continuar disponível. A ordem respeita as prioridades e, em seguida, a proximidade. Uma empresa que já recebeu a corrida fica fora das próximas etapas. Reiniciar as cotas abre um novo ciclo.
+
+Para enviar ofertas aos parceiros, configure `EMAIL_FROM` com um remetente de um domínio verificado na conta Resend correspondente a `RESEND_API_KEY`. O endereço de teste `onboarding@resend.dev` é restrito e pode retornar HTTP 403 para destinatários externos.

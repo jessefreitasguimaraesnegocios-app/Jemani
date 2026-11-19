@@ -19,6 +19,7 @@ type Oferta = {
     distance: number | null
     passageiros: number
     valor_empresa: number
+    janela_minutos?: number
   }
 }
 
@@ -56,6 +57,7 @@ Deno.serve(async (req) => {
         passageiros: oferta.passageiros,
         valorEmpresa: oferta.valor_empresa,
         urlRevisao: montarUrlConvite(oferta.token),
+        janelaMinutos: oferta.janela_minutos,
         validoAte: new Date(data.expires_at).toLocaleString('pt-BR', {
           timeZone: 'America/Los_Angeles', day: '2-digit', month: 'short',
           hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
@@ -79,7 +81,16 @@ Deno.serve(async (req) => {
             text: corpoOfertaCorrida(dados),
           }),
         })
-        if (!resposta.ok) throw new Error('Resend HTTP ' + resposta.status)
+        if (!resposta.ok) {
+          if ([400, 403, 422].includes(resposta.status)) {
+            const { error: erroRecusa } = await db.rpc('recusar_email_oferta', {
+              p_id: data.id,
+              p_status: resposta.status,
+            })
+            if (erroRecusa) throw new Error(erroRecusa.message)
+          }
+          throw new Error('Resend HTTP ' + resposta.status)
+        }
         const { error: erroConclusao } = await db.rpc('concluir_email_oferta', { p_id: data.id })
         if (erroConclusao) throw erroConclusao
         enviados++

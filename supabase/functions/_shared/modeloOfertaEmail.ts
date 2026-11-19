@@ -19,6 +19,7 @@ type ParamsOferta = {
   /** Link exclusivo de revisão/aceite (não confirma sozinho ao abrir). */
   urlRevisao?: string
   validoAte?: string
+  janelaMinutos?: number
 }
 
 export function corpoOfertaCorrida(params: ParamsOferta): string {
@@ -47,7 +48,9 @@ export function corpoOfertaCorrida(params: ParamsOferta): string {
       'Revisar corrida (botão no e-mail HTML):',
       params.urlRevisao,
       '',
-      params.validoAte
+      params.janelaMinutos
+        ? `Link exclusivo · válido por até ${params.janelaMinutos} minutos. O clique abre a revisão.`
+        : params.validoAte
         ? `Botão exclusivo · válido até ${params.validoAte}. O clique abre a revisão — ainda não aceita.`
         : 'Botão exclusivo. O clique abre a revisão — ainda não aceita.',
     )
@@ -73,9 +76,12 @@ export function corpoOfertaCorridaHtml(params: ParamsOferta): string {
           <td style="padding:0 14px 12px;font-size:15px;font-weight:700;color:#111;">${params.distanciaKm} km</td>
         </tr>`
       : ''
-  const validade = params.validoAte
-    ? `Link exclusivo · válido até ${escaparHtml(params.validoAte)}`
-    : 'Link exclusivo'
+  let validade = 'Link exclusivo'
+  if (params.janelaMinutos) {
+    validade += ` · válido por até ${params.janelaMinutos} minutos`
+  } else if (params.validoAte) {
+    validade += ` · válido até ${escaparHtml(params.validoAte)}`
+  }
   const botao = params.urlRevisao
     ? `
       <p style="margin:24px 0 8px;text-align:center;">
