@@ -10,6 +10,7 @@ import { useDemoStore } from '@/store/demoStore'
 import { modoDemoAtivo, usarNuvemComoFonte } from '@/lib/nuvemAtiva'
 import { supabase } from '@/lib/supabase'
 import { carregarContaSessaoAtual, sairNuvem } from '@/services/nuvemCorrida'
+import { pararPushNativoNoLogout } from '@/services/pushNativo'
 import { obterSessaoAuthValida } from '@/services/sessaoAuth'
 import type { Perfil, TipoUsuario } from '@/types'
 import { SENHA_DEMO } from '@/data/seed'
@@ -119,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     entrar: async (email, senha) => entrarStore(email, senha),
     cadastrar: async (dados) => cadastrarStore(dados),
     sair: async () => {
+      await pararPushNativoNoLogout()
       sairStore()
       await sairNuvem()
     },

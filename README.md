@@ -14,6 +14,7 @@ A plataforma capta clientes, distribui solicitações para empresas parceiras e 
 - **Reserva do cliente:** **3 passos** (origem/destino → data/hora → frota → pagamento na viagem).
 - **Padrão do app:** tema **escuro** e idioma **EN**.
 - **Fonte de verdade:** Supabase (corridas, ofertas, GPS, frota, turnos, mensagens, notificações, comissões).
+- **Push nativo (APK):** FCM via Capacitor; tokens em `device_push_tokens`; envio só no INSERT de `notifications`. Setup: [`docs/PUSH-NATIVO.md`](docs/PUSH-NATIVO.md).
 
 Histórico completo: [`CHANGELOG.md`](CHANGELOG.md).
 

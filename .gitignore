@@ -21,10 +21,13 @@ android/.gradle
 .native-apk-backup
 android/build
 android/app/build
+android/app/google-services.json
 ios/DerivedData
 ios/App/Pods
 tmp_mig*.json
 tmp_*.json
+*-firebase-adminsdk*.json
+fcm-service-account.json
 
 # Editor directories and files
 .vscode/*

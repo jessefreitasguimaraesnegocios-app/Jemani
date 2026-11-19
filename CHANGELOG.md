@@ -6,6 +6,7 @@ Registro das mudanças do Jemani.
 
 ### Adicionado
 
+- Push nativo Capacitor (`@capacitor/push-notifications`): registro de token em `device_push_tokens`, Edge `enviar-push` (FCM HTTP v1) no INSERT de `notifications` (trigger pg_net + Vault), deep link no tap. Docs: `docs/PUSH-NATIVO.md`. Edge usa o `record` do webhook (evita 404 pré-commit). APK **1.0.109**.
 - RPC `criar_viagem` + trigger `proteger_preco_viagem`: preço da reserva calculado no Postgres (não confia no valor do app). Migration `20261119160000_criar_viagem_preco_servidor.sql` (aplicar no SQL Editor se ainda não rodou). APK **1.0.106**.
 
 ### Alterado

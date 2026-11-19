@@ -40,6 +40,7 @@ npx supabase functions deploy criar-empresa --no-verify-jwt
 npx supabase functions deploy places-proxy --no-verify-jwt
 npx supabase functions deploy convite-oferta --no-verify-jwt
 npx supabase functions deploy enviar-oferta-email --no-verify-jwt
+npx supabase functions deploy enviar-push --no-verify-jwt
 ```
 
 Secrets de e-mail (envio automático da oferta):
@@ -48,6 +49,23 @@ Secrets de e-mail (envio automático da oferta):
 npx supabase secrets set RESEND_API_KEY=re_xxxx --project-ref qdiocaeoevxhdsrtcahn
 npx supabase secrets set EMAIL_FROM="Jemani <onboarding@resend.dev>" --project-ref qdiocaeoevxhdsrtcahn
 ```
+
+### Push nativo (FCM)
+
+1. SQL: rode `supabase/migrations/20261119180000_device_push_tokens.sql` (ou `npx supabase db query --linked -f ...`).
+2. Secrets (não commit):
+
+```powershell
+npx supabase secrets set FCM_SERVICE_ACCOUNT_JSON="$(Get-Content -Raw .\fcm-service-account.json)" --project-ref qdiocaeoevxhdsrtcahn
+npx supabase secrets set PUSH_WEBHOOK_SECRET="gere-um-segredo-longo" --project-ref qdiocaeoevxhdsrtcahn
+```
+
+3. Deploy: `npx supabase functions deploy enviar-push --no-verify-jwt`
+4. Disparo: trigger `jemani_enviar_push` + Vault `jemani_push_webhook_secret` (SQL em `20261119183000_trigger_enviar_push.sql`). Alternativa: Database Webhook INSERT → mesma URL com header `x-push-secret`.
+5. APK local: coloque `android/app/google-services.json` (gitignored) com package `com.jemani.executivemobility` e rode `npm run android:apk`.
+6. iOS (Mac): Xcode → Push Notifications capability + APNs no Firebase; o código do app já registra token.
+
+Guia curto: [`docs/PUSH-NATIVO.md`](./PUSH-NATIVO.md).
 
 ### Preço no servidor / criar_viagem (obrigatório no SQL Editor)
 
@@ -87,6 +105,7 @@ No Dashboard → Edge Functions → Secrets:
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 - `MAPBOX_ACCESS_TOKEN`
+- `FCM_SERVICE_ACCOUNT_JSON` / `PUSH_WEBHOOK_SECRET` (push nativo)
 - `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` (em geral o runtime já injeta)
 
 Não cole secrets em chat, commit ou `.md`.

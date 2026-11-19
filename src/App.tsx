@@ -5,6 +5,7 @@ import { AvisoAtualizacaoApp } from '@/components/AvisoAtualizacaoApp'
 import { FiltrosVidroSvg } from '@/components/FiltrosVidroSvg'
 import { SincronizarIdioma } from '@/components/SincronizarIdioma'
 import { PrepararAlertas } from '@/components/PrepararAlertas'
+import { PrepararPushNativo } from '@/components/PrepararPushNativo'
 import { VigilanciaAlertas } from '@/components/VigilanciaAlertas'
 import { VigilanciaHourly } from '@/components/VigilanciaHourly'
 import { SincronizarNuvem } from '@/components/SincronizarNuvem'
@@ -180,6 +181,7 @@ export default function App() {
           <VigilanciaAlertas />
           <AvisoAtualizacaoApp />
           <BrowserRouter>
+            <PrepararPushNativo />
             <Suspense fallback={<FallbackRota />}>
               <Routes>
                 <Route path="/" element={<LandingPage />} />
