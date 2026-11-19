@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { clienteAdmin } from '../_shared/auth.ts'
 import { json } from '../_shared/cors.ts'
 import { corpoOfertaCorrida, corpoOfertaCorridaHtml } from '../_shared/modeloOfertaEmail.ts'
+import { montarUrlConvite } from '../_shared/urlConviteOferta.ts'
 
 type Oferta = {
   id: string
@@ -31,7 +32,6 @@ Deno.serve(async (req) => {
   const resendKey = Deno.env.get('RESEND_API_KEY')
   if (!resendKey) return json({ erro: 'RESEND_API_KEY ausente' }, 503)
 
-  const appUrl = (Deno.env.get('APP_URL') || 'https://jemani.vercel.app').replace(/\/$/, '')
   const from = Deno.env.get('EMAIL_FROM')?.trim() || 'Jemani <onboarding@resend.dev>'
   const db = clienteAdmin()
   let enviados = 0
@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
         distanciaKm: oferta.distance ?? undefined,
         passageiros: oferta.passageiros,
         valorEmpresa: oferta.valor_empresa,
-        urlRevisao: appUrl + '/convite/' + oferta.token,
+        urlRevisao: montarUrlConvite(oferta.token),
         validoAte: new Date(data.expires_at).toLocaleString('pt-BR', {
           timeZone: 'America/Los_Angeles', day: '2-digit', month: 'short',
           hour: '2-digit', minute: '2-digit', timeZoneName: 'short',

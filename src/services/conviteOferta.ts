@@ -1,4 +1,5 @@
 import type { ConviteOferta, Viagem } from '@/types'
+export { montarUrlConvite } from '../../supabase/functions/_shared/urlConviteOferta'
 
 const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
 
@@ -16,10 +17,6 @@ export async function hashearTokenConvite(token: string): Promise<string> {
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
-}
-
-export function montarUrlConvite(token: string, origem = typeof window !== 'undefined' ? window.location.origin : 'https://jemani.vercel.app') {
-  return `${origem.replace(/\/$/, '')}/convite/${encodeURIComponent(token)}`
 }
 
 /** Validade até o horário da corrida (fim do dia se horário inválido). */
