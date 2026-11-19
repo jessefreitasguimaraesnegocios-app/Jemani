@@ -49,6 +49,14 @@ npx supabase secrets set RESEND_API_KEY=re_xxxx --project-ref qdiocaeoevxhdsrtca
 npx supabase secrets set EMAIL_FROM="Jemani <onboarding@resend.dev>" --project-ref qdiocaeoevxhdsrtcahn
 ```
 
+### Preço no servidor / criar_viagem (obrigatório no SQL Editor)
+
+No projeto `qdiocaeoevxhdsrtcahn`, abra **SQL Editor** e execute:
+
+`supabase/migrations/20261119160000_criar_viagem_preco_servidor.sql`
+
+(guia curto: `docs/CRIAR-VIAGEM-PRECO-SERVIDOR.sql`)
+
 ### Convite / Parceiros externos (obrigatório no SQL Editor)
 
 No projeto `qdiocaeoevxhdsrtcahn`, abra **SQL Editor** e execute o arquivo:

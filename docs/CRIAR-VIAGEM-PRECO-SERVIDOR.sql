@@ -1,0 +1,13 @@
+-- Aplicar no SQL Editor do projeto Jemani (qdiocaeoevxhdsrtcahn).
+-- Abra e execute o arquivo:
+--   supabase/migrations/20261119160000_criar_viagem_preco_servidor.sql
+--
+-- Smoke (após aplicar, logado como cliente):
+--   select * from public.calcular_preco_reserva_servidor(
+--     '<categoria_uuid>',
+--     'one_way',
+--     '15:00',
+--     33.94, -118.40,
+--     34.07, -118.40,
+--     null
+--   );

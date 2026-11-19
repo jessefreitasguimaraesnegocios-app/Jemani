@@ -4,15 +4,15 @@ Marketplace de transporte executivo nos **Estados Unidos** e no **mundo** — en
 
 A plataforma capta clientes, distribui solicitações para empresas parceiras e registra a comissão.
 
-## Estado atual — 17/11/2026
+## Estado atual — 19/11/2026
 
-- **APK:** **1.0.105** (`npm run android:apk` → `public/downloads/jemani-android.apk`).
-- **Produção web:** projeto Vercel **`jemani`** → [jemani.vercel.app](https://jemani.vercel.app) (único projeto ligado ao repo; não use o projeto antigo `main`).
+- **APK:** gerar com `npm run android:apk` → `public/downloads/jemani-android.apk` (versão no `versao-android.json`).
+- **Produção web:** projeto Vercel **`jemani`** → [jemani.vercel.app](https://jemani.vercel.app) (único projeto ligado ao repo).
+- **Segurança reserva:** preço no servidor (`criar_viagem` + trigger). “Simular pagamento” ainda ligado na web/APK de teste (desligar só quando for produção real).
 - **Desempenho:** rotas e layouts sob demanda (`React.lazy`); Mapbox e Supabase em chunks separados; auth, sync Supabase, GPS do motorista e notificações no shell.
-- **Descoberta pública (sem HTML da SPA):** `/robots.txt`, `/llms.txt`, `/ai-catalog.json`, `/.well-known/ai-catalog.json` — só páginas públicas (landing, entrar, cadastrar, APK).
+- **Descoberta pública (sem HTML da SPA):** `/robots.txt`, `/llms.txt`, `/ai-catalog.json`, `/.well-known/ai-catalog.json`.
 - **Reserva do cliente:** **3 passos** (origem/destino → data/hora → frota → pagamento na viagem).
-- **Padrão do app:** tema **escuro** e idioma **EN** (sem preferência salva).
-- **Admin:** Novas solicitações + e-mail de parceiro externo (Resend); Financeiro com filtro Parceiros externos; Dashboard com comissão/valor das viagens pagas.
+- **Padrão do app:** tema **escuro** e idioma **EN**.
 - **Fonte de verdade:** Supabase (corridas, ofertas, GPS, frota, turnos, mensagens, notificações, comissões).
 
 Histórico completo: [`CHANGELOG.md`](CHANGELOG.md).

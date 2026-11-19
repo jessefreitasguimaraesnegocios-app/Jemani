@@ -424,6 +424,70 @@ export async function gravarViagemNuvem(viagem: Viagem) {
   return resultado.ok
 }
 
+export type DadosCriarViagemNuvem = {
+  id?: string
+  categoria_id: string
+  modalidade: 'one_way' | 'hourly'
+  origem: string
+  destino: string
+  data_viagem: string
+  horario: string
+  passageiros: number
+  origem_lat?: number
+  origem_lng?: number
+  destino_lat?: number
+  destino_lng?: number
+  origem_place_id?: string
+  destino_place_id?: string
+  duracao_minutos?: number
+  malas?: number
+  numero_voo?: string
+  nome_passageiro?: string
+  observacoes?: string
+}
+
+/** Cria a reserva via RPC — preço calculado no Postgres, não no app. */
+export async function criarViagemNuvem(
+  dados: DadosCriarViagemNuvem,
+): Promise<{ ok: true; viagem: Viagem } | { ok: false; erro: string }> {
+  const db = cliente()
+  if (!db) return { ok: false, erro: 'Supabase indisponível' }
+  const { obterSessaoAuthValida } = await import('@/services/sessaoAuth')
+  const sessao = await obterSessaoAuthValida()
+  if (!sessao?.user.id) {
+    return { ok: false, erro: 'Sessão expirada. Saia e entre de novo.' }
+  }
+
+  const { data, error } = await db.rpc('criar_viagem', {
+    p_categoria_id: dados.categoria_id,
+    p_modalidade: dados.modalidade,
+    p_origem: dados.origem,
+    p_destino: dados.destino,
+    p_data_viagem: dados.data_viagem,
+    p_horario: dados.horario.length === 5 ? `${dados.horario}:00` : dados.horario,
+    p_passageiros: dados.passageiros,
+    p_origem_lat: dados.origem_lat ?? null,
+    p_origem_lng: dados.origem_lng ?? null,
+    p_destino_lat: dados.destino_lat ?? null,
+    p_destino_lng: dados.destino_lng ?? null,
+    p_origem_place_id: dados.origem_place_id ?? null,
+    p_destino_place_id: dados.destino_place_id ?? null,
+    p_duracao_minutos: dados.duracao_minutos ?? null,
+    p_malas: dados.malas ?? null,
+    p_numero_voo: dados.numero_voo ?? null,
+    p_nome_passageiro: dados.nome_passageiro ?? null,
+    p_observacoes: dados.observacoes ?? null,
+    p_id: dados.id ?? null,
+  })
+
+  if (error) {
+    console.warn('Falha ao criar viagem na nuvem', error.message)
+    return { ok: false, erro: error.message }
+  }
+  if (!data) return { ok: false, erro: 'Resposta vazia ao criar viagem' }
+  return { ok: true, viagem: viagemDaLinha(data as LinhaViagem) }
+}
+
 export async function gravarViagemNuvemDetalhe(
   viagem: Viagem,
 ): Promise<ResultadoGravacaoViagem> {

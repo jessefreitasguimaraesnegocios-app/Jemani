@@ -48,8 +48,8 @@ DDoS volumétrico exige borda (Cloudflare / WAF). Rate limit em Edge Function **
 
 Projeto canônico: **`jemani`** → `https://jemani.vercel.app` (único ligado ao repo GitHub Jemani). Não recriar projeto `main` no mesmo repositório.
 
-1. `VITE_DEMO_MODE=false` em Production (somente nesse projeto).
-2. Não definir `VITE_ALLOW_DEV_PAYMENT`.
+1. `VITE_DEMO_MODE=false` em Production (somente nesse projeto). **Feito.**
+2. `VITE_ALLOW_DEV_PAYMENT=false` em Production **quando for produção real** (hoje permanece `true` para QA).
 3. Remover `VITE_AVIATIONSTACK_KEY` do frontend quando possível (mover para Edge Function).
 4. Restringir `VITE_MAPBOX_ACCESS_TOKEN` no painel Mapbox (URL/app) **ou** remover e usar só proxy.
 5. Ativar Deployment Protection / WAF se o plano permitir.
@@ -83,7 +83,7 @@ Projeto canônico: **`jemani`** → `https://jemani.vercel.app` (único ligado a
 
 ## Riscos restantes (aceitos / próximos passos)
 
-1. Preço da viagem ainda é gravado no INSERT pelo cliente — checkout usa o valor no DB; atacante pode criar viagem barata. **Próximo:** RPC `criar_viagem` recalculando preço no servidor.
+1. ~~Preço no INSERT pelo cliente~~ → mitigado com RPC `criar_viagem` + trigger `proteger_preco_viagem` (migration `20261119160000`). **Aplicar no SQL Editor se ainda não rodou** (`docs/CRIAR-VIAGEM-PRECO-SERVIDOR.sql`).
 2. Token Mapbox / AviationStack ainda podem existir no bundle se configurados.
 3. CORS `*` nas Edge Functions — comum em mobile; mitiga-se com JWT + rate limit.
 4. Polling 25s + Realtime — custo sob abuso de contas; monitorar.

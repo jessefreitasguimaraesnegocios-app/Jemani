@@ -2,6 +2,17 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-11-19]
+
+### Adicionado
+
+- RPC `criar_viagem` + trigger `proteger_preco_viagem`: preço da reserva calculado no Postgres (não confia no valor do app). Migration `20261119160000_criar_viagem_preco_servidor.sql` (aplicar no SQL Editor se ainda não rodou). APK **1.0.106**.
+
+### Alterado
+
+- Cliente com nuvem ativa cria viagem via RPC; demo local mantém cálculo no store.
+- Vercel `jemani`: `VITE_DEMO_MODE=false` em Production. **Simular pagamento permanece ligado** (`VITE_ALLOW_DEV_PAYMENT=true`) até pedido explícito de desligar.
+
 ## [2026-11-17]
 
 ### Adicionado

@@ -786,36 +786,134 @@ export const useDemoStore = create<EstadoDemo>()(
 
         const state = get()
         const agora = agoraIso()
-        let precoTotal: ReturnType<typeof calcularPrecoViagem> & {
-          franquia_milhas?: number
-        }
-        let janela: { inicioIso: string; fimIso: string } | undefined
-        let destinoTexto: string
-        let destinoEndereco: EnderecoLocal | undefined
-        let destinoLat: number | undefined
-        let destinoLng: number | undefined
-        let destinoPlaceId: string | undefined
-        let duracaoMinutos: number | undefined
-        let franquiaMilhas: number | undefined
-
         const destino = dados.destinoEndereco!
-        destinoTexto = destino.formatted
-        destinoEndereco = destino
-        destinoLat = destino.latitude
-        destinoLng = destino.longitude
-        destinoPlaceId = destino.place_id
+        let duracaoMinutos: number | undefined
 
         if (modalidade === 'hourly') {
           duracaoMinutos = dados.duracao_minutos
           if (!duracaoMinutos) throw new Error('Selecione a duração contratada.')
+        }
+
+        if (usarNuvemComoFonte()) {
+          const { assegurarSessaoParaEmail, obterSessaoAuthValida } = await import(
+            '@/services/sessaoAuth'
+          )
+          const { criarViagemNuvem } = await import('@/services/nuvemCorrida')
+          const perfil = get().perfis.find((p) => p.id === clienteId)
+          const email = perfil?.email
+          const senha = email ? get().senhas[email] : undefined
+          if (email) await assegurarSessaoParaEmail(email, senha)
+          const sessaoAuth = await obterSessaoAuthValida()
+          const uid = sessaoAuth?.user.id
+          if (!uid) throw new Error('Sessão expirada. Saia e entre de novo.')
+
+          const criada = await criarViagemNuvem({
+            categoria_id: dados.categoria_id,
+            modalidade,
+            origem: dados.origemEndereco.formatted,
+            destino: destino.formatted,
+            data_viagem: dados.data_viagem,
+            horario: dados.horario,
+            passageiros: dados.passageiros,
+            origem_lat: dados.origemEndereco.latitude,
+            origem_lng: dados.origemEndereco.longitude,
+            destino_lat: destino.latitude,
+            destino_lng: destino.longitude,
+            origem_place_id: dados.origemEndereco.place_id,
+            destino_place_id: destino.place_id,
+            duracao_minutos: duracaoMinutos,
+            malas: dados.malas,
+            numero_voo: dados.numero_voo,
+            nome_passageiro: dados.nome_passageiro,
+            observacoes: dados.observacoes,
+          })
+          if (!criada.ok) {
+            throw new Error(
+              criada.erro
+                ? `Não foi possível salvar a corrida no Supabase: ${criada.erro}`
+                : 'Não foi possível salvar a corrida no Supabase. Verifique a conexão e tente de novo.',
+            )
+          }
+
+          const viagem: Viagem = {
+            ...criada.viagem,
+            origem_endereco: dados.origemEndereco,
+            destino_endereco: destino,
+          }
+
+          if (uid !== clienteId) {
+            set((s) => ({
+              sessaoId: uid,
+              perfis: s.perfis.map((p) => (p.id === clienteId ? { ...p, id: uid } : p)),
+            }))
+          }
+
+          const pagamento: Pagamento = {
+            id: gerarId(),
+            booking_id: viagem.id,
+            payment_id: `pending_${viagem.id.slice(0, 8)}`,
+            amount: viagem.preco_total,
+            platform_fee: viagem.valor_plataforma,
+            company_amount: viagem.valor_empresa,
+            status: 'pending_payment',
+            payment_method: 'pendente',
+            provider: 'teste',
+            created_at: agora,
+            updated_at: agora,
+          }
+
+          set((s) => ({
+            viagens: [viagem, ...s.viagens.filter((v) => v.id !== viagem.id)],
+            pagamentos: [pagamento, ...s.pagamentos],
+          }))
+
+          const historicoInicial = registrarHistorico(
+            set,
+            get,
+            viagem.id,
+            undefined,
+            'pending_payment',
+            uid,
+            undefined,
+            false,
+          )
+          void gravarHistoricoNuvem(historicoInicial)
+
+          notificar(
+            set,
+            get,
+            uid,
+            'Reserva criada — aguardando pagamento',
+            `Viagem ${viagem.codigo} criada. A confirmação definitiva ocorre após o pagamento.`,
+            'pagamento',
+            viagem.id,
+          )
+
+          void criarIntencaoPagamento({
+            bookingId: viagem.id,
+            amount: viagem.preco_total,
+            platformFee: viagem.valor_plataforma,
+            companyAmount: viagem.valor_empresa,
+          })
+
+          return viagem
+        }
+
+        let precoTotal: ReturnType<typeof calcularPrecoViagem> & {
+          franquia_milhas?: number
+        }
+        let janela: { inicioIso: string; fimIso: string } | undefined
+        let franquiaMilhas: number | undefined
+
+        if (modalidade === 'hourly') {
           const calc = get().calcularPrecoHourlyReserva(
             dados.categoria_id,
             dados.horario,
-            duracaoMinutos,
+            duracaoMinutos!,
           )
           precoTotal = calc
           franquiaMilhas = calc.franquia_milhas
-          janela = montarJanelaHourly(dados.data_viagem, dados.horario, duracaoMinutos)
+          janela = montarJanelaHourly(dados.data_viagem, dados.horario, duracaoMinutos!)
         } else {
           const distancia =
             dados.distancia_km ??
@@ -835,15 +933,15 @@ export const useDemoStore = create<EstadoDemo>()(
           categoria_id: dados.categoria_id,
           modalidade,
           origem: dados.origemEndereco.formatted,
-          destino: destinoTexto,
+          destino: destino.formatted,
           origem_endereco: dados.origemEndereco,
-          destino_endereco: destinoEndereco,
+          destino_endereco: destino,
           origem_lat: dados.origemEndereco.latitude,
           origem_lng: dados.origemEndereco.longitude,
-          destino_lat: destinoLat,
-          destino_lng: destinoLng,
+          destino_lat: destino.latitude,
+          destino_lng: destino.longitude,
           origem_place_id: dados.origemEndereco.place_id,
-          destino_place_id: destinoPlaceId,
+          destino_place_id: destino.place_id,
           data_viagem: dados.data_viagem,
           horario: dados.horario,
           duracao_contratada_minutos: duracaoMinutos,
@@ -902,45 +1000,9 @@ export const useDemoStore = create<EstadoDemo>()(
           false,
         )
 
-        if (usarNuvemComoFonte()) {
-          const { assegurarSessaoParaEmail } = await import('@/services/sessaoAuth')
-          const { gravarViagemNuvemDetalhe } = await import('@/services/nuvemCorrida')
-          const perfil = get().perfis.find((p) => p.id === clienteId)
-          const email = perfil?.email
-          const senha = email ? get().senhas[email] : undefined
-          if (email) await assegurarSessaoParaEmail(email, senha)
-          const sessaoAuth = await (await import('@/services/sessaoAuth')).obterSessaoAuthValida()
-          const uid = sessaoAuth?.user.id
-          const viagemNuvem =
-            uid && uid !== viagem.cliente_id ? { ...viagem, cliente_id: uid } : viagem
-          if (uid && uid !== clienteId) {
-            set((s) => ({
-              viagens: s.viagens.map((v) =>
-                v.id === viagem.id ? { ...v, cliente_id: uid } : v,
-              ),
-              sessaoId: uid,
-              perfis: s.perfis.map((p) => (p.id === clienteId ? { ...p, id: uid } : p)),
-            }))
-          }
-          const gravacao = await gravarViagemNuvemDetalhe(viagemNuvem)
-          if (!gravacao.ok) {
-            set((s) => ({
-              viagens: s.viagens.filter((v) => v.id !== viagem.id),
-              pagamentos: s.pagamentos.filter((p) => p.booking_id !== viagem.id),
-              historicos: s.historicos.filter((h) => h.id !== historicoInicial.id),
-            }))
-            throw new Error(
-              gravacao.erro
-                ? `Não foi possível salvar a corrida no Supabase: ${gravacao.erro}`
-                : 'Não foi possível salvar a corrida no Supabase. Verifique a conexão e tente de novo.',
-            )
-          }
-          void gravarHistoricoNuvem(historicoInicial)
-        } else {
-          void gravarViagemNuvem(viagem).then((gravou) => {
-            if (gravou) void gravarHistoricoNuvem(historicoInicial)
-          })
-        }
+        void gravarViagemNuvem(viagem).then((gravou) => {
+          if (gravou) void gravarHistoricoNuvem(historicoInicial)
+        })
 
         notificar(
           set,
