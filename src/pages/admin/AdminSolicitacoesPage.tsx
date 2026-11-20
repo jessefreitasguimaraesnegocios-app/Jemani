@@ -55,7 +55,8 @@ export function AdminSolicitacoesPage() {
               (a) =>
                 a.viagem_id === viagem.id &&
                 a.empresa_id === o.empresa.id &&
-                a.email_enviado_em,
+                a.email_enviado_em &&
+                a.motivo !== 'email_oferta_gmail',
             ),
           ),
         })),

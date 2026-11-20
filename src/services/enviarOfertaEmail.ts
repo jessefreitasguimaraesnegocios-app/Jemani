@@ -3,7 +3,16 @@ import { exigirSessaoAuthValida } from '@/services/sessaoAuth'
 
 export type ResultadoEnvioOfertaEmail = {
   ok: true
-  id?: string | null
+  id: string
+}
+
+export class ErroEnvioOfertaEmail extends Error {
+  readonly status: number
+
+  constructor(mensagem: string, status: number) {
+    super(mensagem)
+    this.status = status
+  }
 }
 
 export async function enviarOfertaEmailAutomatico(entrada: {
@@ -49,8 +58,11 @@ export async function enviarOfertaEmailAutomatico(entrada: {
   }
 
   if (!resposta.ok || !corpo.ok) {
-    throw new Error(corpo.erro || `Falha ao enviar e-mail (HTTP ${resposta.status})`)
+    throw new ErroEnvioOfertaEmail(corpo.erro || `Falha ao enviar e-mail (HTTP ${resposta.status})`, resposta.status)
   }
 
-  return { ok: true, id: corpo.id ?? null }
+  if (typeof corpo.id !== 'string' || !corpo.id.trim()) {
+    throw new Error('O provedor não confirmou o envio do e-mail')
+  }
+  return { ok: true, id: corpo.id }
 }

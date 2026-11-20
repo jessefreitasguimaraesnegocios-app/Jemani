@@ -42,8 +42,21 @@ Deno.serve(async (req: Request) => {
     const html = String(payload.html ?? '').trim()
     const texto = String(payload.texto ?? '').trim()
 
-    if (!para || !para.includes('@')) return json({ erro: 'E-mail da empresa inválido' }, 400)
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(para)) return json({ erro: 'E-mail da empresa inválido' }, 400)
     if (!assunto || !html) return json({ erro: 'Assunto e HTML são obrigatórios' }, 400)
+
+    const url = Deno.env.get('SUPABASE_URL')
+    const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const admin = url && service ? createClient(url, service) : null
+    if (payload.empresa_id) {
+      if (!admin) return json({ erro: 'Supabase admin não configurado' }, 500)
+      const { data: empresa, error } = await admin.from('companies')
+        .select('email').eq('id', payload.empresa_id).maybeSingle()
+      if (error) return json({ erro: 'Não foi possível verificar o e-mail atual da empresa' }, 500)
+      if (empresa?.email?.trim().toLowerCase() !== para) {
+        return json({ erro: 'O e-mail da empresa mudou. Atualize a página e tente novamente.' }, 409)
+      }
+    }
 
     const resendKey = Deno.env.get('RESEND_API_KEY')
     if (!resendKey) {
@@ -84,13 +97,20 @@ Deno.serve(async (req: Request) => {
       return json({ erro: `Falha no envio: ${detalhe}` }, 502)
     }
 
-    if (payload.viagem_id) {
+    const messageId = typeof corpo?.id === 'string' ? corpo.id.trim() : ''
+    if (!messageId) return json({ erro: 'Resend não retornou o identificador do envio' }, 500)
+
+    if (payload.viagem_id && admin) {
       try {
-        const url = Deno.env.get('SUPABASE_URL')
-        const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-        if (url && service) {
-          const admin = createClient(url, service)
-          await admin.from('audit_logs').insert({
+        if (payload.empresa_id) {
+          const { error } = await admin.from('trip_assignments').upsert({
+            viagem_id: payload.viagem_id,
+            empresa_id: payload.empresa_id,
+            email_enviado_em: new Date().toISOString(),
+          }, { onConflict: 'viagem_id,empresa_id' })
+          if (error) console.error('Falha ao registrar envio manual', payload.viagem_id, error.code)
+        }
+        await admin.from('audit_logs').insert({
             acao: 'email_oferta_enviado',
             usuario_id: user.id,
             entidade_tipo: 'viagem',
@@ -99,25 +119,15 @@ Deno.serve(async (req: Request) => {
               empresa_id: payload.empresa_id ?? null,
               para,
               provider: 'resend',
-              message_id:
-                typeof corpo === 'object' && corpo && 'id' in corpo
-                  ? (corpo as { id: string }).id
-                  : null,
+              message_id: messageId,
             },
-          })
-        }
+        })
       } catch {
         /* auditoria é best-effort */
       }
     }
 
-    return json({
-      ok: true,
-      id:
-        typeof corpo === 'object' && corpo && 'id' in corpo
-          ? (corpo as { id: string }).id
-          : null,
-    })
+    return json({ ok: true, id: messageId })
   } catch (e) {
     if (e instanceof RespostaAuth) return json({ erro: e.message }, e.status)
     return json({ erro: e instanceof Error ? e.message : 'Erro ao enviar e-mail' }, 500)

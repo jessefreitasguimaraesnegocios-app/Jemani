@@ -52,6 +52,7 @@ No projeto de destino, confira o histórico antes de aplicar migrations. Em um b
 2. [`20261119210000_dispatch_offer_email_on_save.sql`](../supabase/migrations/20261119210000_dispatch_offer_email_on_save.sql) dispara o processamento após salvar a configuração com o envio ligado.
 3. [`20261119220000_sequenciar_email_ofertas.sql`](../supabase/migrations/20261119220000_sequenciar_email_ofertas.sql) dispara após a corrida ficar elegível, encadeia ofertas e registra recusas do provedor.
 4. [`20261119223000_configurar_intervalo_email_ofertas.sql`](../supabase/migrations/20261119223000_configurar_intervalo_email_ofertas.sql) permite ajustar o intervalo entre ofertas automáticas pelo painel.
+5. [`20261120010000_confirmar_envio_e_atualizar_destinatario.sql`](../supabase/migrations/20261120010000_confirmar_envio_e_atualizar_destinatario.sql) registra o ID do Resend e permite reaproveitar uma oferta pendente ou rejeitada quando o endereço da empresa foi corrigido.
 
 No repositório, com a CLI autenticada para o projeto correto, publique as funções necessárias:
 
@@ -78,6 +79,8 @@ Uma corrida futura, paga e sem empresa confirmada entra na automação. A fila c
 ## 5. Testar e diagnosticar
 
 - Faça uma reserva de teste com corrida futura, empresa elegível e destinatário controlado. Confirme o pagamento pelo fluxo de QA. No **Resend → Emails**, verifique o remetente, o destinatário e o status **Delivered**. Um retorno de API aceito aparece antes da confirmação de entrega.
+- O painel mostra **Aceito pelo Resend** quando o provedor aceita a solicitação. As novas ofertas automáticas gravam `provider_message_id` em `offer_email_jobs` para localizar o envio no Resend. Abrir um rascunho no Gmail no fluxo manual deixa a oferta sem confirmação no painel.
+- Ao alterar o e-mail de uma empresa, a fila usa o endereço novo nas próximas ofertas. Uma tentativa pendente com o endereço antigo é substituída após a janela de execução do worker. Uma recusa registrada com o endereço anterior deixa de bloquear o endereço corrigido. A automação preserva o histórico das ofertas já aceitas pelo provedor.
 - Abra **Revisar corrida** e confirme a abertura em `https://jemani.vercel.app/convite/…`. Confira a validade do convite. Para validar a sequência, rode um cenário sem aceite e outro com aceite antes do prazo configurado.
 - **HTTP 403 com `onboarding@resend.dev`** indica que o remetente de teste está limitado. Confira `EMAIL_FROM` no Supabase.
 - **HTTP 403 de domínio não verificado, com o domínio já Verified** foi o erro da chave anterior. Confirme que a chave pertence à mesma conta ou equipe Resend que verificou o domínio e que tem acesso de envio para esse domínio. No incidente, a substituição por uma chave restrita ao domínio resolveu a recusa.

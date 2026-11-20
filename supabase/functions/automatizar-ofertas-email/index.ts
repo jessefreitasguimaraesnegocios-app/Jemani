@@ -91,7 +91,14 @@ Deno.serve(async (req) => {
           }
           throw new Error('Resend HTTP ' + resposta.status)
         }
-        const { error: erroConclusao } = await db.rpc('concluir_email_oferta', { p_id: data.id })
+        const recibo = await resposta.json().catch(() => null) as { id?: string } | null
+        if (typeof recibo?.id !== 'string' || !recibo.id.trim()) {
+          throw new Error('Resend não retornou o identificador do envio')
+        }
+        const { error: erroConclusao } = await db.rpc('confirmar_envio_email_oferta', {
+          p_id: data.id,
+          p_message_id: recibo.id,
+        })
         if (erroConclusao) throw erroConclusao
         enviados++
       } catch (erro) {
