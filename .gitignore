@@ -22,6 +22,9 @@ android/.gradle
 android/build
 android/app/build
 android/app/google-services.json
+*.jks
+*.keystore
+jemani-debug.keystore
 ios/DerivedData
 ios/App/Pods
 tmp_mig*.json
