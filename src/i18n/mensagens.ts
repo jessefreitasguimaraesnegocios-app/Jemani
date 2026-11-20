@@ -258,7 +258,8 @@ const pt = {
 
   'admin.solicitacoes.titulo': 'Novas solicitações',
   'admin.automacao.titulo': 'Automação de e-mails',
-  'admin.automacao.ajuda': 'Cada corrida paga é oferecida às empresas elegíveis por proximidade, com 15 min para aceitar antes da próxima. Empresas prioritárias vêm primeiro, na ordem da lista. As cotas contam os e-mails automáticos enviados neste ciclo.',
+  'admin.automacao.ajuda': 'O intervalo define o tempo para aceitar uma nova oferta automática antes do envio à próxima empresa. A ordem segue as prioridades e depois a proximidade. As cotas contam os e-mails enviados neste ciclo.',
+  'admin.automacao.intervalo': 'Intervalo entre ofertas (min)',
   'admin.automacao.ativar': 'Envio automático',
   'admin.automacao.cotaPadrao': 'Cota padrão por empresa',
   'admin.automacao.empresa': 'Selecionar empresa',
@@ -1020,7 +1021,8 @@ const en: Record<ChaveTraducao, string> = {
 
   'admin.solicitacoes.titulo': 'New requests',
   'admin.automacao.titulo': 'Email automation',
-  'admin.automacao.ajuda': 'Each paid trip is offered to eligible companies by proximity, with 15 minutes to accept before the next offer. Priority companies go first in the order shown. Quotas count automated emails sent this cycle.',
+  'admin.automacao.ajuda': 'The interval sets how long a company has to accept a new automated offer before the next company is notified. Priority comes first, followed by proximity. Quotas count emails sent this cycle.',
+  'admin.automacao.intervalo': 'Offer interval (min)',
   'admin.automacao.ativar': 'Automatic sending',
   'admin.automacao.cotaPadrao': 'Default quota per company',
   'admin.automacao.empresa': 'Select a company',
@@ -1778,7 +1780,8 @@ const es: Record<ChaveTraducao, string> = {
 
   'admin.solicitacoes.titulo': 'Nuevas solicitudes',
   'admin.automacao.titulo': 'Automatización de correos',
-  'admin.automacao.ajuda': 'Cada viaje pagado se ofrece a las empresas elegibles por proximidad, con 15 minutos para aceptar antes de pasar a la siguiente. Las empresas prioritarias van primero, en el orden de la lista. Las cuotas cuentan los correos automáticos enviados en este ciclo.',
+  'admin.automacao.ajuda': 'El intervalo define el plazo para aceptar una nueva oferta automática antes de avisar a la siguiente empresa. El orden sigue las prioridades y luego la proximidad. Las cuotas cuentan los correos enviados en este ciclo.',
+  'admin.automacao.intervalo': 'Intervalo entre ofertas (min)',
   'admin.automacao.ativar': 'Envío automático',
   'admin.automacao.cotaPadrao': 'Cuota predeterminada por empresa',
   'admin.automacao.empresa': 'Seleccionar empresa',

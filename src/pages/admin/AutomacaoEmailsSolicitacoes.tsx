@@ -6,8 +6,9 @@ import { supabase } from '@/lib/supabase'
 import type { Empresa } from '@/types'
 
 type Regra = { company_id: string; quota: number; priority: boolean }
-type Config = { enabled: boolean; default_quota: number; rules: Regra[]; cycle: string }
+type Config = { enabled: boolean; default_quota: number; wait_minutes: number; rules: Regra[]; cycle: string }
 type Progresso = { company_id: string; sent: number; pending: number; failed: number }
+const COLUNAS_CONFIG = 'enabled,default_quota,wait_minutes,rules,cycle'
 
 export function AutomacaoEmailsSolicitacoes({ empresas }: { empresas: Empresa[] }) {
   const { t } = usarIdioma()
@@ -27,7 +28,7 @@ export function AutomacaoEmailsSolicitacoes({ empresas }: { empresas: Empresa[] 
     async function carregar() {
       setErro(null)
       const resposta = await supabase?.from('offer_email_automation')
-        .select('enabled,default_quota,rules,cycle').eq('id', true).single<Config>()
+        .select(COLUNAS_CONFIG).eq('id', true).single<Config>()
       if (!ativo) return
       if (!resposta?.data) {
         setErro('admin.automacao.indisponivel')
@@ -69,7 +70,7 @@ export function AutomacaoEmailsSolicitacoes({ empresas }: { empresas: Empresa[] 
       const dados = { ...config, cycle: reiniciar ? crypto.randomUUID() : config.cycle }
       const { data, error } = await db.from('offer_email_automation').update(dados)
         .eq('id', true).eq('cycle', salva.cycle)
-        .select('enabled,default_quota,rules,cycle').single<Config>()
+        .select(COLUNAS_CONFIG).single<Config>()
       if (error || !data) throw error
       if (reiniciar) setProgresso([])
       setConfig(data)
@@ -143,6 +144,17 @@ export function AutomacaoEmailsSolicitacoes({ empresas }: { empresas: Empresa[] 
                     {t('admin.automacao.cotaPadrao')}
                     <input type="number" min={0} max={10000} required value={Number.isNaN(config.default_quota) ? '' : config.default_quota}
                       onChange={(e) => setConfig({ ...config, default_quota: e.target.valueAsNumber })} />
+                  </label>
+                  <label className="admin-automacao-cota">
+                    {t('admin.automacao.intervalo')}
+                    <input
+                      type="number"
+                      min={1}
+                      max={1440}
+                      required
+                      value={Number.isNaN(config.wait_minutes) ? '' : config.wait_minutes}
+                      onChange={(e) => setConfig({ ...config, wait_minutes: e.target.valueAsNumber })}
+                    />
                   </label>
                 </div>
                 <div className="admin-automacao-linha">
