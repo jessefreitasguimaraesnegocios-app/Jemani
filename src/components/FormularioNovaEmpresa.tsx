@@ -3,6 +3,12 @@ import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { CampoEndereco } from '@/components/CampoEndereco'
 import { criarEmpresaNoSupabase } from '@/services/empresaAdminService'
 import type { CategoriaVeiculo, Empresa, EnderecoLocal } from '@/types'
+import {
+  documentoFiscalValido,
+  emailCadastroValido,
+  formatarTelefoneEua,
+  sugerirEmails,
+} from '@/utils/cadastroEmpresa'
 import { enderecoProntoParaReserva } from '@/utils/endereco'
 import './FormularioNovaEmpresa.css'
 
@@ -15,7 +21,7 @@ interface Props {
 export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Props) {
   const [nomeComercial, setNomeComercial] = useState('')
   const [razaoSocial, setRazaoSocial] = useState('')
-  const [ein, setEin] = useState('')
+  const [documento, setDocumento] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [telefone, setTelefone] = useState('')
@@ -26,6 +32,21 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
     categorias.filter((c) => c.ativo).map((c) => c.id),
   )
   const [erro, setErro] = useState('')
+  const [validarCampos, setValidarCampos] = useState(false)
+  const telefoneFormatado = formatarTelefoneEua(telefone)
+  const camposInvalidos = {
+    'emp-nome': !nomeComercial.trim(),
+    'emp-razao': !razaoSocial.trim(),
+    'emp-documento': !documentoFiscalValido(documento),
+    'emp-tel': !telefoneFormatado,
+    'emp-email': !emailCadastroValido(email),
+    'emp-senha': senha.length < 8,
+  }
+
+  function campoInvalido(id: keyof typeof camposInvalidos) {
+    return validarCampos && camposInvalidos[id]
+  }
+  const sugestoesEmail = sugerirEmails(email)
 
   function alternarCategoria(id: string) {
     setCategoriasIds((atual) =>
@@ -35,6 +56,13 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
 
   async function enviar() {
     setErro('')
+    setValidarCampos(true)
+    const primeiroCampoInvalido = Object.entries(camposInvalidos).find(([, invalido]) => invalido)
+    if (primeiroCampoInvalido || !telefoneFormatado) {
+      if (primeiroCampoInvalido) document.getElementById(primeiroCampoInvalido[0])?.focus()
+      setErro('Confira os campos indicados para criar a empresa.')
+      throw new Error('cadastro inválido')
+    }
     const check = enderecoProntoParaReserva(endereco)
     if (!check.ok || !endereco) {
       setErro(check.mensagem ?? 'Informe o endereço-base com número válido.')
@@ -52,8 +80,8 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
       const empresa = await criarEmpresaNoSupabase({
         nome_comercial: nomeComercial.trim(),
         razao_social: razaoSocial.trim(),
-        cnpj: ein.trim(),
-        telefone: telefone.trim(),
+        cnpj: documento.trim().toUpperCase(),
+        telefone: telefoneFormatado,
         email: email.trim(),
         senha,
         cidade: cidade.trim() || endereco.cidade || '',
@@ -90,8 +118,15 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
             className="campo"
             value={nomeComercial}
             onChange={(e) => setNomeComercial(e.target.value)}
+            aria-invalid={campoInvalido('emp-nome')}
+            aria-describedby={campoInvalido('emp-nome') ? 'emp-nome-erro' : undefined}
             required
           />
+          {campoInvalido('emp-nome') && (
+            <p id="emp-nome-erro" className="mt-1 text-sm text-[var(--color-danger)]">
+              Informe o nome comercial.
+            </p>
+          )}
         </div>
         <div>
           <label className="rotulo" htmlFor="emp-razao">
@@ -102,33 +137,61 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
             className="campo"
             value={razaoSocial}
             onChange={(e) => setRazaoSocial(e.target.value)}
+            aria-invalid={campoInvalido('emp-razao')}
+            aria-describedby={campoInvalido('emp-razao') ? 'emp-razao-erro' : undefined}
             required
           />
+          {campoInvalido('emp-razao') && (
+            <p id="emp-razao-erro" className="mt-1 text-sm text-[var(--color-danger)]">
+              Informe a razão social.
+            </p>
+          )}
         </div>
         <div>
-          <label className="rotulo" htmlFor="emp-ein">
-            EIN / CNPJ
+          <label className="rotulo" htmlFor="emp-documento">
+            Documento fiscal (EIN, CNPJ ou CPF)
           </label>
           <input
-            id="emp-ein"
+            id="emp-documento"
             className="campo"
-            value={ein}
-            onChange={(e) => setEin(e.target.value)}
+            value={documento}
+            onChange={(e) => setDocumento(e.target.value)}
+            placeholder="Ex.: 12-3456789"
+            spellCheck={false}
+            aria-invalid={campoInvalido('emp-documento')}
+            aria-describedby={campoInvalido('emp-documento') ? 'emp-documento-erro' : undefined}
             required
           />
+          {campoInvalido('emp-documento') && (
+            <p id="emp-documento-erro" className="mt-1 text-sm text-[var(--color-danger)]">
+              Informe um EIN de 9 dígitos, um CNPJ ou um CPF válido.
+            </p>
+          )}
         </div>
         <div>
           <label className="rotulo" htmlFor="emp-tel">
-            Telefone
+            Telefone dos EUA
           </label>
           <input
             id="emp-tel"
             className="campo"
             type="tel"
             value={telefone}
+            autoComplete="tel"
+            placeholder="+1 (213) 555-0123"
+            aria-invalid={campoInvalido('emp-tel')}
+            aria-describedby={campoInvalido('emp-tel') ? 'emp-tel-erro' : undefined}
+            onBlur={() => {
+              if (telefoneFormatado) setTelefone(telefoneFormatado)
+            }}
             onChange={(e) => setTelefone(e.target.value)}
             required
           />
+          {campoInvalido('emp-tel') && (
+            <p id="emp-tel-erro" className="mt-1 text-sm text-[var(--color-danger)]">
+              Informe um telefone dos EUA com código de área e 10 dígitos.
+            </p>
+          )}
         </div>
         <div>
           <label className="rotulo" htmlFor="emp-email">
@@ -139,9 +202,37 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
             className="campo"
             type="email"
             value={email}
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-invalid={campoInvalido('emp-email')}
+            aria-describedby={campoInvalido('emp-email') ? 'emp-email-erro' : undefined}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
+          {campoInvalido('emp-email') && (
+            <p id="emp-email-erro" className="mt-1 text-sm text-[var(--color-danger)]">
+              Informe um e-mail válido, como nome@empresa.com.
+            </p>
+          )}
+          {sugestoesEmail.length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-2" aria-label="Sugestões de e-mail">
+              {sugestoesEmail.map((sugestao) => (
+                <li key={sugestao}>
+                  <button
+                    type="button"
+                    className="btn-secundario max-w-full break-all text-sm"
+                    onClick={() => {
+                      setEmail(sugestao)
+                      document.getElementById('emp-email')?.focus()
+                    }}
+                  >
+                    {sugestao}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div>
           <label className="rotulo" htmlFor="emp-senha">
@@ -153,9 +244,17 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
             type="password"
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
-            minLength={6}
+            minLength={8}
+            autoComplete="new-password"
+            aria-invalid={campoInvalido('emp-senha')}
+            aria-describedby={campoInvalido('emp-senha') ? 'emp-senha-erro' : undefined}
             required
           />
+          {campoInvalido('emp-senha') && (
+            <p id="emp-senha-erro" className="mt-1 text-sm text-[var(--color-danger)]">
+              Use pelo menos 8 caracteres.
+            </p>
+          )}
         </div>
         <div>
           <label className="rotulo" htmlFor="emp-cidade">
@@ -209,7 +308,7 @@ export function FormularioNovaEmpresa({ categorias, onCriada, onCancelar }: Prop
         </div>
       </div>
 
-      {erro && <p className="text-sm text-[var(--color-danger)]">{erro}</p>}
+      {erro && <p role="alert" className="text-sm text-[var(--color-danger)]">{erro}</p>}
 
       <div className="formulario-nova-empresa-acoes">
         <button type="button" className="btn-secundario" onClick={onCancelar}>
