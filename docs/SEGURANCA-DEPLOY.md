@@ -47,7 +47,7 @@ Secrets de e-mail (envio automático da oferta):
 
 ```powershell
 npx supabase secrets set RESEND_API_KEY=re_xxxx --project-ref qdiocaeoevxhdsrtcahn
-npx supabase secrets set EMAIL_FROM="Jemani <onboarding@resend.dev>" --project-ref qdiocaeoevxhdsrtcahn
+npx supabase secrets set EMAIL_FROM="Jemani <corridas@ofertas.shoppingdelrey.com>" --project-ref qdiocaeoevxhdsrtcahn
 ```
 
 ### Push nativo (FCM)
@@ -126,6 +126,8 @@ Não cole secrets em chat, commit ou `.md`.
 Se `401 Sessão de usuário obrigatória`: o app precisa estar com `VITE_DEMO_MODE=false` e sessão Auth real (não só store local).
 
 ### Automação de e-mails de Novas solicitações
+
+A configuração de produção, a publicação das migrations e o diagnóstico de envio estão no [guia de e-mails de ofertas](./EMAILS-OFERTAS.md).
 
 Aplique `supabase/migrations/20261119200000_offer_email_automation.sql` antes de publicar o frontend. A migration cria a configuração pausada e agenda a execução a cada minuto.
 

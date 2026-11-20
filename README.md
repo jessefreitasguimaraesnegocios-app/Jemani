@@ -15,6 +15,7 @@ A plataforma capta clientes, distribui solicitações para empresas parceiras e 
 - **Padrão do app:** tema **escuro** e idioma **EN**.
 - **Fonte de verdade:** Supabase (corridas, ofertas, GPS, frota, turnos, mensagens, notificações, comissões).
 - **Push nativo (APK):** FCM via Capacitor; tokens em `device_push_tokens`; envio só no INSERT de `notifications`. Setup: [`docs/PUSH-NATIVO.md`](docs/PUSH-NATIVO.md).
+- **E-mails de oferta:** guia de DNS, Resend, Supabase e automação em [`docs/EMAILS-OFERTAS.md`](docs/EMAILS-OFERTAS.md).
 
 Histórico completo: [`CHANGELOG.md`](CHANGELOG.md).
 
