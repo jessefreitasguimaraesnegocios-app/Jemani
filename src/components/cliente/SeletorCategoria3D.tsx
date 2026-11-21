@@ -31,7 +31,16 @@ type EstadoArrasto = {
 
 const LARGURA_CARTAO = 128
 const GAP_CARTAO = 10
+const PASSO_CARTAO = LARGURA_CARTAO + GAP_CARTAO
 const VELOCIDADE_AUTO = 33 / 1000
+const COPIA_PRINCIPAL = 1
+
+function posicaoNoLoop(posicao: number, largura: number) {
+  if (largura <= 0) return posicao
+
+  // A cópia central tem espaço para deslizar nos dois sentidos.
+  return largura + ((posicao % largura) + largura) % largura
+}
 
 export function SeletorCategoria3D({
   categorias,
@@ -45,12 +54,14 @@ export function SeletorCategoria3D({
 }: Props) {
   const faixaRef = useRef<HTMLDivElement>(null)
   const grupoRef = useRef<HTMLDivElement>(null)
+  const larguraLoop = useRef(0)
   const pausaAte = useRef(0)
   const mouseSobreFaixa = useRef(false)
   const arrasto = useRef<EstadoArrasto | null>(null)
   const bloqueiaClick = useRef(false)
   const [movimento, setMovimento] = useState(true)
   const [temOverflow, setTemOverflow] = useState(false)
+  const [totalCopias, setTotalCopias] = useState(3)
 
   const frota = useMemo(
     () => veiculosParaCarrosselReserva(veiculos, empresas, categorias, passageiros),
@@ -134,38 +145,14 @@ export function SeletorCategoria3D({
     pausaAte.current = Date.now() + ms
   }
 
-  function larguraLoop() {
-    const grupo = grupoRef.current
-    if (!grupo) return 0
-    const estilo = window.getComputedStyle(grupo.parentElement ?? grupo)
-    const gap = Number.parseFloat(estilo.columnGap || estilo.gap || '0') || 0
-    return grupo.offsetWidth + gap
-  }
-
-  function normalizarScroll(trilho: HTMLDivElement) {
-    if (!movimento) return
-    const loop = larguraLoop()
-    if (loop <= 0) return
-    if (trilho.scrollLeft >= loop) trilho.scrollLeft %= loop
-  }
-
-  function medirOverflow() {
-    const trilho = faixaRef.current
-    if (!trilho) return
-    const overflow = trilho.scrollWidth > trilho.clientWidth + 8
-    setTemOverflow((atual) => (atual === overflow ? atual : overflow))
-  }
-
   function deslizar(direcao: -1 | 1) {
     const trilho = faixaRef.current
     if (!trilho) return
-    const passo = LARGURA_CARTAO + GAP_CARTAO
-    trilho.scrollBy({ left: direcao * passo, behavior: 'smooth' })
+    const posicao = posicaoNoLoop(trilho.scrollLeft, larguraLoop.current)
+    if (posicao !== trilho.scrollLeft) trilho.scrollLeft = posicao
+
     pausarAuto(3200)
-    window.setTimeout(() => {
-      normalizarScroll(trilho)
-      medirOverflow()
-    }, 360)
+    trilho.scrollBy({ left: direcao * PASSO_CARTAO, behavior: 'smooth' })
   }
 
   useEffect(() => {
@@ -180,21 +167,23 @@ export function SeletorCategoria3D({
     ? frota.map((item) => item.id).join('|')
     : categoriasValidas.map((c) => c.id).join('|')
 
+  const repetir = movimento && (usarVeiculos ? frota.length : categoriasValidas.length) > 1
+
   useEffect(() => {
     const trilho = faixaRef.current
-    if (!trilho || !chaveFaixa) return
+    const grupo = grupoRef.current
+    if (!trilho || !grupo || !chaveFaixa) return
 
     let quadro = 0
     let quadroAnterior: number | undefined
     let fracao = 0
-    let loop = 0
+    larguraLoop.current = 0
 
     const andar = (agora: number) => {
       const intervalo = Math.min(agora - (quadroAnterior ?? agora), 50)
       quadroAnterior = agora
       if (
-        movimento &&
-        loop > 0 &&
+        larguraLoop.current > 0 &&
         !mouseSobreFaixa.current &&
         !arrasto.current &&
         Date.now() >= pausaAte.current
@@ -204,7 +193,7 @@ export function SeletorCategoria3D({
         const pixels = Math.floor(fracao)
         if (pixels > 0) {
           fracao -= pixels
-          trilho.scrollLeft = (Math.max(0, trilho.scrollLeft) + pixels) % loop
+          trilho.scrollLeft = posicaoNoLoop(trilho.scrollLeft + pixels, larguraLoop.current)
         }
       } else {
         fracao = 0
@@ -218,10 +207,8 @@ export function SeletorCategoria3D({
         Math.abs(evento.deltaY) > Math.abs(evento.deltaX) ? evento.deltaY : evento.deltaX
       if (delta === 0) return
       evento.preventDefault()
-      trilho.scrollLeft += delta
-      normalizarScroll(trilho)
+      trilho.scrollLeft = posicaoNoLoop(trilho.scrollLeft + delta, larguraLoop.current)
       pausarAuto(1800)
-      medirOverflow()
     }
 
     const aoPointerDown = (evento: PointerEvent) => {
@@ -261,20 +248,7 @@ export function SeletorCategoria3D({
       }
       if (!estado.moveu) return
       evento.preventDefault()
-      trilho.scrollLeft = estado.scrollInicio - delta
-      const loop = larguraLoop()
-      if (movimento && loop > 0) {
-        if (trilho.scrollLeft >= loop) {
-          trilho.scrollLeft -= loop
-          estado.scrollInicio = trilho.scrollLeft
-          estado.inicioX = evento.clientX
-        } else if (trilho.scrollLeft < 0) {
-          trilho.scrollLeft += loop
-          estado.scrollInicio = trilho.scrollLeft
-          estado.inicioX = evento.clientX
-        }
-      }
-      medirOverflow()
+      trilho.scrollLeft = posicaoNoLoop(estado.scrollInicio - delta, larguraLoop.current)
     }
 
     const soltar = (evento: PointerEvent) => {
@@ -298,22 +272,32 @@ export function SeletorCategoria3D({
       } else {
         bloqueiaClick.current = false
       }
-      medirOverflow()
     }
 
     const aoResize = () => {
-      const largura = larguraLoop()
-      loop = largura > 0 && trilho.scrollWidth - trilho.clientWidth >= largura ? largura : 0
-      medirOverflow()
+      const anterior = trilho.firstElementChild
+      if (repetir && anterior) {
+        const largura = Math.round(grupo.getBoundingClientRect().left - anterior.getBoundingClientRect().left)
+        if (largura > 0) {
+          // Número suficiente de cópias para preencher também telas largas com pouca frota.
+          const necessarias = Math.max(3, Math.ceil((trilho.clientWidth + PASSO_CARTAO) / largura) + 2)
+          setTotalCopias(necessarias)
+          if (totalCopias >= necessarias && largura !== larguraLoop.current) {
+            trilho.scrollLeft = posicaoNoLoop(trilho.scrollLeft, largura)
+            larguraLoop.current = largura
+          }
+        }
+      }
+      setTemOverflow(trilho.scrollWidth > trilho.clientWidth + 8)
     }
 
-    trilho.scrollLeft = movimento ? 2 : 0
+    trilho.scrollLeft = 0
     pausaAte.current = 0
     aoResize()
 
     const observer = new ResizeObserver(aoResize)
     observer.observe(trilho)
-    if (grupoRef.current) observer.observe(grupoRef.current)
+    observer.observe(grupo)
 
     trilho.addEventListener('wheel', aoWheel, { passive: false })
     trilho.addEventListener('pointerdown', aoPointerDown)
@@ -331,7 +315,7 @@ export function SeletorCategoria3D({
       window.removeEventListener('pointerup', soltar)
       window.removeEventListener('pointercancel', soltar)
     }
-  }, [movimento, chaveFaixa])
+  }, [repetir, chaveFaixa, totalCopias])
 
   if (!selecionada) return null
 
@@ -339,8 +323,8 @@ export function SeletorCategoria3D({
   const foto = veiculoSelecionado
     ? fotoVeiculo(veiculoSelecionado, selecionada)
     : fotoCategoria(selecionada)
-  const copias = movimento ? [0, 1] : [0]
-  const mostrarSetas = temOverflow || movimento
+  const copias = repetir ? Array.from({ length: totalCopias }, (_, indice) => indice) : [COPIA_PRINCIPAL]
+  const mostrarSetas = temOverflow
 
   function escolherCategoria(id: string, serve: boolean) {
     if (!serve) return
@@ -372,7 +356,7 @@ export function SeletorCategoria3D({
         type="button"
         role="option"
         aria-selected={ativa}
-        tabIndex={copia === 1 ? -1 : undefined}
+        tabIndex={copia !== COPIA_PRINCIPAL ? -1 : undefined}
         disabled={!c.serve}
         className={`showroom-card ${ativa ? 'showroom-card--ativo' : ''} ${
           c.slug === SLUG_SHIELD ? 'showroom-card--elite' : ''
@@ -396,7 +380,7 @@ export function SeletorCategoria3D({
         type="button"
         role="option"
         aria-selected={ativa}
-        tabIndex={copia === 1 ? -1 : undefined}
+        tabIndex={copia !== COPIA_PRINCIPAL ? -1 : undefined}
         disabled={!item.serve}
         className={`showroom-card ${ativa ? 'showroom-card--ativo' : ''} ${
           item.categoria.slug === SLUG_SHIELD ? 'showroom-card--elite' : ''
@@ -490,9 +474,9 @@ export function SeletorCategoria3D({
           {copias.map((copia) => (
             <div
               key={copia}
-              ref={copia === 0 ? grupoRef : undefined}
+              ref={copia === COPIA_PRINCIPAL ? grupoRef : undefined}
               className="showroom-faixa-grupo"
-              aria-hidden={copia === 1 ? true : undefined}
+              aria-hidden={copia !== COPIA_PRINCIPAL ? true : undefined}
             >
               {usarVeiculos
                 ? frota.map((item) => cartaoVeiculo(item, copia))
