@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { OpcoesAceiteAutomatico } from '@/components/AceiteAutomaticoEmpresa'
 import { useAuth } from '@/contexts/AuthContext'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { useDemoStore } from '@/store/demoStore'
@@ -48,7 +49,10 @@ export function EmpresaSolicitacoesPage() {
 
   return (
     <div className="animar-entrada space-y-4">
-      <h1 className="fonte-display text-3xl">{t('empresa.solicitacoes.titulo')}</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="fonte-display text-3xl">{t('empresa.solicitacoes.titulo')}</h1>
+        <OpcoesAceiteAutomatico key={empresa.id} empresaId={empresa.id} />
+      </div>
       {erro && <p className="text-sm text-[var(--color-danger)]">{erro}</p>}
       {ofertas.length === 0 && (
         <div className="cartao text-[var(--color-slate)]">

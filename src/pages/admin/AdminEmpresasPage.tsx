@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { LiberacaoAceiteAutomatico } from '@/components/AceiteAutomaticoEmpresa'
 import { FormularioEditarEmpresa } from '@/components/FormularioEditarEmpresa'
 import { FormularioNovaEmpresa } from '@/components/FormularioNovaEmpresa'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -241,6 +242,8 @@ export function AdminEmpresasPage() {
                         }}
                       />
                     </div>
+
+                    <LiberacaoAceiteAutomatico key={e.id} empresaId={e.id} />
 
                     <div className="admin-empresa-bloco">
                       <h3>Gestão de status</h3>
