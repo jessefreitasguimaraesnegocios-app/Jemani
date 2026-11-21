@@ -31,6 +31,7 @@ type EstadoArrasto = {
 
 const LARGURA_CARTAO = 128
 const GAP_CARTAO = 10
+const VELOCIDADE_AUTO = 33 / 1000
 
 export function SeletorCategoria3D({
   categorias,
@@ -45,6 +46,7 @@ export function SeletorCategoria3D({
   const faixaRef = useRef<HTMLDivElement>(null)
   const grupoRef = useRef<HTMLDivElement>(null)
   const pausaAte = useRef(0)
+  const mouseSobreFaixa = useRef(false)
   const arrasto = useRef<EstadoArrasto | null>(null)
   const bloqueiaClick = useRef(false)
   const [movimento, setMovimento] = useState(true)
@@ -144,8 +146,7 @@ export function SeletorCategoria3D({
     if (!movimento) return
     const loop = larguraLoop()
     if (loop <= 0) return
-    while (trilho.scrollLeft >= loop) trilho.scrollLeft -= loop
-    while (trilho.scrollLeft < 0) trilho.scrollLeft += loop
+    if (trilho.scrollLeft >= loop) trilho.scrollLeft %= loop
   }
 
   function medirOverflow() {
@@ -184,15 +185,30 @@ export function SeletorCategoria3D({
     if (!trilho || !chaveFaixa) return
 
     let quadro = 0
-    let vivo = true
+    let quadroAnterior: number | undefined
+    let fracao = 0
+    let loop = 0
 
-    const andar = () => {
-      if (!vivo) return
-      if (movimento && !arrasto.current && Date.now() >= pausaAte.current) {
-        trilho.scrollLeft += 0.55
-        normalizarScroll(trilho)
+    const andar = (agora: number) => {
+      const intervalo = Math.min(agora - (quadroAnterior ?? agora), 50)
+      quadroAnterior = agora
+      if (
+        movimento &&
+        loop > 0 &&
+        !mouseSobreFaixa.current &&
+        !arrasto.current &&
+        Date.now() >= pausaAte.current
+      ) {
+        // O navegador pode arredondar scrollLeft. Acumule as frações até completar um pixel.
+        fracao += intervalo * VELOCIDADE_AUTO
+        const pixels = Math.floor(fracao)
+        if (pixels > 0) {
+          fracao -= pixels
+          trilho.scrollLeft = (Math.max(0, trilho.scrollLeft) + pixels) % loop
+        }
+      } else {
+        fracao = 0
       }
-      medirOverflow()
       quadro = window.requestAnimationFrame(andar)
     }
 
@@ -285,29 +301,35 @@ export function SeletorCategoria3D({
       medirOverflow()
     }
 
-    const aoResize = () => medirOverflow()
+    const aoResize = () => {
+      const largura = larguraLoop()
+      loop = largura > 0 && trilho.scrollWidth - trilho.clientWidth >= largura ? largura : 0
+      medirOverflow()
+    }
 
     trilho.scrollLeft = movimento ? 2 : 0
     pausaAte.current = 0
-    medirOverflow()
+    aoResize()
+
+    const observer = new ResizeObserver(aoResize)
+    observer.observe(trilho)
+    if (grupoRef.current) observer.observe(grupoRef.current)
 
     trilho.addEventListener('wheel', aoWheel, { passive: false })
     trilho.addEventListener('pointerdown', aoPointerDown)
     window.addEventListener('pointermove', aoPointerMove)
     window.addEventListener('pointerup', soltar)
     window.addEventListener('pointercancel', soltar)
-    window.addEventListener('resize', aoResize)
     quadro = window.requestAnimationFrame(andar)
 
     return () => {
-      vivo = false
+      observer.disconnect()
       window.cancelAnimationFrame(quadro)
       trilho.removeEventListener('wheel', aoWheel)
       trilho.removeEventListener('pointerdown', aoPointerDown)
       window.removeEventListener('pointermove', aoPointerMove)
       window.removeEventListener('pointerup', soltar)
       window.removeEventListener('pointercancel', soltar)
-      window.removeEventListener('resize', aoResize)
     }
   }, [movimento, chaveFaixa])
 
@@ -445,7 +467,15 @@ export function SeletorCategoria3D({
         </li>
       </ul>
 
-      <div className={`showroom-faixa-envolve ${mostrarSetas ? 'showroom-faixa-envolve--setas' : ''}`}>
+      <div
+        className={`showroom-faixa-envolve ${mostrarSetas ? 'showroom-faixa-envolve--setas' : ''}`}
+        onPointerEnter={(evento) => {
+          if (evento.pointerType === 'mouse') mouseSobreFaixa.current = true
+        }}
+        onPointerLeave={(evento) => {
+          if (evento.pointerType === 'mouse') mouseSobreFaixa.current = false
+        }}
+      >
         {mostrarSetas && (
           <button
             type="button"
