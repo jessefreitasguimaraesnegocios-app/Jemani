@@ -67,13 +67,14 @@
 .reserva-progresso-joia {
   position: absolute;
   top: 50%;
-  left: 0;
+  right: 0;
+  left: auto;
   width: 7px;
   height: 7px;
   border-radius: 1px;
   background: color-mix(in srgb, var(--color-line) 70%, var(--color-gold) 30%);
   border: 1px solid color-mix(in srgb, var(--color-gold) 35%, transparent);
-  transform: translate(-35%, -50%) rotate(45deg);
+  transform: translate(35%, -50%) rotate(45deg);
   transition:
     background 0.35s ease,
     border-color 0.35s ease,
@@ -148,7 +149,7 @@
   box-shadow:
     0 0 0 3px color-mix(in srgb, var(--color-gold) 18%, transparent),
     0 0 12px color-mix(in srgb, var(--color-gold) 35%, transparent);
-  transform: translate(-35%, -50%) rotate(45deg) scale(1.12);
+  transform: translate(35%, -50%) rotate(45deg) scale(1.12);
   animation: reserva-progresso-pulso 2.4s ease-in-out infinite;
 }
 
@@ -325,6 +326,17 @@ html[data-tema='escuro'] .reserva-progresso-joia {
   background: var(--color-gold);
   border-color: var(--color-gold);
   color: #111;
+}
+
+.reserva-quantidade-rotulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.reserva-quantidade-rotulo svg {
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .reserva-quantidade {

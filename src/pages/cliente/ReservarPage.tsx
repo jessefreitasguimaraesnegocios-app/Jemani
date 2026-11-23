@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Check } from 'lucide-react'
+import { Check, Luggage, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { CampoEndereco } from '@/components/CampoEndereco'
 import { SeletorCategoria3D } from '@/components/cliente/SeletorCategoria3D'
@@ -37,7 +37,8 @@ const ETAPAS: ChaveTraducao[] = [
   'reserva.etapaCategoria',
 ]
 const MAX_MALAS = 12
-const OPCOES_QUANTIDADE = [1, 2, 3] as const
+const OPCOES_PASSAGEIROS = [1, 2, 3] as const
+const OPCOES_MALAS = [0, 1, 2] as const
 
 export function ReservarPage() {
   const { t, locale } = usarIdioma()
@@ -131,6 +132,19 @@ export function ReservarPage() {
     const timer = window.setTimeout(() => setPodeConfirmarEtapa(true), 450)
     return () => window.clearTimeout(timer)
   }, [etapa])
+
+  useEffect(() => {
+    const irAoTopo = () => {
+      const painel = document.querySelector('.layout-cliente-scroll')
+      if (painel instanceof HTMLElement) {
+        painel.scrollTo({ top: 0, behavior: 'auto' })
+        return
+      }
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    }
+    const quadro = window.requestAnimationFrame(irAoTopo)
+    return () => window.cancelAnimationFrame(quadro)
+  }, [etapa, modalidadeConfirmada])
 
   const trechoComAeroporto = embarqueAeroporto || destinoAeroporto
   const pedirDadosVoo = trechoComAeroporto && !naoVouEmbarcar
@@ -233,7 +247,7 @@ export function ReservarPage() {
       setDestinoEndereco(null)
       setRota(null)
       setMalas(0)
-    } else if (malas < 1) {
+    } else if (malas < 0) {
       setMalas(2)
     }
   }
@@ -747,15 +761,16 @@ export function ReservarPage() {
             </div>
 
             <div>
-              <p className="rotulo" id="rotulo-passageiros">
+              <p className="rotulo reserva-quantidade-rotulo" id="rotulo-passageiros">
                 Quantidade de passageiros
+                <User size={16} aria-hidden />
               </p>
               <div
                 className="reserva-quantidade"
                 role="group"
                 aria-labelledby="rotulo-passageiros"
               >
-                {OPCOES_QUANTIDADE.map((opcao) => {
+                {OPCOES_PASSAGEIROS.map((opcao) => {
                   const ativo = opcao === 3 ? passageiros >= 3 : passageiros === opcao
                   return (
                     <button
@@ -774,12 +789,13 @@ export function ReservarPage() {
 
             {!ehHourly && (
               <div>
-                <p className="rotulo" id="rotulo-malas">
+                <p className="rotulo reserva-quantidade-rotulo" id="rotulo-malas">
                   Quantidade de malas
+                  <Luggage size={16} aria-hidden />
                 </p>
                 <div className="reserva-quantidade" role="group" aria-labelledby="rotulo-malas">
-                  {OPCOES_QUANTIDADE.map((opcao) => {
-                    const ativo = opcao === 3 ? malas >= 3 : malas === opcao
+                  {OPCOES_MALAS.map((opcao) => {
+                    const ativo = opcao === 2 ? malas >= 2 : malas === opcao
                     return (
                       <button
                         key={`malas-${opcao}`}
@@ -788,7 +804,7 @@ export function ReservarPage() {
                         aria-pressed={ativo}
                         onClick={() => setMalas(opcao)}
                       >
-                        {opcao === 3 ? '3+' : String(opcao)}
+                        {opcao === 2 ? '2+' : String(opcao)}
                       </button>
                     )
                   })}
