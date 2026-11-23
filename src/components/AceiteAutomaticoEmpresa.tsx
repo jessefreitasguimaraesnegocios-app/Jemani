@@ -1,5 +1,6 @@
-import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Ellipsis } from 'lucide-react'
+import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { supabase, supabaseConfigurado } from '@/lib/supabase'
 import {
@@ -105,22 +106,23 @@ export function OpcoesAceiteAutomatico({ empresaId }: { empresaId: string }) {
   if (!regra?.liberada) return null
 
   return (
-    <div className="relative">
+    <div className="relative shrink-0 self-start">
       <button
         type="button"
-        className="btn-secundario inline-flex items-center justify-center !p-2"
+        className="btn-secundario inline-flex size-10 shrink-0 items-center justify-center !p-0"
         aria-label={t('aceiteAuto.titulo')}
         aria-expanded={aberto}
         aria-controls={aberto ? id : undefined}
-        onClick={() => setAberto(!aberto)}
+        onClick={() => setAberto((v) => !v)}
       >
         <Ellipsis size={22} aria-hidden="true" />
       </button>
       {aberto && (
-        <section id={id} aria-label={t('aceiteAuto.titulo')}
-          className="cartao absolute right-0 top-full z-20 mt-2 w-[min(22rem,calc(100vw-3rem))]">
-          <FormularioAceiteAutomatico regra={regra} />
-        </section>
+        <div className="absolute right-0 top-full z-30 mt-2 w-[min(22rem,calc(100vw-3rem))]">
+          <section id={id} aria-label={t('aceiteAuto.titulo')} className="cartao">
+            <FormularioAceiteAutomatico regra={regra} />
+          </section>
+        </div>
       )}
     </div>
   )
@@ -132,13 +134,10 @@ function FormularioAceiteAutomatico({ regra }: { regra: RegraAceiteAutomatico })
   const [minimo, setMinimo] = useState(String(regra.valor_minimo_usd))
   const [todos, setTodos] = useState(regra.limite_diario === null)
   const [limite, setLimite] = useState(String(regra.limite_diario ?? 10))
-  const [salvando, setSalvando] = useState(false)
-  const [retorno, setRetorno] = useState<'salvo' | 'erro' | null>(null)
+  const [erro, setErro] = useState(false)
 
-  async function salvar(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault()
-    setSalvando(true)
-    setRetorno(null)
+  async function salvar() {
+    setErro(false)
     try {
       await salvarRegraAceite({
         ...regra,
@@ -146,18 +145,21 @@ function FormularioAceiteAutomatico({ regra }: { regra: RegraAceiteAutomatico })
         valor_minimo_usd: Number(minimo),
         limite_diario: todos ? null : Number(limite),
       })
-      setRetorno('salvo')
     } catch {
-      setRetorno('erro')
-    } finally {
-      setSalvando(false)
+      setErro(true)
+      throw new Error('falha_salvar_aceite')
     }
   }
 
   return (
-    <form className="space-y-3" onSubmit={(evento) => void salvar(evento)}>
+    <form
+      className="space-y-3"
+      onSubmit={(evento) => {
+        evento.preventDefault()
+      }}
+    >
       <h2 className="fonte-display text-xl">{t('aceiteAuto.titulo')}</h2>
-      <fieldset disabled={salvando} className="space-y-3">
+      <fieldset className="space-y-3">
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={ligada} onChange={(e) => setLigada(e.target.checked)} />
           {t('aceiteAuto.ativar')}
@@ -184,9 +186,10 @@ function FormularioAceiteAutomatico({ regra }: { regra: RegraAceiteAutomatico })
         )}
       </fieldset>
       <p className="text-sm text-[var(--color-slate)]">{t('aceiteAuto.dica')}</p>
-      <button type="submit" className="btn-ouro" disabled={salvando}>{t('comum.salvar')}</button>
-      {retorno === 'salvo' && <p role="status" className="text-sm">{t('aceiteAuto.salvo')}</p>}
-      {retorno === 'erro' && (
+      <BotaoSalvar className="btn-ouro" aoSalvar={salvar} rotuloOk={t('comum.salvo')}>
+        {t('comum.salvar')}
+      </BotaoSalvar>
+      {erro && (
         <p role="alert" className="text-sm text-[var(--color-danger)]">{t('aceiteAuto.erro')}</p>
       )}
     </form>

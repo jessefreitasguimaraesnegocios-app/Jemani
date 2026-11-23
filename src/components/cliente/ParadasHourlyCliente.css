@@ -92,3 +92,46 @@
   font-size: 0.85rem;
   color: var(--color-success);
 }
+
+html[data-tema='escuro'] .paradas-hourly {
+  border-color: rgba(201, 168, 124, 0.28);
+  background:
+    radial-gradient(ellipse 70% 55% at 8% 0%, rgba(255, 255, 255, 0.08), transparent 50%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.06) 0%, transparent 42%),
+    rgba(26, 26, 26, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 0 0 0.5px rgba(201, 168, 124, 0.2),
+    0 16px 40px rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+
+html[data-tema='escuro'] .paradas-hourly-cabeca h2 {
+  color: #fff;
+}
+
+html[data-tema='escuro'] .paradas-hourly-cabeca p,
+html[data-tema='escuro'] .paradas-hourly-dica,
+html[data-tema='escuro'] .paradas-hourly-limite > p {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+html[data-tema='escuro'] .paradas-hourly-item {
+  background: rgba(12, 12, 12, 0.72);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+html[data-tema='escuro'] .paradas-hourly-item span {
+  color: #d4b896;
+}
+
+html[data-tema='escuro'] .paradas-hourly-item--atual {
+  border-color: rgba(201, 168, 124, 0.5);
+  background: rgba(201, 168, 124, 0.14);
+}
+
+html[data-tema='escuro'] .paradas-hourly-item--feito {
+  opacity: 0.45;
+}
