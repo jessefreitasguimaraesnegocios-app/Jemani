@@ -114,17 +114,12 @@ export function ClienteInicioPage() {
   return (
     <div className="cliente-inicio animar-entrada">
       <section className="cliente-inicio-hero" aria-label="Jemani">
-        <div className="cliente-inicio-hero-cena" aria-hidden="true">
-          <div className="cliente-inicio-cartao-3d">
-            <div className="cliente-inicio-cartao-face cliente-inicio-cartao-frente">
-              <img src="/images/jemani-cartao-frente.png" alt="" draggable={false} />
-            </div>
-            <div className="cliente-inicio-cartao-face cliente-inicio-cartao-verso">
-              <img src="/images/jemani-cartao-verso.png" alt="" draggable={false} />
-            </div>
+        <div className="cliente-inicio-cartao-cena" aria-hidden="true">
+          <div className="cliente-inicio-cartao-giro">
+            <img className="cliente-inicio-cartao-face" src="/images/jemani-cartao-novo-frente.png" alt="" />
+            <img className="cliente-inicio-cartao-face cliente-inicio-cartao-verso" src="/images/jemani-cartao-novo-verso.png" alt="" />
           </div>
         </div>
-        <div className="cliente-inicio-hero-fade" aria-hidden="true" />
         <Link to="/app/reservar" className="cliente-inicio-cta">
           {t('landing.ctaReservar')}
           <ArrowRight size={18} />
