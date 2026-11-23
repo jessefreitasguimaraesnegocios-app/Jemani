@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { ArrowDown, ArrowUp, Ellipsis, X } from 'lucide-react'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -18,37 +18,54 @@ export function AutomacaoEmailsSolicitacoes({ empresas }: { empresas: Empresa[] 
   const [progresso, setProgresso] = useState<Progresso[]>([])
   const [empresaId, setEmpresaId] = useState('')
   const [salvando, setSalvando] = useState(false)
+  const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<ChaveTraducao | null>(null)
   const [aviso, setAviso] = useState(false)
+  const abrirAposCarregar = useRef(false)
   const ciclo = salva?.cycle
 
   useEffect(() => {
-    if (!aberto || config) return
     let ativo = true
     async function carregar() {
+      setCarregando(true)
       setErro(null)
       const resposta = await supabase?.from('offer_email_automation')
         .select(COLUNAS_CONFIG).eq('id', true).single<Config>()
       if (!ativo) return
       if (!resposta?.data) {
         setErro('admin.automacao.indisponivel')
+        setCarregando(false)
+        if (abrirAposCarregar.current) {
+          abrirAposCarregar.current = false
+          setAberto(true)
+        }
         return
       }
       setConfig(resposta.data)
       setSalva(resposta.data)
+      setCarregando(false)
+      if (abrirAposCarregar.current) {
+        abrirAposCarregar.current = false
+        setAberto(true)
+      }
     }
     void carregar()
-    return () => { ativo = false }
-  }, [aberto, config])
+    return () => {
+      ativo = false
+    }
+  }, [])
 
   useEffect(() => {
-    if (!aberto || !ciclo) return
+    if (!ciclo) return
     let ativo = true
     async function atualizar() {
       const resposta = await supabase?.rpc('progresso_email_oferta', { p_cycle: ciclo })
       if (ativo && resposta?.data) setProgresso(resposta.data as Progresso[])
     }
     void atualizar()
+    if (!aberto) return () => {
+      ativo = false
+    }
     const intervalo = window.setInterval(() => void atualizar(), 15_000)
     return () => {
       ativo = false
@@ -99,30 +116,59 @@ export function AutomacaoEmailsSolicitacoes({ empresas }: { empresas: Empresa[] 
     setConfig({ ...config, rules })
   }
 
+  function alternarPainel() {
+    if (aberto) {
+      setAviso(false)
+      setAberto(false)
+      return
+    }
+    if (config || erro) {
+      setAberto(true)
+      return
+    }
+    if (carregando) {
+      abrirAposCarregar.current = true
+      return
+    }
+    abrirAposCarregar.current = true
+    setCarregando(true)
+    void (async () => {
+      setErro(null)
+      const resposta = await supabase?.from('offer_email_automation')
+        .select(COLUNAS_CONFIG).eq('id', true).single<Config>()
+      if (!resposta?.data) {
+        setErro('admin.automacao.indisponivel')
+        setCarregando(false)
+        abrirAposCarregar.current = false
+        setAberto(true)
+        return
+      }
+      setConfig(resposta.data)
+      setSalva(resposta.data)
+      setCarregando(false)
+      abrirAposCarregar.current = false
+      setAberto(true)
+    })()
+  }
+
   const disponiveis = empresas.filter((empresa) => empresa.status === 'ativa' && empresa.habilitada_receber
     && !config?.rules.some((regra) => regra.company_id === empresa.id))
   const totais = progresso.reduce((total, item) => ({
     sent: total.sent + item.sent, pending: total.pending + item.pending, failed: total.failed + item.failed,
   }), { sent: 0, pending: 0, failed: 0 })
+  const prontoParaAbrir = Boolean(config) || Boolean(erro)
 
   return (
     <>
       <button type="button" className="btn-secundario admin-automacao-menu"
         aria-label={t('admin.automacao.titulo')} title={t('admin.automacao.titulo')}
         aria-expanded={aberto} aria-controls={aberto ? 'admin-automacao-emails' : undefined}
+        aria-busy={carregando && !prontoParaAbrir}
         disabled={salvando}
-        onClick={() => {
-          if (aberto) {
-            setConfig(null)
-            setSalva(null)
-            setProgresso([])
-            setAviso(false)
-          }
-          setAberto(!aberto)
-        }}>
+        onClick={alternarPainel}>
         <Ellipsis size={22} aria-hidden="true" />
       </button>
-      {aberto && (
+      {aberto && prontoParaAbrir && (
         <section id="admin-automacao-emails" className="cartao admin-automacao-painel" aria-labelledby="admin-automacao-titulo">
           <div>
             <h2 id="admin-automacao-titulo" className="fonte-display text-2xl">{t('admin.automacao.titulo')}</h2>
@@ -130,7 +176,6 @@ export function AutomacaoEmailsSolicitacoes({ empresas }: { empresas: Empresa[] 
           </div>
           {erro && <p role="alert" className="text-sm text-[var(--color-danger)]">{t(erro)}</p>}
           {aviso && <p role="status" className="text-sm text-[var(--color-success)]">{t('admin.automacao.salva')}</p>}
-          {!config && !erro && <p role="status">{t('admin.automacao.carregando')}</p>}
           {config && (
             <form onSubmit={salvar}>
               <fieldset disabled={salvando} className="admin-automacao-campos">
