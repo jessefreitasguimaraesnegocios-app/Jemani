@@ -43,3 +43,12 @@ export async function salvarRegraAceite(regra: RegraAceiteAutomatico) {
   if (error) throw error
   return data
 }
+
+export async function contarAceitesAutomaticosHoje(empresaId: string) {
+  if (!supabase) throw new Error('Supabase indisponível')
+  const { data, error } = await supabase.rpc('contar_aceites_automaticos_hoje', {
+    p_empresa_id: empresaId,
+  })
+  if (error) throw error
+  return Number(data ?? 0)
+}

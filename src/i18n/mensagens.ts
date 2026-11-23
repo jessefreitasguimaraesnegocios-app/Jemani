@@ -282,11 +282,6 @@ const pt = {
   'admin.automacao.salva': 'Configuração salva.',
   'admin.solicitacoes.sub':
     'Corridas pagas aguardando oferta por e-mail às empresas mais próximas do embarque.',
-  'admin.solicitacoes.comoTitulo': 'Como funciona',
-  'admin.solicitacoes.como1':
-    'Corridas pagas entram na fila. O sistema ordena empresas pela distância até o embarque. Em Enviar e-mail, a proposta sai automaticamente com o botão “Revisar corrida”.',
-  'admin.solicitacoes.como2':
-    'A empresa abre o link exclusivo, confere os dados e clica em Reservar. A Jemani é notificada, a corrida sai da fila disponível e vai para Parceiros externos no kanban.',
 
   'convite.subtituloPainel': 'Proposta de corrida',
   'convite.carregando': 'Carregando proposta…',
@@ -552,6 +547,7 @@ const pt = {
   'aceiteAuto.todas': 'Todas as corridas elegíveis',
   'aceiteAuto.comLimite': 'Definir limite diário',
   'aceiteAuto.limite': 'Máximo de aceites automáticos por dia',
+  'aceiteAuto.usoHoje': 'Já aceitos hoje: {usados} de {max}',
   'aceiteAuto.dica': 'A regra vale para novas ofertas pagas com repasse igual ou superior ao mínimo. A contagem reinicia à meia-noite de Los Angeles.',
   'aceiteAuto.salvo': 'Configuração salva.',
   'aceiteAuto.erro': 'Não foi possível sincronizar o aceite automático. Tente novamente.',
@@ -1060,11 +1056,6 @@ const en: Record<ChaveTraducao, string> = {
   'admin.automacao.salva': 'Settings saved.',
   'admin.solicitacoes.sub':
     'Paid trips waiting for an email offer to the companies closest to pickup.',
-  'admin.solicitacoes.comoTitulo': 'How it works',
-  'admin.solicitacoes.como1':
-    'Paid trips enter the queue. The system ranks companies by distance to pickup. Send email delivers the proposal automatically with a “Review trip” button.',
-  'admin.solicitacoes.como2':
-    'The company opens the exclusive link, checks the details and taps Reserve. Jemani is notified, the trip leaves the available queue and moves to External partners on the board.',
 
   'convite.subtituloPainel': 'Trip proposal',
   'convite.carregando': 'Loading proposal…',
@@ -1328,6 +1319,7 @@ const en: Record<ChaveTraducao, string> = {
   'aceiteAuto.todas': 'All eligible trips',
   'aceiteAuto.comLimite': 'Set a daily limit',
   'aceiteAuto.limite': 'Maximum automatic acceptances per day',
+  'aceiteAuto.usoHoje': 'Accepted today: {usados} of {max}',
   'aceiteAuto.dica': 'The rule covers new paid offers that meet the minimum amount. The count resets at midnight in Los Angeles.',
   'aceiteAuto.salvo': 'Settings saved.',
   'aceiteAuto.erro': 'Could not sync automatic acceptance. Try again.',
@@ -1834,11 +1826,6 @@ const es: Record<ChaveTraducao, string> = {
   'admin.automacao.salva': 'Configuración guardada.',
   'admin.solicitacoes.sub':
     'Viajes pagados esperando oferta por correo a las empresas más cercanas al embarque.',
-  'admin.solicitacoes.comoTitulo': 'Cómo funciona',
-  'admin.solicitacoes.como1':
-    'Los viajes pagados entran en la cola. El sistema ordena empresas por distancia al embarque. Enviar correo entrega la propuesta automáticamente con el botón “Revisar viaje”.',
-  'admin.solicitacoes.como2':
-    'La empresa abre el enlace exclusivo, revisa los datos y toca Reservar. Jemani es notificada, el viaje sale de la cola disponible y va a Socios externos en el tablero.',
 
   'convite.subtituloPainel': 'Propuesta de viaje',
   'convite.carregando': 'Cargando propuesta…',
@@ -2103,6 +2090,7 @@ const es: Record<ChaveTraducao, string> = {
   'aceiteAuto.todas': 'Todos los viajes elegibles',
   'aceiteAuto.comLimite': 'Establecer un límite diario',
   'aceiteAuto.limite': 'Máximo de aceptaciones automáticas por día',
+  'aceiteAuto.usoHoje': 'Ya aceptados hoy: {usados} de {max}',
   'aceiteAuto.dica': 'La regla se aplica a nuevas ofertas pagadas que alcanzan el importe mínimo. El contador se reinicia a medianoche en Los Ángeles.',
   'aceiteAuto.salvo': 'Configuración guardada.',
   'aceiteAuto.erro': 'No se pudo sincronizar la aceptación automática. Inténtalo de nuevo.',

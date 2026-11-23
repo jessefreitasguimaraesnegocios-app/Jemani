@@ -5,6 +5,7 @@ import { usarIdioma } from '@/i18n/usarIdioma'
 import { supabase, supabaseConfigurado } from '@/lib/supabase'
 import {
   buscarRegraAceite,
+  contarAceitesAutomaticosHoje,
   liberarAceiteAutomatico,
   salvarRegraAceite,
   type RegraAceiteAutomatico,
@@ -135,6 +136,25 @@ function FormularioAceiteAutomatico({ regra }: { regra: RegraAceiteAutomatico })
   const [todos, setTodos] = useState(regra.limite_diario === null)
   const [limite, setLimite] = useState(String(regra.limite_diario ?? 10))
   const [erro, setErro] = useState(false)
+  const [aceitosHoje, setAceitosHoje] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (todos) {
+      setAceitosHoje(null)
+      return
+    }
+    let ativo = true
+    void contarAceitesAutomaticosHoje(regra.empresa_id)
+      .then((n) => {
+        if (ativo) setAceitosHoje(n)
+      })
+      .catch(() => {
+        if (ativo) setAceitosHoje(null)
+      })
+    return () => {
+      ativo = false
+    }
+  }, [regra.empresa_id, todos])
 
   async function salvar() {
     setErro(false)
@@ -145,11 +165,18 @@ function FormularioAceiteAutomatico({ regra }: { regra: RegraAceiteAutomatico })
         valor_minimo_usd: Number(minimo),
         limite_diario: todos ? null : Number(limite),
       })
+      if (!todos) {
+        const n = await contarAceitesAutomaticosHoje(regra.empresa_id)
+        setAceitosHoje(n)
+      }
     } catch {
       setErro(true)
       throw new Error('falha_salvar_aceite')
     }
   }
+
+  const limiteNum = Number(limite)
+  const mostrarContagem = !todos && aceitosHoje !== null && Number.isFinite(limiteNum) && limiteNum > 0
 
   return (
     <form
@@ -182,6 +209,11 @@ function FormularioAceiteAutomatico({ regra }: { regra: RegraAceiteAutomatico })
             {t('aceiteAuto.limite')}
             <input className="campo mt-1" type="number" required min={1} max={2147483647}
               step={1} value={limite} onChange={(e) => setLimite(e.target.value)} />
+            {mostrarContagem && (
+              <p className="mt-1.5 text-sm text-[var(--color-slate)]" role="status">
+                {t('aceiteAuto.usoHoje', { usados: aceitosHoje!, max: limiteNum })}
+              </p>
+            )}
           </label>
         )}
       </fieldset>

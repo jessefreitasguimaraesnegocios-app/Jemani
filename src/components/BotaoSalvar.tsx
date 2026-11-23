@@ -94,18 +94,18 @@ export function BotaoSalvar({
       className={classes}
       disabled={disabled || enviando}
       onClick={(e) => void aoClicar(e)}
+      aria-live="polite"
       {...rest}
     >
-      {ok ? (
-        <>
-          <span className="btn-salvar-check" aria-hidden>
-            ✓
-          </span>
-          {rotuloOk}
-        </>
-      ) : (
-        children
-      )}
+      <span className={`btn-salvar-rotulo${ok ? ' btn-salvar-rotulo--oculto' : ''}`}>
+        {children}
+      </span>
+      <span className={`btn-salvar-ok${ok ? ' btn-salvar-ok--visivel' : ''}`} aria-hidden={!ok}>
+        <span className="btn-salvar-check" aria-hidden>
+          ✓
+        </span>
+        {rotuloOk}
+      </span>
     </button>
   )
 }

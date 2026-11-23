@@ -93,12 +93,6 @@ export function AdminSolicitacoesPage() {
         <AutomacaoEmailsSolicitacoes empresas={empresas} />
       </div>
 
-      <div className="admin-solicitacoes-intro">
-        <p className="font-medium text-[var(--color-ink)]">{t('admin.solicitacoes.comoTitulo')}</p>
-        <p>{t('admin.solicitacoes.como1')}</p>
-        <p>{t('admin.solicitacoes.como2')}</p>
-      </div>
-
       {(msg || erro) && (
         <div className="cartao">
           {msg && <p className="text-sm text-[var(--color-success)]">{msg}</p>}
