@@ -3,7 +3,7 @@
   inset: 0;
   z-index: 50;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   padding: 1rem;
   background: rgba(0, 0, 0, 0.55);
@@ -14,9 +14,10 @@
 .finalizar-painel {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow: auto;
   width: 100%;
   max-width: 32rem;
+  max-height: min(92dvh, 40rem);
   display: grid;
   gap: 1rem;
   padding: 1.25rem;
@@ -90,15 +91,19 @@
 
 .finalizar-acoes {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-wrap: nowrap;
+  gap: 0.65rem;
 }
 
 .finalizar-cancelar,
 .finalizar-seguir {
+  flex: 1 1 0;
+  min-height: 3.15rem;
   border-radius: 999px;
-  padding: 0.75rem 1.1rem;
+  padding: 0.95rem 1.15rem;
+  font-size: 1rem;
   font-weight: 700;
+  line-height: 1.2;
   cursor: pointer;
 }
 
@@ -118,10 +123,4 @@
 .finalizar-cancelar:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-@media (min-width: 640px) {
-  .finalizar-fundo {
-    align-items: center;
-  }
 }
