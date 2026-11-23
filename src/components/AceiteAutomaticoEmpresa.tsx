@@ -215,13 +215,15 @@ function FormularioAceiteAutomatico({
     setMinimo(String(regra.valor_minimo_usd))
     setTodos(regra.limite_diario === null)
     setLimite(String(regra.limite_diario ?? 10))
+  }, [regra.empresa_id, regra.ligada, regra.limite_diario, regra.liberada, regra.valor_minimo_usd])
+
+  useEffect(() => {
     setAceitosHoje(aceitosIniciais)
-  }, [regra, aceitosIniciais])
+  }, [aceitosIniciais])
 
   useEffect(() => {
     if (todos) {
       setAceitosHoje(null)
-      aoAtualizarAceitos(null)
       return
     }
     if (aceitosHoje !== null) return
@@ -230,17 +232,15 @@ function FormularioAceiteAutomatico({
       .then((n) => {
         if (!ativo) return
         setAceitosHoje(n)
-        aoAtualizarAceitos(n)
       })
       .catch(() => {
         if (!ativo) return
         setAceitosHoje(null)
-        aoAtualizarAceitos(null)
       })
     return () => {
       ativo = false
     }
-  }, [aceitosHoje, aoAtualizarAceitos, regra.empresa_id, todos])
+  }, [aceitosHoje, regra.empresa_id, todos])
 
   async function salvar() {
     setErro(false)
