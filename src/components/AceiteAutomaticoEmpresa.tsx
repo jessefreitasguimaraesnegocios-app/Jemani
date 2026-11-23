@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Ellipsis } from 'lucide-react'
 import { BotaoSalvar } from '@/components/BotaoSalvar'
 import { usarIdioma } from '@/i18n/usarIdioma'
@@ -102,9 +102,68 @@ export function OpcoesAceiteAutomatico({ empresaId }: { empresaId: string }) {
   const { t } = usarIdioma()
   const { regra } = useRegraAceite(empresaId)
   const [aberto, setAberto] = useState(false)
+  const [aceitosHoje, setAceitosHoje] = useState<number | null>(null)
+  const [pronto, setPronto] = useState(false)
+  const abrirAposPronto = useRef(false)
   const id = useId()
 
+  useEffect(() => {
+    if (!regra?.liberada) {
+      setPronto(false)
+      setAceitosHoje(null)
+      return
+    }
+
+    const liberada = regra.liberada
+    const limiteDiario = regra.limite_diario
+    let ativo = true
+    setPronto(false)
+
+    async function preparar() {
+      if (!liberada) return
+      if (limiteDiario === null) {
+        if (!ativo) return
+        setAceitosHoje(null)
+        setPronto(true)
+        return
+      }
+      try {
+        const n = await contarAceitesAutomaticosHoje(empresaId)
+        if (!ativo) return
+        setAceitosHoje(n)
+      } catch {
+        if (!ativo) return
+        setAceitosHoje(null)
+      } finally {
+        if (ativo) setPronto(true)
+      }
+    }
+
+    void preparar()
+    return () => {
+      ativo = false
+    }
+  }, [empresaId, regra?.liberada, regra?.limite_diario])
+
+  useEffect(() => {
+    if (!abrirAposPronto.current || !pronto || !regra?.liberada) return
+    abrirAposPronto.current = false
+    setAberto(true)
+  }, [pronto, regra?.liberada])
+
   if (!regra?.liberada) return null
+
+  function alternarPainel() {
+    if (aberto) {
+      setAberto(false)
+      return
+    }
+    if (pronto) {
+      setAberto(true)
+      return
+    }
+    abrirAposPronto.current = true
+  }
 
   return (
     <div className="relative shrink-0 self-start">
@@ -114,14 +173,19 @@ export function OpcoesAceiteAutomatico({ empresaId }: { empresaId: string }) {
         aria-label={t('aceiteAuto.titulo')}
         aria-expanded={aberto}
         aria-controls={aberto ? id : undefined}
-        onClick={() => setAberto((v) => !v)}
+        aria-busy={!pronto}
+        onClick={alternarPainel}
       >
         <Ellipsis size={22} aria-hidden="true" />
       </button>
-      {aberto && (
+      {aberto && pronto && (
         <div className="absolute right-0 top-full z-30 mt-2 w-[min(22rem,calc(100vw-3rem))]">
           <section id={id} aria-label={t('aceiteAuto.titulo')} className="cartao">
-            <FormularioAceiteAutomatico regra={regra} />
+            <FormularioAceiteAutomatico
+              regra={regra}
+              aceitosIniciais={aceitosHoje}
+              aoAtualizarAceitos={setAceitosHoje}
+            />
           </section>
         </div>
       )}
@@ -129,32 +193,54 @@ export function OpcoesAceiteAutomatico({ empresaId }: { empresaId: string }) {
   )
 }
 
-function FormularioAceiteAutomatico({ regra }: { regra: RegraAceiteAutomatico }) {
+function FormularioAceiteAutomatico({
+  regra,
+  aceitosIniciais,
+  aoAtualizarAceitos,
+}: {
+  regra: RegraAceiteAutomatico
+  aceitosIniciais: number | null
+  aoAtualizarAceitos: (n: number | null) => void
+}) {
   const { t } = usarIdioma()
   const [ligada, setLigada] = useState(regra.ligada)
   const [minimo, setMinimo] = useState(String(regra.valor_minimo_usd))
   const [todos, setTodos] = useState(regra.limite_diario === null)
   const [limite, setLimite] = useState(String(regra.limite_diario ?? 10))
   const [erro, setErro] = useState(false)
-  const [aceitosHoje, setAceitosHoje] = useState<number | null>(null)
+  const [aceitosHoje, setAceitosHoje] = useState<number | null>(aceitosIniciais)
+
+  useEffect(() => {
+    setLigada(regra.ligada)
+    setMinimo(String(regra.valor_minimo_usd))
+    setTodos(regra.limite_diario === null)
+    setLimite(String(regra.limite_diario ?? 10))
+    setAceitosHoje(aceitosIniciais)
+  }, [regra, aceitosIniciais])
 
   useEffect(() => {
     if (todos) {
       setAceitosHoje(null)
+      aoAtualizarAceitos(null)
       return
     }
+    if (aceitosHoje !== null) return
     let ativo = true
     void contarAceitesAutomaticosHoje(regra.empresa_id)
       .then((n) => {
-        if (ativo) setAceitosHoje(n)
+        if (!ativo) return
+        setAceitosHoje(n)
+        aoAtualizarAceitos(n)
       })
       .catch(() => {
-        if (ativo) setAceitosHoje(null)
+        if (!ativo) return
+        setAceitosHoje(null)
+        aoAtualizarAceitos(null)
       })
     return () => {
       ativo = false
     }
-  }, [regra.empresa_id, todos])
+  }, [aceitosHoje, aoAtualizarAceitos, regra.empresa_id, todos])
 
   async function salvar() {
     setErro(false)
@@ -168,6 +254,10 @@ function FormularioAceiteAutomatico({ regra }: { regra: RegraAceiteAutomatico })
       if (!todos) {
         const n = await contarAceitesAutomaticosHoje(regra.empresa_id)
         setAceitosHoje(n)
+        aoAtualizarAceitos(n)
+      } else {
+        setAceitosHoje(null)
+        aoAtualizarAceitos(null)
       }
     } catch {
       setErro(true)
@@ -209,11 +299,14 @@ function FormularioAceiteAutomatico({ regra }: { regra: RegraAceiteAutomatico })
             {t('aceiteAuto.limite')}
             <input className="campo mt-1" type="number" required min={1} max={2147483647}
               step={1} value={limite} onChange={(e) => setLimite(e.target.value)} />
-            {mostrarContagem && (
-              <p className="mt-1.5 text-sm text-[var(--color-slate)]" role="status">
-                {t('aceiteAuto.usoHoje', { usados: aceitosHoje!, max: limiteNum })}
-              </p>
-            )}
+            <p
+              className="mt-1.5 min-h-[1.25rem] text-sm text-[var(--color-slate)]"
+              role="status"
+            >
+              {mostrarContagem
+                ? t('aceiteAuto.usoHoje', { usados: aceitosHoje!, max: limiteNum })
+                : '\u00a0'}
+            </p>
           </label>
         )}
       </fieldset>
