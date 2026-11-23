@@ -66,10 +66,6 @@ const EmpresaSolicitacoesPage = carregarRota(
   () => import('@/pages/empresa/EmpresaSolicitacoesPage'),
   'EmpresaSolicitacoesPage',
 )
-const EmpresaAoVivoPage = carregarRota(
-  () => import('@/pages/empresa/EmpresaAoVivoPage'),
-  'EmpresaAoVivoPage',
-)
 const EmpresaViagensPage = carregarRota(
   () => import('@/pages/empresa/EmpresaViagensPage'),
   'EmpresaViagensPage',
@@ -209,7 +205,7 @@ export default function App() {
                   <Route path="/empresa" element={<LayoutEmpresa />}>
                     <Route index element={<EmpresaDashboardPage />} />
                     <Route path="solicitacoes" element={<EmpresaSolicitacoesPage />} />
-                    <Route path="ao-vivo" element={<EmpresaAoVivoPage />} />
+                    <Route path="ao-vivo" element={null} />
                     <Route path="viagens" element={<EmpresaViagensPage />} />
                     <Route path="viagens/:id" element={<EmpresaViagemDetalhePage />} />
                     <Route path="motoristas" element={<EmpresaMotoristasPage />} />

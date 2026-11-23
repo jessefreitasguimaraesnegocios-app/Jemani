@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Building2,
@@ -20,6 +20,12 @@ import type { ChaveTraducao } from '@/i18n/mensagens'
 import { useDemoStore } from '@/store/demoStore'
 import { cn } from '@/utils/format'
 import './LayoutEmpresa.css'
+
+const EmpresaAoVivoPage = lazy(() =>
+  import('@/pages/empresa/EmpresaAoVivoPage').then((mod) => ({
+    default: mod.EmpresaAoVivoPage,
+  })),
+)
 
 const links: Array<{ to: string; chave: ChaveTraducao; icon: typeof Car; end?: boolean }> = [
   { to: '/empresa', chave: 'nav.empresa.dashboard', icon: LayoutDashboard, end: true },
@@ -64,10 +70,15 @@ export function LayoutEmpresa() {
   const atribuicoes = useDemoStore((s) => s.atribuicoes)
   const viagens = useDemoStore((s) => s.viagens)
   const aoVivo = caminho.pathname.startsWith('/empresa/ao-vivo')
+  const [aoVivoMontado, setAoVivoMontado] = useState(aoVivo)
   const qtdSolicitacoes = useMemo(
     () => (empresa ? contarSolicitacoesEmpresa(empresa.id, atribuicoes, viagens) : 0),
     [empresa, atribuicoes, viagens],
   )
+
+  useEffect(() => {
+    if (aoVivo) setAoVivoMontado(true)
+  }, [aoVivo])
 
   async function handleSair() {
     await sair()
@@ -133,13 +144,26 @@ export function LayoutEmpresa() {
       </aside>
       <main
         className={cn(
-          'mx-auto w-full px-4 lg:px-8',
+          'layout-empresa-conteudo mx-auto w-full px-4 lg:px-8',
           aoVivo
             ? 'flex max-w-[92rem] flex-col py-3 lg:h-dvh lg:overflow-hidden'
             : 'max-w-6xl py-6',
         )}
       >
-        <Outlet />
+        {aoVivoMontado && (
+          <div
+            className={cn(
+              'layout-empresa-ao-vivo-keep',
+              aoVivo && 'layout-empresa-ao-vivo-keep--ativo',
+            )}
+            aria-hidden={!aoVivo}
+          >
+            <Suspense fallback={null}>
+              <EmpresaAoVivoPage ativo={aoVivo} />
+            </Suspense>
+          </div>
+        )}
+        {!aoVivo && <Outlet />}
       </main>
     </div>
   )

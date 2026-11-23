@@ -20,7 +20,11 @@ import './EmpresaAoVivoPage.css'
 
 type AbaPainel = 'motoristas' | 'chat' | null
 
-export function EmpresaAoVivoPage() {
+type Props = {
+  ativo?: boolean
+}
+
+export function EmpresaAoVivoPage({ ativo = true }: Props) {
   const { t, locale } = usarIdioma()
   const { usuario } = useAuth()
   const empresa = useDemoStore((s) => s.obterEmpresaDoUsuario(usuario?.id ?? ''))
@@ -154,6 +158,7 @@ export function EmpresaAoVivoPage() {
           pontosMotorista={pontosMotorista}
           foco={foco}
           aoFocarMotorista={escolherMotorista}
+          ativo={ativo}
         />
         {!emRota && !selecionada && pontosMotorista.length === 0 && (
           <p className="ao-vivo-vazio">{t('empresa.aoVivo.vazioMapa')}</p>

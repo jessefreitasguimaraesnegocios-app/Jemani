@@ -26,6 +26,7 @@ type Props = {
   pontosMotorista: PontoMotorista[]
   foco: FocoMapa | null
   aoFocarMotorista: (id: string) => void
+  ativo?: boolean
 }
 
 const CARRO = `<svg viewBox="0 0 48 80" aria-hidden="true">
@@ -79,6 +80,7 @@ export function MapaFrotaEmpresa({
   pontosMotorista,
   foco,
   aoFocarMotorista,
+  ativo = true,
 }: Props) {
   const caixaRef = useRef<HTMLDivElement>(null)
   const mapaRef = useRef<mapboxgl.Map | null>(null)
@@ -89,6 +91,8 @@ export function MapaFrotaEmpresa({
   const focoIdRef = useRef<string | null>(foco?.id ?? null)
   const aoSelecionarRef = useRef(aoSelecionar)
   const aoFocarRef = useRef(aoFocarMotorista)
+  const ativoRef = useRef(ativo)
+  const reiniciarAnimacaoRef = useRef<(() => void) | null>(null)
   const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as string | undefined
 
   viagensRef.current = viagens
@@ -97,6 +101,7 @@ export function MapaFrotaEmpresa({
   focoIdRef.current = foco?.id ?? null
   aoSelecionarRef.current = aoSelecionar
   aoFocarRef.current = aoFocarMotorista
+  ativoRef.current = ativo
 
   useEffect(() => {
     if (!token || !caixaRef.current || mapaRef.current) return
@@ -109,7 +114,9 @@ export function MapaFrotaEmpresa({
     })
     mapa.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
     mapaRef.current = mapa
-    const observador = new ResizeObserver(() => mapa.resize())
+    const observador = new ResizeObserver(() => {
+      if (ativoRef.current) mapa.resize()
+    })
     if (caixaRef.current) observador.observe(caixaRef.current)
 
     mapa.on('load', () => {
@@ -131,7 +138,14 @@ export function MapaFrotaEmpresa({
 
     let quadro = 0
     let enquadrados = ''
+    let animando = false
     const pulsar = () => {
+      if (!ativoRef.current) {
+        animando = false
+        quadro = 0
+        return
+      }
+      animando = true
       try {
       const ativos = new Set<string>()
       for (const viagem of viagensRef.current) {
@@ -205,9 +219,15 @@ export function MapaFrotaEmpresa({
       }
       quadro = window.requestAnimationFrame(pulsar)
     }
-    pulsar()
+    const iniciarAnimacao = () => {
+      if (animando || !ativoRef.current) return
+      pulsar()
+    }
+    reiniciarAnimacaoRef.current = iniciarAnimacao
+    iniciarAnimacao()
 
     return () => {
+      reiniciarAnimacaoRef.current = null
       window.cancelAnimationFrame(quadro)
       observador.disconnect()
       for (const marca of marcasRef.current.values()) marca.remove()
@@ -216,6 +236,14 @@ export function MapaFrotaEmpresa({
       mapaRef.current = null
     }
   }, [token])
+
+  useEffect(() => {
+    const mapa = mapaRef.current
+    if (!ativo || !mapa) return
+    reiniciarAnimacaoRef.current?.()
+    const id = window.setTimeout(() => mapa.resize(), 40)
+    return () => window.clearTimeout(id)
+  }, [ativo])
 
   const selecionada = viagens.find((item) => item.id === selecionadaId)
   useEffect(() => {
