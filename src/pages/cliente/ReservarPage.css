@@ -327,6 +327,54 @@ html[data-tema='escuro'] .reserva-progresso-joia {
   color: #111;
 }
 
+.reserva-quantidade {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.reserva-quantidade-btn {
+  border: 1px solid var(--color-line);
+  border-radius: 0.85rem;
+  padding: 0.85rem 0.5rem;
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.12s ease;
+}
+
+.reserva-quantidade-btn:hover {
+  border-color: color-mix(in srgb, var(--color-gold) 55%, var(--color-line));
+}
+
+.reserva-quantidade-btn:active {
+  transform: scale(0.98);
+}
+
+.reserva-quantidade-btn--ativo {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+  color: #111;
+}
+
+html[data-tema='escuro'] .reserva-quantidade-btn {
+  border-color: #2f2f2f;
+  color: #f2f2f2;
+}
+
+html[data-tema='escuro'] .reserva-quantidade-btn--ativo {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #111;
+}
+
 .reserva-hourly-aviso {
   margin: 0.65rem 0 0;
   padding: 0.65rem 0.75rem;

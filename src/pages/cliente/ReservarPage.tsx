@@ -37,6 +37,7 @@ const ETAPAS: ChaveTraducao[] = [
   'reserva.etapaCategoria',
 ]
 const MAX_MALAS = 12
+const OPCOES_QUANTIDADE = [1, 2, 3] as const
 
 export function ReservarPage() {
   const { t, locale } = usarIdioma()
@@ -232,6 +233,8 @@ export function ReservarPage() {
       setDestinoEndereco(null)
       setRota(null)
       setMalas(0)
+    } else if (malas < 1) {
+      setMalas(2)
     }
   }
 
@@ -744,35 +747,52 @@ export function ReservarPage() {
             </div>
 
             <div>
-              <label className="rotulo" htmlFor="passageiros">
+              <p className="rotulo" id="rotulo-passageiros">
                 Quantidade de passageiros
-              </label>
-              <input
-                id="passageiros"
-                type="number"
-                min={1}
-                max={20}
-                className="campo"
-                value={passageiros}
-                onChange={(e) => setPassageiros(Number(e.target.value))}
-                required
-              />
+              </p>
+              <div
+                className="reserva-quantidade"
+                role="group"
+                aria-labelledby="rotulo-passageiros"
+              >
+                {OPCOES_QUANTIDADE.map((opcao) => {
+                  const ativo = opcao === 3 ? passageiros >= 3 : passageiros === opcao
+                  return (
+                    <button
+                      key={`pax-${opcao}`}
+                      type="button"
+                      className={`reserva-quantidade-btn${ativo ? ' reserva-quantidade-btn--ativo' : ''}`}
+                      aria-pressed={ativo}
+                      onClick={() => setPassageiros(opcao)}
+                    >
+                      {opcao === 3 ? '3+' : String(opcao)}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             {!ehHourly && (
               <div>
-                <label className="rotulo" htmlFor="malas">
+                <p className="rotulo" id="rotulo-malas">
                   Quantidade de malas
-                </label>
-                <input
-                  id="malas"
-                  type="number"
-                  min={0}
-                  max={MAX_MALAS}
-                  className="campo"
-                  value={malas}
-                  onChange={(e) => setMalas(Number(e.target.value))}
-                />
+                </p>
+                <div className="reserva-quantidade" role="group" aria-labelledby="rotulo-malas">
+                  {OPCOES_QUANTIDADE.map((opcao) => {
+                    const ativo = opcao === 3 ? malas >= 3 : malas === opcao
+                    return (
+                      <button
+                        key={`malas-${opcao}`}
+                        type="button"
+                        className={`reserva-quantidade-btn${ativo ? ' reserva-quantidade-btn--ativo' : ''}`}
+                        aria-pressed={ativo}
+                        onClick={() => setMalas(opcao)}
+                      >
+                        {opcao === 3 ? '3+' : String(opcao)}
+                      </button>
+                    )
+                  })}
+                </div>
                 <p className="mt-1 text-xs text-[var(--color-slate)]">
                   Inclua bagagem de mão e despachada (máx. {MAX_MALAS}).
                 </p>
