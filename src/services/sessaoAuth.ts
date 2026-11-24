@@ -62,7 +62,7 @@ export async function assegurarSessaoParaEmail(
 
   // Sessão de outro usuário ou inválida sem senha para reentrar.
   if (valida && valida.user.email?.toLowerCase() !== emailLimpo) {
-    await db.auth.signOut()
+    await db.auth.signOut({ scope: 'local' })
   }
   return false
 }

@@ -4,10 +4,11 @@ Marketplace de transporte executivo nos **Estados Unidos** e no **mundo** — en
 
 A plataforma capta clientes, distribui solicitações para empresas parceiras e registra a comissão.
 
-## Estado atual — 19/11/2026
+## Estado atual — 23/11/2026
 
-- **APK:** gerar com `npm run android:apk` → `public/downloads/jemani-android.apk` (versão no `versao-android.json`).
+- **APK:** gerar com `npm run android:apk` → `public/downloads/jemani-android.apk` (versão no `versao-android.json`). Atual: **1.0.130**.
 - **Produção web:** projeto Vercel **`jemani`** → [jemani.vercel.app](https://jemani.vercel.app) (único projeto ligado ao repo).
+- **Sessão por aba (web):** cada aba do navegador mantém JWT e `sessaoId` próprios (`sessionStorage` + `storageKey` único). Login/logout numa aba não altera outra; F5 mantém a conta da aba. No APK nativo segue uma sessão (Preferences). Detalhes: [`docs/SEGURANCA.md`](docs/SEGURANCA.md).
 - **Segurança reserva:** preço no servidor (`criar_viagem` + trigger). “Simular pagamento” ainda ligado na web/APK de teste (desligar só quando for produção real).
 - **Desempenho:** rotas e layouts sob demanda (`React.lazy`); Mapbox e Supabase em chunks separados; auth, sync Supabase, GPS do motorista e notificações no shell.
 - **Descoberta pública (sem HTML da SPA):** `/robots.txt`, `/llms.txt`, `/ai-catalog.json`, `/.well-known/ai-catalog.json`.
@@ -64,6 +65,14 @@ Outras empresas: `empresa@pacificexec.app`, `empresa@westcoastmobility.app`
 5. Aceite a solicitação e atribua motorista/veículo
 6. Acompanhe status como cliente / motorista (no hourly, informe desembarque na reserva; depois o cliente adiciona paradas e o motorista marca “Cheguei”)
 7. Finalize e confira comissão no **admin**
+
+### Várias contas no mesmo navegador
+
+Abra **abas novas** (não só “duplicar”) e faça login com contas diferentes (ex.: cliente, empresa, admin). Cada aba deve:
+
+1. Continuar na mesma conta após **F5**
+2. Mostrar só os dados daquela conta
+3. Ao **Sair**, desconectar apenas aquela aba
 
 ## 5. Supabase / Deploy
 

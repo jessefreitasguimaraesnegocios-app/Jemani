@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { storageZustandPorAba } from '@/lib/storageZustandPorAba'
 import { fundirCatalogoComFrota } from '@/data/catalogoFotosFrota'
 import { completarCatalogo, criarDadosIniciais, SLUG_SHIELD } from '@/data/seed'
 import {
@@ -4158,6 +4159,7 @@ export const useDemoStore = create<EstadoDemo>()(
     {
       name: 'jemani-demo-v5',
       version: 16,
+      storage: createJSONStorage(() => storageZustandPorAba()),
       partialize: (estado): ReturnType<typeof estadoInicial> => {
         if (usarNuvemComoFonte()) {
           const base = estadoInicial()

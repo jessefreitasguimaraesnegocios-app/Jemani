@@ -2,6 +2,15 @@
 
 Registro das mudanças do Jemani.
 
+## [2026-11-23]
+
+### Corrigido
+
+- **Sessões simultâneas por aba (web):** JWT do Supabase e `sessaoId` do store deixam de compartilhar `localStorage` entre abas. Cada aba usa `sessionStorage` + `storageKey` único (`jemani-auth-<idAba>`); logout com `scope: 'local'`. Duplicar aba gera id novo e migra a sessão. App nativo (APK) permanece com Preferences (uma WebView). APK **1.0.130**.
+- Aceite automático da empresa: select “All eligible trips” não volta mais para o limite diário. APK **1.0.128**.
+- Modal de finalizar corrida (motorista): centralizado e botões Continuar / Confirmar maiores. APK **1.0.129**.
+- Reserva do cliente: passageiros/malas em botões; malas `0/1/2+`; ícones; scroll no topo a cada etapa; joia do progresso à direita. APK **1.0.127**.
+
 ## [2026-11-19]
 
 ### Adicionado

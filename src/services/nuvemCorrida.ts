@@ -234,7 +234,7 @@ export async function entrarContaNuvem(email: string, senha: string) {
 
   const conta = await montarContaDoUsuario(data.user.id)
   if (!conta) {
-    await db.auth.signOut()
+    await db.auth.signOut({ scope: 'local' })
     return null
   }
   return conta
@@ -254,7 +254,8 @@ export async function carregarContaSessaoAtual() {
 export async function sairNuvem() {
   const db = cliente()
   if (!db) return
-  await db.auth.signOut()
+  // Só esta aba: não revoga sessões de outras abas/dispositivos do mesmo usuário.
+  await db.auth.signOut({ scope: 'local' })
 }
 
 function paraLinha(viagem: Viagem): LinhaViagem {

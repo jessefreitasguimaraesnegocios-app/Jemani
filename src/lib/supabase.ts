@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { chaveStorageAuthSupabase, obterIdAbaSessao } from '@/lib/idAbaSessao'
 import { modoDemoAtivo, nuvemAtiva } from '@/lib/nuvemAtiva'
 import { storageAuthNativo } from '@/lib/storageAuthNativo'
 
@@ -11,6 +12,9 @@ export const supabaseConfigurado = nuvemAtiva() && !modoDemoAtivo()
 
 const nativo = Capacitor.isNativePlatform()
 
+// Garante id da aba antes do client (storageKey único → sem sync entre abas).
+if (!nativo) obterIdAbaSessao()
+
 export const supabase: SupabaseClient | null =
   url && anon
     ? createClient(url, anon, {
@@ -19,6 +23,8 @@ export const supabase: SupabaseClient | null =
           autoRefreshToken: true,
           // No app nativo a URL não traz token OAuth; evita limpar sessão ao abrir.
           detectSessionInUrl: !nativo,
+          // Chave por aba: isola JWT e o BroadcastChannel interno do GoTrue.
+          storageKey: nativo ? 'jemani-auth-nativo' : chaveStorageAuthSupabase(),
           storage: storageAuthNativo,
         },
       })

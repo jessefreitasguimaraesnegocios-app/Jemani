@@ -15,6 +15,20 @@ Documento gerado na auditoria de segurança. **Não contém secrets.**
 - Autocomplete de endereço prefere o proxy autenticado.
 - Simulação DEV de pagamento permanece desligada.
 
+### Sessão por aba (navegador)
+
+No **web**, o JWT não fica mais no `localStorage` compartilhado entre abas (isso fazia login numa aba derrubar outra).
+
+| Peça | Comportamento |
+|------|----------------|
+| Id da aba | `sessionStorage` + heartbeat; F5 mantém; duplicar aba gera id novo |
+| Auth Supabase | `storageKey` `jemani-auth-<idAba>` + `sessionStorage` (isola também o BroadcastChannel do GoTrue) |
+| Store (`sessaoId`/perfil) | Fatia em `sessionStorage` por aba; catálogo/resto no `localStorage` |
+| Logout | `signOut({ scope: 'local' })` — só a aba atual |
+| APK nativo | Preferences, uma sessão (WebView única) |
+
+Cada aba envia o Bearer da própria sessão; RLS no Postgres continua filtrando por `auth.uid()`. Não depende de IP/Wi‑Fi.
+
 ## B. Proteções no banco (migrations)
 
 Arquivos:
