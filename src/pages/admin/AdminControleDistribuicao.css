@@ -1,0 +1,262 @@
+.controle-dist {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.controle-dist-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.controle-dist-intro p {
+  margin: 0;
+}
+
+.controle-dist-fuso {
+  font-size: 0.82rem;
+  color: var(--color-slate);
+  line-height: 1.45;
+}
+
+.controle-dist-resumo {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.controle-dist-resumo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.controle-dist-resumo-item strong {
+  font-size: 1.65rem;
+  line-height: 1.1;
+}
+
+.controle-dist-resumo-item span {
+  font-size: 0.78rem;
+  color: var(--color-slate);
+}
+
+.controle-dist-aviso {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-slate);
+}
+
+.controle-dist-tabela-wrap {
+  overflow-x: auto;
+}
+
+.controle-dist-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 46rem;
+}
+
+.controle-dist-tabela th {
+  padding: 0.35rem 0.7rem 0.75rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-slate);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.controle-dist-tabela td {
+  padding: 0.85rem 0.7rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-line);
+  font-size: 0.92rem;
+}
+
+.controle-dist-tabela tr:last-child td {
+  border-bottom: 0;
+}
+
+.controle-dist-nome {
+  font-weight: 600;
+}
+
+.controle-dist-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.28rem;
+}
+
+.controle-dist-dica {
+  font-size: 0.75rem;
+  color: var(--color-slate);
+}
+
+.controle-dist-rotulo {
+  display: none;
+}
+
+.controle-dist-acoes {
+  width: 3.2rem;
+  text-align: right;
+}
+
+.controle-dist-so-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.controle-dist-menu {
+  position: fixed;
+  z-index: 70;
+  min-width: 13.5rem;
+  padding: 0.35rem;
+  border-radius: 0.85rem;
+  background: var(--color-surface, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+}
+
+.controle-dist-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  border-radius: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+}
+
+.controle-dist-menu button:hover,
+.controle-dist-menu button:focus-visible {
+  background: rgba(184, 149, 108, 0.16);
+}
+
+.controle-dist-dialog {
+  width: min(100%, 34rem);
+}
+
+.controle-dist-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.controle-dist-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.controle-dist-leitura {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.controle-dist-leitura div {
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.8rem;
+  border: 1px solid var(--color-line);
+}
+
+.controle-dist-leitura span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-slate);
+}
+
+.controle-dist-leitura strong {
+  font-size: 1.15rem;
+}
+
+.controle-dist-confirmacao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+html[data-tema='escuro'] .controle-dist-menu {
+  background: #1a1a1a;
+  color: #f6f1e8;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 860px) {
+  .controle-dist-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .controle-dist-tabela-wrap {
+    overflow: visible;
+  }
+
+  .controle-dist-tabela {
+    min-width: 0;
+  }
+
+  .controle-dist-tabela thead {
+    display: none;
+  }
+
+  .controle-dist-tabela,
+  .controle-dist-tabela tbody,
+  .controle-dist-tabela tr,
+  .controle-dist-tabela td {
+    display: block;
+    width: 100%;
+  }
+
+  .controle-dist-tabela tr {
+    padding: 0.35rem 0 0.85rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .controle-dist-tabela tr:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .controle-dist-tabela td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    border-bottom: 0;
+    text-align: right;
+  }
+
+  .controle-dist-rotulo {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--color-slate);
+    text-align: left;
+  }
+
+  .controle-dist-acoes {
+    width: auto;
+    justify-content: flex-end;
+  }
+
+  .controle-dist-leitura {
+    grid-template-columns: 1fr;
+  }
+}

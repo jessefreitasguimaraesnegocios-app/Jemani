@@ -1,5 +1,6 @@
 -- Rodar no SQL Editor do projeto Jemani (qdiocaeoevxhdsrtcahn)
 -- Contagem diária de aceites automáticos (fuso Los Angeles).
+-- Exige a coluna conta_limite da migração controle_distribuicao_automatica.
 
 create or replace function public.contar_aceites_automaticos_hoje(p_empresa_id uuid)
 returns integer
@@ -32,7 +33,9 @@ begin
     into total
   from public.trip_auto_acceptances x
   where x.empresa_id = p_empresa_id
-    and x.dia_operacional = hoje;
+    and x.dia_operacional = hoje
+    and x.conta_limite
+    and x.viagem_id is not null;
 
   return coalesce(total, 0);
 end;

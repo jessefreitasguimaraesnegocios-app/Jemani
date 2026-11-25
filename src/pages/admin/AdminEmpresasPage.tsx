@@ -5,6 +5,7 @@ import { FormularioEditarEmpresa } from '@/components/FormularioEditarEmpresa'
 import { FormularioNovaEmpresa } from '@/components/FormularioNovaEmpresa'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import { AdminCatalogoVeiculos } from '@/pages/admin/AdminCatalogoVeiculos'
+import { AdminControleDistribuicao } from '@/pages/admin/AdminControleDistribuicao'
 import { AdminFrotaVeiculos } from '@/pages/admin/AdminFrotaVeiculos'
 import { excluirEmpresaAdmin } from '@/services/adminUsuarios'
 import { listarEmpresasNuvem } from '@/services/nuvemCatalogo'
@@ -19,7 +20,7 @@ function normalizarFrase(texto: string) {
   return texto.trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
-type AbaAdminEmpresas = 'empresas' | 'veiculos'
+type AbaAdminEmpresas = 'empresas' | 'veiculos' | 'controle'
 
 export function AdminEmpresasPage() {
   const { t } = usarIdioma()
@@ -140,9 +141,24 @@ export function AdminEmpresasPage() {
         >
           {t('admin.empresas.abaVeiculos')}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={aba === 'controle'}
+          className={`admin-empresas-aba${aba === 'controle' ? ' admin-empresas-aba--ativa' : ''}`}
+          onClick={() => {
+            setAba('controle')
+            setEmpresaAbertaId(null)
+            setMostrarForm(false)
+          }}
+        >
+          {t('admin.empresas.abaControle')}
+        </button>
       </div>
 
-      {aba === 'veiculos' ? (
+      {aba === 'controle' ? (
+        <AdminControleDistribuicao />
+      ) : aba === 'veiculos' ? (
         <div className="space-y-8">
           <AdminCatalogoVeiculos />
           <AdminFrotaVeiculos />
