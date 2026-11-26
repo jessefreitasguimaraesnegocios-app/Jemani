@@ -7,8 +7,10 @@ import {
   contarEmpresasDoMes,
   contarMesesDoAno,
   filtrarViagensDoMes,
+  ID_PARCEIROS_EXTERNOS_PLANILHA,
   somarPlanilha,
   type MesPlanilha,
+  type QuinzenaPlanilha,
 } from '@/services/planilhaMensalCorridas'
 import type { CategoriaVeiculo, Empresa, Motorista, Perfil, Viagem } from '@/types'
 import { formatarData, formatarMoeda } from '@/utils/format'
@@ -24,6 +26,8 @@ interface Props {
   mapaCategorias: Map<string, CategoriaVeiculo>
   /** Quando definido, pula a escolha de empresa (visão da própria empresa). */
   empresaFixaId?: string
+  /** Abre já focado em parceiros externos (após escolher o mês). */
+  focarParceirosExternos?: boolean
   rotuloBotao?: string
 }
 
@@ -54,6 +58,7 @@ export function PlanilhaMensalCorridas({
   mapaMotoristas,
   mapaCategorias,
   empresaFixaId,
+  focarParceirosExternos = false,
   rotuloBotao,
 }: Props) {
   const { t, locale } = usarIdioma()
@@ -61,7 +66,10 @@ export function PlanilhaMensalCorridas({
   const [etapa, setEtapa] = useState<EtapaPlanilha>('mes')
   const [ano, setAno] = useState<number>(() => new Date().getFullYear())
   const [mes, setMes] = useState<MesPlanilha | null>(null)
-  const [empresaId, setEmpresaId] = useState<string | undefined>(empresaFixaId)
+  const [empresaId, setEmpresaId] = useState<string | undefined>(
+    empresaFixaId ?? (focarParceirosExternos ? ID_PARCEIROS_EXTERNOS_PLANILHA : undefined),
+  )
+  const [quinzena, setQuinzena] = useState<QuinzenaPlanilha>('todas')
 
   const anos = useMemo(() => anosDisponiveisPlanilha(viagens), [viagens])
   const viagensBase = useMemo(
@@ -75,13 +83,21 @@ export function PlanilhaMensalCorridas({
   )
   const linhas = useMemo(() => {
     if (!mes) return []
-    return filtrarViagensDoMes(viagensBase, ano, mes, empresaId)
-  }, [viagensBase, ano, mes, empresaId])
+    return filtrarViagensDoMes(viagensBase, ano, mes, { empresaId, quinzena })
+  }, [viagensBase, ano, mes, empresaId, quinzena])
   const resumo = useMemo(() => somarPlanilha(linhas), [linhas])
   const nomeEmpresa =
-    empresaId
-      ? empresas.find((item) => item.id === empresaId)?.nome_comercial ?? t('comum.empresa')
-      : t('planilha.todasEmpresas')
+    empresaId === ID_PARCEIROS_EXTERNOS_PLANILHA
+      ? t('planilha.parceirosExternos')
+      : empresaId
+        ? (empresas.find((item) => item.id === empresaId)?.nome_comercial ?? t('comum.empresa'))
+        : t('planilha.todasEmpresas')
+  const rotuloQuinzena =
+    quinzena === 'q1'
+      ? t('planilha.quinzena1')
+      : quinzena === 'q2'
+        ? t('planilha.quinzena2')
+        : t('planilha.mesInteiro')
 
   useEffect(() => {
     if (!aberta) return
@@ -107,7 +123,10 @@ export function PlanilhaMensalCorridas({
     setAberta(true)
     setEtapa('mes')
     setMes(null)
-    setEmpresaId(empresaFixaId)
+    setQuinzena('todas')
+    setEmpresaId(
+      empresaFixaId ?? (focarParceirosExternos ? ID_PARCEIROS_EXTERNOS_PLANILHA : undefined),
+    )
   }
 
   function fechar() {
@@ -116,8 +135,14 @@ export function PlanilhaMensalCorridas({
 
   function escolherMes(proximo: MesPlanilha) {
     setMes(proximo)
+    setQuinzena('todas')
     if (empresaFixaId) {
       setEmpresaId(empresaFixaId)
+      setEtapa('planilha')
+      return
+    }
+    if (focarParceirosExternos) {
+      setEmpresaId(ID_PARCEIROS_EXTERNOS_PLANILHA)
       setEtapa('planilha')
       return
     }
@@ -132,7 +157,7 @@ export function PlanilhaMensalCorridas({
 
   function voltar() {
     if (etapa === 'planilha') {
-      if (empresaFixaId) {
+      if (empresaFixaId || focarParceirosExternos) {
         setEtapa('mes')
         setMes(null)
         return
@@ -205,11 +230,15 @@ export function PlanilhaMensalCorridas({
     const link = document.createElement('a')
     const mesNome = t(CHAVES_MES[mes]).toLowerCase().replace(/\s+/g, '-')
     const empresaSlug = nomeEmpresa.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
+    const quinzenaSlug = quinzena === 'todas' ? 'mes' : quinzena
     link.href = url
-    link.download = `jemani-${mesNome}-${ano}-${empresaSlug || 'planilha'}.csv`
+    link.download = `jemani-${mesNome}-${ano}-${quinzenaSlug}-${empresaSlug || 'planilha'}.csv`
     link.click()
     URL.revokeObjectURL(url)
   }
+
+  const mostrarColunaEmpresa =
+    !empresaFixaId || empresaId === ID_PARCEIROS_EXTERNOS_PLANILHA
 
   return (
     <>
@@ -241,10 +270,11 @@ export function PlanilhaMensalCorridas({
                       ano: String(ano),
                     })}
                   {etapa === 'planilha' &&
-                    t('planilha.subPlanilha', {
+                    t('planilha.subPlanilhaPeriodo', {
                       mes: mes ? t(CHAVES_MES[mes]) : '',
                       ano: String(ano),
                       empresa: nomeEmpresa,
+                      periodo: rotuloQuinzena,
                     })}
                 </p>
               </div>
@@ -254,10 +284,14 @@ export function PlanilhaMensalCorridas({
             </header>
 
             <div className="planilha-mensal-passos" aria-hidden="true">
-              <span className={`planilha-mensal-passo ${etapa === 'mes' ? 'planilha-mensal-passo--ativo' : 'planilha-mensal-passo--feito'}`}>
+              <span
+                className={`planilha-mensal-passo ${
+                  etapa === 'mes' ? 'planilha-mensal-passo--ativo' : 'planilha-mensal-passo--feito'
+                }`}
+              >
                 1 · {t('planilha.passoMes')}
               </span>
-              {!empresaFixaId && (
+              {!empresaFixaId && !focarParceirosExternos && (
                 <span
                   className={`planilha-mensal-passo ${
                     etapa === 'empresa'
@@ -270,8 +304,12 @@ export function PlanilhaMensalCorridas({
                   2 · {t('planilha.passoEmpresa')}
                 </span>
               )}
-              <span className={`planilha-mensal-passo ${etapa === 'planilha' ? 'planilha-mensal-passo--ativo' : ''}`}>
-                {empresaFixaId ? '2' : '3'} · {t('planilha.passoPlanilha')}
+              <span
+                className={`planilha-mensal-passo ${
+                  etapa === 'planilha' ? 'planilha-mensal-passo--ativo' : ''
+                }`}
+              >
+                {empresaFixaId || focarParceirosExternos ? '2' : '3'} · {t('planilha.passoPlanilha')}
               </span>
             </div>
 
@@ -324,14 +362,23 @@ export function PlanilhaMensalCorridas({
                       <button
                         key={item.empresaId}
                         type="button"
-                        className="planilha-mensal-empresa"
+                        className={`planilha-mensal-empresa ${
+                          item.parceiroExterno ? 'planilha-mensal-empresa--parceiro' : ''
+                        }`}
                         onClick={() => escolherEmpresa(item.empresaId)}
                       >
                         <div>
-                          <p className="planilha-mensal-empresa-nome">{item.nome}</p>
+                          <p className="planilha-mensal-empresa-nome">
+                            {item.parceiroExterno
+                              ? t('planilha.parceirosExternos')
+                              : item.nome}
+                          </p>
                           <p className="planilha-mensal-empresa-meta">
                             {t('planilha.qtdCorridas', { n: item.quantidade })} ·{' '}
                             {formatarMoeda(item.valorEmpresa, locale)}
+                            {item.parceiroExterno
+                              ? ` · ${t('planilha.repasseManual')}`
+                              : ''}
                           </p>
                         </div>
                         <span className="planilha-mensal-empresa-selo">{t('planilha.abrir')}</span>
@@ -343,6 +390,27 @@ export function PlanilhaMensalCorridas({
 
               {etapa === 'planilha' && mes && (
                 <>
+                  <div className="planilha-mensal-quinzenas" role="tablist" aria-label={t('planilha.periodo')}>
+                    {(
+                      [
+                        ['todas', 'planilha.mesInteiro'],
+                        ['q1', 'planilha.quinzena1'],
+                        ['q2', 'planilha.quinzena2'],
+                      ] as const
+                    ).map(([id, chave]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        role="tab"
+                        aria-selected={quinzena === id}
+                        className={`planilha-mensal-ano ${quinzena === id ? 'planilha-mensal-ano--ativo' : ''}`}
+                        onClick={() => setQuinzena(id)}
+                      >
+                        {t(chave)}
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="planilha-mensal-toolbar">
                     <div className="planilha-mensal-resumo">
                       <span className="planilha-mensal-chip">
@@ -351,6 +419,11 @@ export function PlanilhaMensalCorridas({
                       <span className="planilha-mensal-chip">
                         {t('planilha.finalizadas')}: {resumo.finalizadas}
                       </span>
+                      {resumo.parceirosExternos > 0 && (
+                        <span className="planilha-mensal-chip">
+                          {t('planilha.parceirosExternos')}: {resumo.parceirosExternos}
+                        </span>
+                      )}
                       <span className="planilha-mensal-chip">
                         {t('planilha.canceladas')}: {resumo.canceladas}
                       </span>
@@ -358,11 +431,20 @@ export function PlanilhaMensalCorridas({
                         {t('planilha.total')}: {formatarMoeda(resumo.precoTotal, locale)}
                       </span>
                       <span className="planilha-mensal-chip">
+                        {t('planilha.col.plataforma')}:{' '}
+                        {formatarMoeda(resumo.valorPlataforma, locale)}
+                      </span>
+                      <span className="planilha-mensal-chip">
                         {t('planilha.repasse')}: {formatarMoeda(resumo.valorEmpresa, locale)}
                       </span>
                     </div>
                     <div className="planilha-mensal-acoes">
-                      <button type="button" className="btn-ouro !py-2" onClick={exportarCsv} disabled={linhas.length === 0}>
+                      <button
+                        type="button"
+                        className="btn-ouro !py-2"
+                        onClick={exportarCsv}
+                        disabled={linhas.length === 0}
+                      >
                         {t('planilha.exportar')}
                       </button>
                     </div>
@@ -379,10 +461,11 @@ export function PlanilhaMensalCorridas({
                             <th>{t('planilha.col.data')}</th>
                             <th>{t('planilha.col.status')}</th>
                             <th>{t('planilha.col.cliente')}</th>
-                            {!empresaFixaId && <th>{t('planilha.col.empresa')}</th>}
+                            {mostrarColunaEmpresa && <th>{t('planilha.col.empresa')}</th>}
                             <th>{t('planilha.col.motorista')}</th>
                             <th>{t('planilha.col.rota')}</th>
                             <th>{t('planilha.col.total')}</th>
+                            <th>{t('planilha.col.plataforma')}</th>
                             <th>{t('planilha.col.empresaValor')}</th>
                           </tr>
                         </thead>
@@ -426,12 +509,15 @@ export function PlanilhaMensalCorridas({
                                     </>
                                   ) : null}
                                 </td>
-                                {!empresaFixaId && <td>{empresa?.nome_comercial ?? '—'}</td>}
+                                {mostrarColunaEmpresa && (
+                                  <td>{empresa?.nome_comercial ?? '—'}</td>
+                                )}
                                 <td>{motorista?.nome ?? '—'}</td>
                                 <td className="planilha-mensal-rota">
                                   {viagem.origem} → {viagem.destino}
                                 </td>
                                 <td>{formatarMoeda(viagem.preco_total, locale)}</td>
+                                <td>{formatarMoeda(viagem.valor_plataforma, locale)}</td>
                                 <td>{formatarMoeda(viagem.valor_empresa, locale)}</td>
                               </tr>
                             )

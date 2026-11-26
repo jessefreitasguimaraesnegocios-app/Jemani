@@ -9,6 +9,19 @@ import type {
 
 export type TipoPagamentoFiltro = StatusPagamento | 'todos'
 export type VisaoFinanceiro = 'empresas' | 'tipos' | 'lancamentos'
+export type QuinzenaFinanceiro = 'todas' | 'q1' | 'q2'
+
+export type FiltrosLancamentoFinanceiro = {
+  empresaId: string
+  tipo: TipoPagamentoFiltro
+  categoriaId: string
+  busca: string
+  /** Ano civil; vazio = qualquer período. */
+  ano?: number | null
+  /** Mês 1–12; exige ano. */
+  mes?: number | null
+  quinzena?: QuinzenaFinanceiro
+}
 
 export type LancamentoFinanceiro = {
   pagamento: Pagamento
@@ -90,16 +103,18 @@ export function montarLancamentosFinanceiros(
     })
 }
 
+function dataReferenciaLancamento(item: LancamentoFinanceiro): string | undefined {
+  if (item.viagem?.data_viagem) return item.viagem.data_viagem
+  const criado = item.pagamento.created_at
+  return criado ? criado.slice(0, 10) : undefined
+}
+
 export function filtrarLancamentos(
   lancamentos: LancamentoFinanceiro[],
-  filtros: {
-    empresaId: string
-    tipo: TipoPagamentoFiltro
-    categoriaId: string
-    busca: string
-  },
+  filtros: FiltrosLancamentoFinanceiro,
 ): LancamentoFinanceiro[] {
   const termo = filtros.busca.trim().toLowerCase()
+  const quinzena = filtros.quinzena ?? 'todas'
   return lancamentos.filter((item) => {
     if (filtros.empresaId === 'sem_empresa') {
       if (item.empresa || item.viagem?.status === 'parceiro_externo') return false
@@ -110,6 +125,19 @@ export function filtrarLancamentos(
     }
     if (filtros.tipo !== 'todos' && item.pagamento.status !== filtros.tipo) return false
     if (filtros.categoriaId && item.categoria?.id !== filtros.categoriaId) return false
+
+    if (filtros.ano && filtros.mes) {
+      const data = dataReferenciaLancamento(item)
+      if (!data) return false
+      const [anoStr, mesStr, diaStr] = data.split('-')
+      const ano = Number(anoStr)
+      const mes = Number(mesStr)
+      const dia = Number(diaStr)
+      if (ano !== filtros.ano || mes !== filtros.mes) return false
+      if (quinzena === 'q1' && !(dia >= 1 && dia <= 15)) return false
+      if (quinzena === 'q2' && !(dia >= 16)) return false
+    }
+
     if (!termo) return true
     const campos = [
       item.pagamento.payment_id,

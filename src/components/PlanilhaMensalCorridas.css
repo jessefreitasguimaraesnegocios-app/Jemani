@@ -207,6 +207,19 @@
   padding: 0.35rem 0.7rem;
 }
 
+.planilha-mensal-quinzenas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.planilha-mensal-empresa--parceiro {
+  border-color: rgba(184, 149, 108, 0.7);
+  background:
+    linear-gradient(160deg, rgba(255, 250, 242, 0.95), rgba(248, 236, 214, 0.9));
+}
+
 .planilha-mensal-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -390,6 +403,11 @@ html[data-tema='escuro'] .planilha-mensal-empresa {
   background: #1a1a1a;
   border-color: #333333;
   color: #ffffff;
+}
+
+html[data-tema='escuro'] .planilha-mensal-empresa--parceiro {
+  background: linear-gradient(160deg, rgba(40, 34, 26, 0.98), rgba(28, 24, 18, 0.98));
+  border-color: rgba(201, 168, 124, 0.55);
 }
 
 html[data-tema='escuro'] .planilha-mensal-mes:hover:not(:disabled),

@@ -173,6 +173,8 @@ const pt = {
   'admin.dashboard.volume': 'Valor total viagens',
   'admin.dashboard.comissao': 'Comissão plataforma',
   'admin.dashboard.empresasValor': 'Valor empresas',
+  'admin.dashboard.parceirosExternos': 'Repasse parceiros externos',
+  'admin.dashboard.parceirosExternosMeta': '{n} corridas pagas',
 
   'admin.viagens.titulo': 'Viagens',
   'admin.viagens.sub':
@@ -192,10 +194,18 @@ const pt = {
   'planilha.subMes': 'Escolha o mês para abrir a planilha contábil das corridas.',
   'planilha.subEmpresa': 'Agora escolha a empresa de {mes}/{ano}.',
   'planilha.subPlanilha': '{empresa} · {mes}/{ano} — linha a linha, pronta para revisão.',
+  'planilha.subPlanilhaPeriodo':
+    '{empresa} · {mes}/{ano} · {periodo} — linha a linha, pronta para o repasse.',
   'planilha.passoMes': 'Mês',
   'planilha.passoEmpresa': 'Empresa',
   'planilha.passoPlanilha': 'Planilha',
   'planilha.ano': 'Ano',
+  'planilha.periodo': 'Período',
+  'planilha.mesInteiro': 'Mês inteiro',
+  'planilha.quinzena1': 'Dias 1–15',
+  'planilha.quinzena2': 'Dias 16–fim',
+  'planilha.parceirosExternos': 'Parceiros externos',
+  'planilha.repasseManual': 'Repasse manual',
   'planilha.semCorridas': 'Sem corridas',
   'planilha.qtdCorridas': '{n} corridas',
   'planilha.semEmpresaMes': 'Nenhuma empresa com corrida neste mês.',
@@ -206,7 +216,8 @@ const pt = {
   'planilha.repasse': 'Repasse',
   'planilha.exportar': 'Exportar CSV',
   'planilha.vazio': 'Nenhuma corrida nesta combinação de mês e empresa.',
-  'planilha.dica': 'Use a planilha para conferência contábil e exportação.',
+  'planilha.dica':
+    'Use a planilha para conferência contábil, quinzena e exportação do repasse.',
   'planilha.todasEmpresas': 'Todas as empresas',
   'planilha.hourly': 'Por hora',
   'planilha.oneWay': 'Transfer',
@@ -372,14 +383,29 @@ const pt = {
 
   'admin.financeiro.titulo': 'Financeiro',
   'admin.financeiro.sub':
-    'Separe por empresa, tipo de pagamento e categoria. Os totais acompanham o filtro.',
+    'Separe por empresa, período (mês ou quinzena), tipo de pagamento e categoria. Os totais acompanham o filtro — use a planilha para o repasse.',
   'admin.financeiro.porEmpresa': 'Por empresa',
   'admin.financeiro.porTipo': 'Por tipo',
   'admin.financeiro.lancamentos': 'Todos os lançamentos',
   'admin.financeiro.volume': 'Volume bruto',
   'admin.financeiro.comissao': 'Comissão',
   'admin.financeiro.valorEmpresas': 'Valor empresas',
+  'admin.financeiro.valorParceiros': 'Valor parceiros',
   'admin.financeiro.situacao': 'Situação',
+  'admin.financeiro.periodoAno': 'Ano',
+  'admin.financeiro.periodoMes': 'Mês',
+  'admin.financeiro.todosPeriodos': 'Todos os períodos',
+  'admin.financeiro.todosMeses': 'Todos os meses',
+  'admin.financeiro.mesAtual': 'Mês atual',
+  'admin.financeiro.limparPeriodo': 'Limpar período',
+  'admin.financeiro.planilhaParceiros': 'Planilha parceiros',
+  'admin.financeiro.abrirPlanilhaParceiros': 'Abrir planilha de parceiros',
+  'admin.financeiro.avisoParceirosTitulo': 'Repasse de parceiros externos',
+  'admin.financeiro.avisoParceirosTexto':
+    'Valores mensais e por quinzena ficam na planilha, com CSV para o contador fechar o reparte com todos os registros.',
+  'admin.financeiro.vazioParceiros':
+    'Nenhum lançamento de parceiro externo com esses filtros. Abra a planilha mensal para conferir por mês ou quinzena.',
+  'admin.financeiro.repasseCurto': 'Repasse',
 
   'admin.comissoes.titulo': 'Comissões',
   'admin.comissoes.sub':
@@ -996,6 +1022,8 @@ const en: Record<ChaveTraducao, string> = {
   'admin.dashboard.volume': 'Total trip value',
   'admin.dashboard.comissao': 'Platform commission',
   'admin.dashboard.empresasValor': 'Company share',
+  'admin.dashboard.parceirosExternos': 'External partners payout',
+  'admin.dashboard.parceirosExternosMeta': '{n} paid trips',
 
   'admin.viagens.titulo': 'Trips',
   'admin.viagens.sub':
@@ -1015,10 +1043,18 @@ const en: Record<ChaveTraducao, string> = {
   'planilha.subMes': 'Pick a month to open the accounting sheet for trips.',
   'planilha.subEmpresa': 'Now choose the company for {mes}/{ano}.',
   'planilha.subPlanilha': '{empresa} · {mes}/{ano} — row by row, ready for review.',
+  'planilha.subPlanilhaPeriodo':
+    '{empresa} · {mes}/{ano} · {periodo} — row by row, ready for payout.',
   'planilha.passoMes': 'Month',
   'planilha.passoEmpresa': 'Company',
   'planilha.passoPlanilha': 'Sheet',
   'planilha.ano': 'Year',
+  'planilha.periodo': 'Period',
+  'planilha.mesInteiro': 'Full month',
+  'planilha.quinzena1': 'Days 1–15',
+  'planilha.quinzena2': 'Days 16–end',
+  'planilha.parceirosExternos': 'External partners',
+  'planilha.repasseManual': 'Manual payout',
   'planilha.semCorridas': 'No trips',
   'planilha.qtdCorridas': '{n} trips',
   'planilha.semEmpresaMes': 'No company with trips this month.',
@@ -1029,7 +1065,7 @@ const en: Record<ChaveTraducao, string> = {
   'planilha.repasse': 'Payout',
   'planilha.exportar': 'Export CSV',
   'planilha.vazio': 'No trips for this month and company.',
-  'planilha.dica': 'Use the sheet for accounting review and export.',
+  'planilha.dica': 'Use the sheet for accounting review, biweekly view and payout export.',
   'planilha.todasEmpresas': 'All companies',
   'planilha.hourly': 'Hourly',
   'planilha.oneWay': 'Transfer',
@@ -1195,14 +1231,29 @@ const en: Record<ChaveTraducao, string> = {
 
   'admin.financeiro.titulo': 'Finance',
   'admin.financeiro.sub':
-    'Filter by company, payment type and category. Totals follow the filter.',
+    'Filter by company, period (month or biweekly), payment type and category. Totals follow the filter — use the sheet for payouts.',
   'admin.financeiro.porEmpresa': 'By company',
   'admin.financeiro.porTipo': 'By type',
   'admin.financeiro.lancamentos': 'All entries',
   'admin.financeiro.volume': 'Gross volume',
   'admin.financeiro.comissao': 'Commission',
   'admin.financeiro.valorEmpresas': 'Company amount',
+  'admin.financeiro.valorParceiros': 'Partner amount',
   'admin.financeiro.situacao': 'Status',
+  'admin.financeiro.periodoAno': 'Year',
+  'admin.financeiro.periodoMes': 'Month',
+  'admin.financeiro.todosPeriodos': 'All periods',
+  'admin.financeiro.todosMeses': 'All months',
+  'admin.financeiro.mesAtual': 'Current month',
+  'admin.financeiro.limparPeriodo': 'Clear period',
+  'admin.financeiro.planilhaParceiros': 'Partners sheet',
+  'admin.financeiro.abrirPlanilhaParceiros': 'Open partners sheet',
+  'admin.financeiro.avisoParceirosTitulo': 'External partner payouts',
+  'admin.financeiro.avisoParceirosTexto':
+    'Monthly and biweekly totals stay in the spreadsheet, with CSV so accounting can close the payout with every record.',
+  'admin.financeiro.vazioParceiros':
+    'No external partner entries with these filters. Open the monthly sheet to review by month or biweekly period.',
+  'admin.financeiro.repasseCurto': 'Payout',
 
   'admin.comissoes.titulo': 'Commissions',
   'admin.comissoes.sub':
@@ -1815,6 +1866,8 @@ const es: Record<ChaveTraducao, string> = {
   'admin.dashboard.volume': 'Valor total de viajes',
   'admin.dashboard.comissao': 'Comisión de la plataforma',
   'admin.dashboard.empresasValor': 'Valor empresas',
+  'admin.dashboard.parceirosExternos': 'Reparto socios externos',
+  'admin.dashboard.parceirosExternosMeta': '{n} viajes pagos',
 
   'admin.viagens.titulo': 'Viajes',
   'admin.viagens.sub':
@@ -1834,10 +1887,18 @@ const es: Record<ChaveTraducao, string> = {
   'planilha.subMes': 'Elige el mes para abrir la planilla contable de viajes.',
   'planilha.subEmpresa': 'Ahora elige la empresa de {mes}/{ano}.',
   'planilha.subPlanilha': '{empresa} · {mes}/{ano} — fila por fila, lista para revisión.',
+  'planilha.subPlanilhaPeriodo':
+    '{empresa} · {mes}/{ano} · {periodo} — fila por fila, lista para el reparto.',
   'planilha.passoMes': 'Mes',
   'planilha.passoEmpresa': 'Empresa',
   'planilha.passoPlanilha': 'Planilla',
   'planilha.ano': 'Año',
+  'planilha.periodo': 'Período',
+  'planilha.mesInteiro': 'Mes completo',
+  'planilha.quinzena1': 'Días 1–15',
+  'planilha.quinzena2': 'Días 16–fin',
+  'planilha.parceirosExternos': 'Socios externos',
+  'planilha.repasseManual': 'Reparto manual',
   'planilha.semCorridas': 'Sin viajes',
   'planilha.qtdCorridas': '{n} viajes',
   'planilha.semEmpresaMes': 'Ninguna empresa con viajes este mes.',
@@ -1848,7 +1909,8 @@ const es: Record<ChaveTraducao, string> = {
   'planilha.repasse': 'Reparto',
   'planilha.exportar': 'Exportar CSV',
   'planilha.vazio': 'No hay viajes para este mes y empresa.',
-  'planilha.dica': 'Usa la planilla para revisión contable y exportación.',
+  'planilha.dica':
+    'Usa la planilla para revisión contable, quincena y exportación del reparto.',
   'planilha.todasEmpresas': 'Todas las empresas',
   'planilha.hourly': 'Por hora',
   'planilha.oneWay': 'Transfer',
@@ -2014,14 +2076,29 @@ const es: Record<ChaveTraducao, string> = {
 
   'admin.financeiro.titulo': 'Finanzas',
   'admin.financeiro.sub':
-    'Separe por empresa, tipo de pago y categoría. Los totales siguen el filtro.',
+    'Separe por empresa, período (mes o quincena), tipo de pago y categoría. Los totales siguen el filtro — use la planilla para el reparto.',
   'admin.financeiro.porEmpresa': 'Por empresa',
   'admin.financeiro.porTipo': 'Por tipo',
   'admin.financeiro.lancamentos': 'Todos los movimientos',
   'admin.financeiro.volume': 'Volumen bruto',
   'admin.financeiro.comissao': 'Comisión',
   'admin.financeiro.valorEmpresas': 'Valor empresas',
+  'admin.financeiro.valorParceiros': 'Valor socios',
   'admin.financeiro.situacao': 'Situación',
+  'admin.financeiro.periodoAno': 'Año',
+  'admin.financeiro.periodoMes': 'Mes',
+  'admin.financeiro.todosPeriodos': 'Todos los períodos',
+  'admin.financeiro.todosMeses': 'Todos los meses',
+  'admin.financeiro.mesAtual': 'Mes actual',
+  'admin.financeiro.limparPeriodo': 'Limpiar período',
+  'admin.financeiro.planilhaParceiros': 'Planilla socios',
+  'admin.financeiro.abrirPlanilhaParceiros': 'Abrir planilla de socios',
+  'admin.financeiro.avisoParceirosTitulo': 'Reparto de socios externos',
+  'admin.financeiro.avisoParceirosTexto':
+    'Los valores mensuales y por quincena quedan en la planilla, con CSV para que contabilidad cierre el reparto con todos los registros.',
+  'admin.financeiro.vazioParceiros':
+    'Ningún movimiento de socio externo con estos filtros. Abra la planilla mensual para revisar por mes o quincena.',
+  'admin.financeiro.repasseCurto': 'Reparto',
 
   'admin.comissoes.titulo': 'Comisiones',
   'admin.comissoes.sub':

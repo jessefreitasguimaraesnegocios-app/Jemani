@@ -43,6 +43,11 @@ export function AdminDashboardPage() {
   const empresasTabela = comissoes.reduce((a, c) => a + (Number(c.valor_empresa) || 0), 0)
   const comissao = comissaoViagens > 0 ? comissaoViagens : comissaoTabela
   const empresasValor = empresasViagens > 0 ? empresasViagens : empresasTabela
+  const parceirosExternosPagas = viagensPagas.filter((v) => v.status === 'parceiro_externo')
+  const repasseParceiros = parceirosExternosPagas.reduce(
+    (a, v) => a + (Number(v.valor_empresa) || 0),
+    0,
+  )
 
   const cards = [
     { label: t('admin.dashboard.clientes'), valor: String(clientes) },
@@ -54,6 +59,11 @@ export function AdminDashboardPage() {
     { label: t('admin.dashboard.volume'), valor: formatarMoeda(valorTotal, locale) },
     { label: t('admin.dashboard.comissao'), valor: formatarMoeda(comissao, locale) },
     { label: t('admin.dashboard.empresasValor'), valor: formatarMoeda(empresasValor, locale) },
+    {
+      label: t('admin.dashboard.parceirosExternos'),
+      valor: formatarMoeda(repasseParceiros, locale),
+      meta: t('admin.dashboard.parceirosExternosMeta', { n: parceirosExternosPagas.length }),
+    },
   ]
 
   return (
@@ -67,6 +77,9 @@ export function AdminDashboardPage() {
           <div key={c.label} className="cartao">
             <p className="text-sm text-[var(--color-slate)]">{c.label}</p>
             <p className="fonte-display mt-2 text-3xl">{c.valor}</p>
+            {'meta' in c && c.meta ? (
+              <p className="mt-1 text-xs text-[var(--color-slate)]">{c.meta}</p>
+            ) : null}
           </div>
         ))}
       </div>
