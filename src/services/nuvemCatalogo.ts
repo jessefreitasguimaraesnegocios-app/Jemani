@@ -16,15 +16,16 @@ const COLUNAS_PRECO =
 const COLUNAS_CONFIG = 'id,chave,valor,descricao,updated_at'
 
 const COLUNAS_EMPRESA =
-  'id,usuario_id,nome_comercial,razao_social,cnpj,telefone,email,cidade,endereco_base,latitude,longitude,regioes_atendidas,categorias_ids,status,habilitada_receber,avaliacao_media,comissao_percentual,stripe_account_id,created_at,updated_at'
+  'id,usuario_id,nome_comercial,razao_social,cnpj,telefone,email,cidade,endereco_base,latitude,longitude,regioes_atendidas,categorias_ids,status,habilitada_receber,avaliacao_media,comissao_percentual,stripe_account_id,plano_acesso,valor_mensalidade,created_at,updated_at'
 
-/** Sem colunas opcionais (ex.: stripe_account_id se migration atrasar). */
+/** Sem colunas opcionais (ex.: stripe_account_id / plano se migration atrasar). */
 const COLUNAS_EMPRESA_BASE =
   'id,usuario_id,nome_comercial,razao_social,cnpj,telefone,email,cidade,endereco_base,latitude,longitude,regioes_atendidas,categorias_ids,status,habilitada_receber,avaliacao_media,comissao_percentual,created_at,updated_at'
 
 /** Configurações que vivem em platform_settings (não preferência local do aparelho). */
 export const CHAVES_CONFIG_NUVEM = new Set([
   'comissao_percentual',
+  'mensalidade_padrao',
   'nome_plataforma',
   'taxa_servico',
   'regiao_atuacao',
@@ -121,6 +122,12 @@ function empresaDaLinha(linha: Record<string, unknown>): Empresa {
       linha.comissao_percentual != null ? Number(linha.comissao_percentual) : 10,
     stripe_account_id:
       linha.stripe_account_id != null ? String(linha.stripe_account_id) : undefined,
+    plano_acesso:
+      linha.plano_acesso === 'repasse_email' || linha.plano_acesso === 'assinatura'
+        ? linha.plano_acesso
+        : 'assinatura',
+    valor_mensalidade:
+      linha.valor_mensalidade != null ? Number(linha.valor_mensalidade) : undefined,
     created_at: String(linha.created_at),
     updated_at: String(linha.updated_at),
   }
@@ -279,8 +286,8 @@ export async function listarEmpresasNuvem(): Promise<Empresa[]> {
     const completo = await db.from('companies').select(COLUNAS_EMPRESA)
     data = completo.data
     error = completo.error
-    // Coluna Stripe ausente no banco (migration atrasada): tenta select base.
-    if (error && /stripe_account_id/i.test(error.message)) {
+    // Colunas opcionais ausentes no banco (migration atrasada): tenta select base.
+    if (error && /stripe_account_id|plano_acesso|valor_mensalidade/i.test(error.message)) {
       const basico = await db.from('companies').select(COLUNAS_EMPRESA_BASE)
       data = basico.data
       error = basico.error
@@ -343,31 +350,39 @@ export async function listarEmpresasNuvem(): Promise<Empresa[]> {
 export async function gravarEmpresaNuvem(empresa: Empresa): Promise<void> {
   const db = supabase
   if (!db) return
-  const { error } = await db.from('companies').upsert(
-    {
-      id: empresa.id,
-      usuario_id: empresa.usuario_id,
-      nome_comercial: empresa.nome_comercial,
-      razao_social: empresa.razao_social,
-      cnpj: empresa.cnpj,
-      telefone: empresa.telefone,
-      email: empresa.email,
-      cidade: empresa.cidade,
-      endereco_base: empresa.endereco_base ?? null,
-      latitude: empresa.latitude ?? null,
-      longitude: empresa.longitude ?? null,
-      regioes_atendidas: empresa.regioes_atendidas ?? [],
-      categorias_ids: empresa.categorias_ids ?? [],
-      status: empresa.status,
-      habilitada_receber: empresa.habilitada_receber,
-      avaliacao_media: empresa.avaliacao_media,
-      comissao_percentual: empresa.comissao_percentual ?? 10,
-      stripe_account_id: empresa.stripe_account_id ?? null,
-      created_at: empresa.created_at,
-      updated_at: empresa.updated_at,
-    },
-    { onConflict: 'id' },
-  )
+  const base = {
+    id: empresa.id,
+    usuario_id: empresa.usuario_id,
+    nome_comercial: empresa.nome_comercial,
+    razao_social: empresa.razao_social,
+    cnpj: empresa.cnpj,
+    telefone: empresa.telefone,
+    email: empresa.email,
+    cidade: empresa.cidade,
+    endereco_base: empresa.endereco_base ?? null,
+    latitude: empresa.latitude ?? null,
+    longitude: empresa.longitude ?? null,
+    regioes_atendidas: empresa.regioes_atendidas ?? [],
+    categorias_ids: empresa.categorias_ids ?? [],
+    status: empresa.status,
+    habilitada_receber: empresa.habilitada_receber,
+    avaliacao_media: empresa.avaliacao_media,
+    comissao_percentual: empresa.comissao_percentual ?? 10,
+    stripe_account_id: empresa.stripe_account_id ?? null,
+    created_at: empresa.created_at,
+    updated_at: empresa.updated_at,
+  }
+  const completo = {
+    ...base,
+    plano_acesso: empresa.plano_acesso ?? 'assinatura',
+    valor_mensalidade: empresa.valor_mensalidade ?? null,
+  }
+  const { error } = await db.from('companies').upsert(completo, { onConflict: 'id' })
+  if (error && /plano_acesso|valor_mensalidade/i.test(error.message)) {
+    const retry = await db.from('companies').upsert(base, { onConflict: 'id' })
+    if (retry.error) throw new Error(retry.error.message)
+    return
+  }
   if (error) throw new Error(error.message)
 }
 

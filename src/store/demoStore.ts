@@ -117,13 +117,16 @@ import type {
   HistoricoDistribuicao,
   HistoricoStatus,
   MensagemEmpresa,
+  MensalidadeEmpresa,
   ModalidadeViagem,
   Motorista,
   Notificacao,
   Pagamento,
   ParadaHourly,
   Perfil,
+  PlanoAcessoEmpresa,
   RegraPreco,
+  StatusMensalidade,
   StatusViagem,
   TipoServicoVeiculo,
   TipoUsuario,
@@ -204,6 +207,7 @@ interface EstadoDemo {
   convitesOferta: ConviteOferta[]
   pagamentos: Pagamento[]
   comissoes: Comissao[]
+  mensalidades: MensalidadeEmpresa[]
   notificacoes: Notificacao[]
   avaliacoes: Avaliacao[]
   distribuicoes: HistoricoDistribuicao[]
@@ -322,6 +326,17 @@ interface EstadoDemo {
   atualizarRegraPreco: (id: string, patch: Partial<RegraPreco>) => void
   salvarCategoria: (cat: Partial<CategoriaVeiculo> & { nome: string }) => CategoriaVeiculo
   salvarEmpresa: (patch: Partial<Empresa> & { id: string }) => Empresa
+  definirPlanoEmpresa: (
+    empresaId: string,
+    plano: PlanoAcessoEmpresa,
+    valorMensalidade?: number,
+  ) => Empresa
+  marcarMensalidade: (
+    empresaId: string,
+    competencia: string,
+    status: StatusMensalidade,
+    valor?: number,
+  ) => MensalidadeEmpresa
   aplicarComissaoTodasEmpresas: (percentual: number) => void
   criarEmpresa: (empresa: Empresa, senhaAcesso?: string) => Empresa
   salvarMotorista: (
@@ -380,6 +395,7 @@ function estadoInicial() {
     convitesOferta: [] as ConviteOferta[],
     extensoesViagem: dados.extensoesViagem ?? [],
     avisosHourly: dados.avisosHourly ?? [],
+    mensalidades: (dados as { mensalidades?: MensalidadeEmpresa[] }).mensalidades ?? [],
   }
 }
 
@@ -3254,6 +3270,60 @@ export const useDemoStore = create<EstadoDemo>()(
         return atualizada
       },
 
+      definirPlanoEmpresa: (empresaId, plano, valorMensalidade) => {
+        const atual = get().empresas.find((e) => e.id === empresaId)
+        if (!atual) throw new Error('Empresa não encontrada')
+        const atualizada: Empresa = {
+          ...atual,
+          plano_acesso: plano,
+          valor_mensalidade:
+            valorMensalidade != null && Number.isFinite(valorMensalidade)
+              ? Number(valorMensalidade)
+              : atual.valor_mensalidade,
+          updated_at: agoraIso(),
+        }
+        set((s) => ({
+          empresas: s.empresas.map((e) => (e.id === empresaId ? atualizada : e)),
+        }))
+        void gravarEmpresaNuvem(atualizada).catch(() => undefined)
+        return atualizada
+      },
+
+      marcarMensalidade: (empresaId, competencia, status, valor) => {
+        const agora = agoraIso()
+        const existente = get().mensalidades.find(
+          (item) => item.empresa_id === empresaId && item.competencia === competencia,
+        )
+        const empresa = get().empresas.find((item) => item.id === empresaId)
+        const valorFinal =
+          valor != null && Number.isFinite(valor)
+            ? Number(valor)
+            : existente?.valor ??
+              (empresa?.valor_mensalidade != null
+                ? Number(empresa.valor_mensalidade)
+                : Number(
+                    get().configuracoes.find((c) => c.chave === 'mensalidade_padrao')?.valor ??
+                      1500,
+                  ))
+        const registro: MensalidadeEmpresa = {
+          id: existente?.id ?? gerarId(),
+          empresa_id: empresaId,
+          competencia,
+          valor: valorFinal,
+          status,
+          pago_em: status === 'pago' ? agora : undefined,
+          observacao: existente?.observacao,
+          created_at: existente?.created_at ?? agora,
+          updated_at: agora,
+        }
+        set((s) => ({
+          mensalidades: existente
+            ? s.mensalidades.map((item) => (item.id === existente.id ? registro : item))
+            : [registro, ...s.mensalidades],
+        }))
+        return registro
+      },
+
       aplicarComissaoTodasEmpresas: (percentual) => {
         const pct = Math.min(100, Math.max(0, Number(percentual) || 0))
         const agora = agoraIso()
@@ -3934,6 +4004,7 @@ export const useDemoStore = create<EstadoDemo>()(
             veiculos: state.veiculos.filter((v) => v.empresa_id !== empresaId),
             atribuicoes: state.atribuicoes.filter((a) => a.empresa_id !== empresaId),
             comissoes: state.comissoes.filter((c) => c.empresa_id !== empresaId),
+            mensalidades: state.mensalidades.filter((m) => m.empresa_id !== empresaId),
             turnos: state.turnos.filter((t) => t.empresa_id !== empresaId),
             mensagensEmpresa: state.mensagensEmpresa.filter((m) => m.empresa_id !== empresaId),
             agendamentosVeiculo: state.agendamentosVeiculo.filter((a) => a.empresa_id !== empresaId),
@@ -4133,13 +4204,30 @@ export const useDemoStore = create<EstadoDemo>()(
       aplicarEmpresasNuvem: (remotos) => {
         if (!remotos.length) return
         set((state) => {
+          const planosLocais = new Map(
+            state.empresas.map((item) => [
+              item.id,
+              {
+                plano_acesso: item.plano_acesso,
+                valor_mensalidade: item.valor_mensalidade,
+              },
+            ]),
+          )
+          const mesclar = (remoto: Empresa): Empresa => {
+            const local = planosLocais.get(remoto.id)
+            return {
+              ...remoto,
+              plano_acesso: remoto.plano_acesso ?? local?.plano_acesso ?? 'assinatura',
+              valor_mensalidade: remoto.valor_mensalidade ?? local?.valor_mensalidade,
+            }
+          }
           if (usarNuvemComoFonte()) {
-            return { empresas: remotos }
+            return { empresas: remotos.map(mesclar) }
           }
           const mapa = new Map(state.empresas.map((item) => [item.id, item]))
           for (const remoto of remotos) {
             const local = mapa.get(remoto.id)
-            mapa.set(remoto.id, local ? { ...local, ...remoto } : remoto)
+            mapa.set(remoto.id, local ? { ...local, ...mesclar(remoto) } : mesclar(remoto))
           }
           return { empresas: [...mapa.values()] }
         })
@@ -4158,7 +4246,7 @@ export const useDemoStore = create<EstadoDemo>()(
     }),
     {
       name: 'jemani-demo-v5',
-      version: 16,
+      version: 17,
       storage: createJSONStorage(() => storageZustandPorAba()),
       partialize: (estado): ReturnType<typeof estadoInicial> => {
         if (usarNuvemComoFonte()) {
@@ -4191,6 +4279,7 @@ export const useDemoStore = create<EstadoDemo>()(
             turnos: [],
             agendamentosVeiculo: [],
             comissoes: [],
+            mensalidades: estado.mensalidades ?? [],
             extensoesViagem: [],
             avisosHourly: [],
             convitesOferta: [],
@@ -4216,9 +4305,19 @@ export const useDemoStore = create<EstadoDemo>()(
         )
           ? (persistido as { fotosCatalogoVeiculo: FotoCatalogoVeiculo[] }).fotosCatalogoVeiculo
           : []
+        const mensalidadesSalvas = Array.isArray(
+          (persistido as { mensalidades?: MensalidadeEmpresa[] }).mensalidades,
+        )
+          ? (persistido as { mensalidades: MensalidadeEmpresa[] }).mensalidades
+          : []
         return {
           ...base,
           fotosCatalogoVeiculo: fundirCatalogoComFrota(fotosSalvas),
+          mensalidades: mensalidadesSalvas,
+          empresas: (base.empresas ?? []).map((empresa) => ({
+            ...empresa,
+            plano_acesso: empresa.plano_acesso ?? 'assinatura',
+          })),
           perfis: (base.perfis ?? []).filter(
             (p) => !fantasmas.has(p.id) && !fantasmas.has(p.email.toLowerCase()),
           ),
@@ -4271,6 +4370,7 @@ export const useDemoStore = create<EstadoDemo>()(
           avisosHourly?: AvisoHourly[]
           viagens?: Viagem[]
           regrasPreco?: RegraPreco[]
+          mensalidades?: MensalidadeEmpresa[]
         }
         const { senhas: _senhas, ...semSenha } = bruto ?? {}
 
@@ -4286,6 +4386,7 @@ export const useDemoStore = create<EstadoDemo>()(
             perfis: perfilSessao,
             empresas: empresaSessao,
             motoristas: motoristaSessao,
+            mensalidades: Array.isArray(bruto?.mensalidades) ? bruto.mensalidades : [],
             viagens: [],
             pagamentos: [],
             atribuicoes: [],

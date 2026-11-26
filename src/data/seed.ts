@@ -346,6 +346,7 @@ export function completarCatalogo<
         empresa.comissao_percentual != null && !Number.isNaN(Number(empresa.comissao_percentual))
           ? Number(empresa.comissao_percentual)
           : 10,
+      plano_acesso: empresa.plano_acesso ?? 'assinatura',
     }
   })
 
@@ -426,6 +427,18 @@ export function completarCatalogo<
         { ...pref, updated_at: agora },
       ]
     }
+  }
+  if (!configuracoes.some((c) => c.chave === 'mensalidade_padrao')) {
+    configuracoes = [
+      ...configuracoes,
+      {
+        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa20',
+        chave: 'mensalidade_padrao',
+        valor: '1500',
+        descricao: 'Mensalidade padrão (USD) das empresas com painel/login',
+        updated_at: agora,
+      },
+    ]
   }
 
   return { ...estado, categorias, empresas, veiculos, motoristas, configuracoes }
@@ -716,6 +729,8 @@ export function criarDadosIniciais(): {
     ...empresa,
     status: empresa.status as Empresa['status'],
     comissao_percentual: percentuaisSeed[indice] ?? 10,
+    plano_acesso: 'assinatura' as const,
+    valor_mensalidade: 1500,
   }))
 
   const veiculosBrutos = [
@@ -1048,6 +1063,13 @@ export function criarDadosIniciais(): {
       chave: 'comissao_percentual',
       valor: '10',
       descricao: 'Comissão da plataforma (%)',
+      updated_at: agora,
+    },
+    {
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa20',
+      chave: 'mensalidade_padrao',
+      valor: '1500',
+      descricao: 'Mensalidade padrão (USD) das empresas com painel/login',
       updated_at: agora,
     },
     {

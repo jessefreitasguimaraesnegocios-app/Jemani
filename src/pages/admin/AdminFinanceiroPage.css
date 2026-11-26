@@ -4,6 +4,34 @@
   gap: 1rem;
 }
 
+.fin-abas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.2rem;
+  border: 1px solid var(--color-line);
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.4);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.fin-aba {
+  border: 0;
+  background: transparent;
+  color: var(--color-slate);
+  border-radius: 0.65rem;
+  padding: 0.5rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.fin-aba--ativa {
+  background: var(--color-ink);
+  color: #fff;
+}
+
 .fin-topo {
   display: flex;
   flex-wrap: wrap;
@@ -369,6 +397,70 @@
   margin: 0;
   font-size: 0.8rem;
   color: var(--color-slate);
+}
+
+.fin-assinaturas {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.fin-assinaturas-intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.fin-assinaturas-titulo {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.fin-assinaturas-texto {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-slate);
+  max-width: 40rem;
+}
+
+.fin-assinaturas-padrao {
+  min-width: min(100%, 14rem);
+}
+
+.fin-assinaturas-padrao-linha {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.fin-assinaturas-valor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 7rem;
+}
+
+.fin-assinaturas-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+html[data-tema='escuro'] .fin-abas {
+  background: #1a1a1a;
+  border-color: #333;
+}
+
+html[data-tema='escuro'] .fin-aba {
+  color: #cfcfcf;
+}
+
+html[data-tema='escuro'] .fin-aba--ativa {
+  background: #fff;
+  color: #000;
 }
 
 html[data-tema='escuro'] .fin-quinzenas,

@@ -29,6 +29,9 @@ export type StatusPagamentoReserva =
 export type StatusEmpresa = 'pendente' | 'aprovada' | 'ativa' | 'inativa' | 'bloqueada'
 export type StatusPagamento = 'pendente' | 'pago' | 'falhou' | 'reembolsado' | 'teste' | 'pending_payment'
 export type StatusEntidade = 'disponivel' | 'ocupado' | 'inativo'
+/** Assinatura = painel com login (paga mensalidade). Repasse e-mail = só recebe ofertas por e-mail. */
+export type PlanoAcessoEmpresa = 'assinatura' | 'repasse_email'
+export type StatusMensalidade = 'pendente' | 'pago' | 'atrasado' | 'isento'
 
 export interface EnderecoLocal {
   formatted: string
@@ -88,6 +91,24 @@ export interface Empresa {
   comissao_percentual?: number
   /** Conta Stripe Connect (acct_...) para receber repasses */
   stripe_account_id?: string
+  /** Quem paga mensalidade pelo painel vs quem só recebe e-mail de ofertas. */
+  plano_acesso?: PlanoAcessoEmpresa
+  /** Valor mensal em USD; se vazio, usa a config mensalidade_padrao. */
+  valor_mensalidade?: number
+  created_at: string
+  updated_at: string
+}
+
+/** Cobrança mensal das empresas com plano assinatura. */
+export interface MensalidadeEmpresa {
+  id: string
+  empresa_id: string
+  /** YYYY-MM */
+  competencia: string
+  valor: number
+  status: StatusMensalidade
+  pago_em?: string
+  observacao?: string
   created_at: string
   updated_at: string
 }

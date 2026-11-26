@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { PlanilhaMensalCorridas } from '@/components/PlanilhaMensalCorridas'
+import { AdminFinanceiroAssinaturas } from '@/pages/admin/AdminFinanceiroAssinaturas'
 import {
   agruparPorEmpresa,
   agruparPorTipo,
@@ -15,11 +16,14 @@ import {
   type VisaoFinanceiro,
 } from '@/services/financeiroAdmin'
 import { anosDisponiveisPlanilha } from '@/services/planilhaMensalCorridas'
+import { listarEmpresasNuvem } from '@/services/nuvemCatalogo'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import type { ChaveTraducao } from '@/i18n/mensagens'
 import { useDemoStore } from '@/store/demoStore'
 import { formatarData, formatarMoeda } from '@/utils/format'
 import './AdminFinanceiroPage.css'
+
+type AbaFinanceiro = 'repasses' | 'assinaturas'
 
 const CHAVES_MES: Record<number, ChaveTraducao> = {
   1: 'planilha.mes.1',
@@ -48,6 +52,7 @@ export function AdminFinanceiroPage() {
   const perfis = useDemoStore((s) => s.perfis)
   const motoristas = useDemoStore((s) => s.motoristas)
 
+  const [aba, setAba] = useState<AbaFinanceiro>('repasses')
   const [empresaId, setEmpresaId] = useState('')
   const [tipo, setTipo] = useState<TipoPagamentoFiltro>('todos')
   const [categoriaId, setCategoriaId] = useState('')
@@ -56,6 +61,20 @@ export function AdminFinanceiroPage() {
   const [ano, setAno] = useState<number | null>(() => new Date().getFullYear())
   const [mes, setMes] = useState<number | null>(() => new Date().getMonth() + 1)
   const [quinzena, setQuinzena] = useState<QuinzenaFinanceiro>('todas')
+  const aplicarEmpresasNuvem = useDemoStore((s) => s.aplicarEmpresasNuvem)
+
+  useEffect(() => {
+    let ativo = true
+    void listarEmpresasNuvem()
+      .then((lista) => {
+        if (!ativo || !lista.length) return
+        aplicarEmpresasNuvem(lista)
+      })
+      .catch(() => undefined)
+    return () => {
+      ativo = false
+    }
+  }, [aplicarEmpresasNuvem])
 
   const mapaClientes = useMemo(
     () => new Map(perfis.filter((p) => p.tipo === 'cliente').map((p) => [p.id, p])),
@@ -109,14 +128,11 @@ export function AdminFinanceiroPage() {
   const gruposEmpresa = useMemo(() => agruparPorEmpresa(filtrados), [filtrados])
   const gruposTipo = useMemo(() => agruparPorTipo(filtrados), [filtrados])
 
-  const empresasComVolume = useMemo(() => {
-    const ids = new Set(
-      todosLancamentos.map((l) => l.empresa?.id).filter((id): id is string => Boolean(id)),
-    )
-    return empresas
-      .filter((e) => ids.has(e.id))
-      .sort((a, b) => a.nome_comercial.localeCompare(b.nome_comercial, 'pt-BR'))
-  }, [empresas, todosLancamentos])
+  const empresasOrdenadas = useMemo(
+    () =>
+      [...empresas].sort((a, b) => a.nome_comercial.localeCompare(b.nome_comercial, 'pt-BR')),
+    [empresas],
+  )
 
   const temSemEmpresa = todosLancamentos.some(
     (l) => !l.empresa && l.viagem?.status !== 'parceiro_externo',
@@ -167,20 +183,48 @@ export function AdminFinanceiroPage() {
           <h1 className="fonte-display text-3xl">{t('admin.financeiro.titulo')}</h1>
           <p className="fin-sub">{t('admin.financeiro.sub')}</p>
         </div>
-        <PlanilhaMensalCorridas
-          key={focoParceiros ? 'parceiros' : 'geral'}
-          viagens={viagens}
-          empresas={empresas}
-          mapaClientes={mapaClientes}
-          mapaMotoristas={mapaMotoristas}
-          mapaCategorias={mapaCategorias}
-          focarParceirosExternos={focoParceiros}
-          rotuloBotao={
-            focoParceiros ? t('admin.financeiro.planilhaParceiros') : t('planilha.botao')
-          }
-        />
+        {aba === 'repasses' && (
+          <PlanilhaMensalCorridas
+            key={focoParceiros ? 'parceiros' : 'geral'}
+            viagens={viagens}
+            empresas={empresas}
+            mapaClientes={mapaClientes}
+            mapaMotoristas={mapaMotoristas}
+            mapaCategorias={mapaCategorias}
+            focarParceirosExternos={focoParceiros}
+            rotuloBotao={
+              focoParceiros ? t('admin.financeiro.planilhaParceiros') : t('planilha.botao')
+            }
+          />
+        )}
       </header>
 
+      <div className="fin-abas" role="tablist" aria-label={t('admin.financeiro.titulo')}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={aba === 'repasses'}
+          className={`fin-aba ${aba === 'repasses' ? 'fin-aba--ativa' : ''}`}
+          onClick={() => setAba('repasses')}
+        >
+          {t('admin.financeiro.abaRepasses')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={aba === 'assinaturas'}
+          className={`fin-aba ${aba === 'assinaturas' ? 'fin-aba--ativa' : ''}`}
+          onClick={() => setAba('assinaturas')}
+        >
+          {t('admin.financeiro.abaAssinaturas')}
+          <span className="fin-pill-qtd">{empresasOrdenadas.length}</span>
+        </button>
+      </div>
+
+      {aba === 'assinaturas' ? (
+        <AdminFinanceiroAssinaturas />
+      ) : (
+        <>
       <section className="cartao fin-periodo" aria-label={t('planilha.periodo')}>
         <div className="fin-periodo-linha">
           <div className="fin-periodo-campos">
@@ -325,7 +369,7 @@ export function AdminFinanceiroPage() {
             onChange={(e) => setEmpresaId(e.target.value)}
           >
             <option value="">{t('admin.financeiro.escolherEmpresa')}</option>
-            {empresasComVolume.map((e) => (
+            {empresasOrdenadas.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.nome_comercial}
               </option>
@@ -527,6 +571,8 @@ export function AdminFinanceiroPage() {
         <div className="cartao fin-tabela-envolve">
           <TabelaLancamentos itens={filtrados} />
         </div>
+      )}
+        </>
       )}
     </div>
   )
