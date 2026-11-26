@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Ellipsis } from 'lucide-react'
 import { BotaoSalvar } from '@/components/BotaoSalvar'
@@ -222,14 +222,17 @@ export function AdminControleDistribuicao() {
                     </span>
                   </td>
                   <td className="controle-dist-acoes">
-                    <MenuDistribuicao
-                      rotulo={t('distAuto.menuAcoes', { nome: linha.nome })}
-                      acao={t('distAuto.configurar')}
-                      onConfigurar={() => {
+                    <button
+                      type="button"
+                      className="btn-secundario inline-flex size-10 items-center justify-center !p-0"
+                      aria-label={t('distAuto.menuAcoes', { nome: linha.nome })}
+                      onClick={() => {
                         setAviso('')
                         setAberta(linha)
                       }}
-                    />
+                    >
+                      <Ellipsis size={18} aria-hidden="true" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -249,94 +252,6 @@ export function AdminControleDistribuicao() {
         />
       )}
     </section>
-  )
-}
-
-function MenuDistribuicao({
-  rotulo,
-  acao,
-  onConfigurar,
-}: {
-  rotulo: string
-  acao: string
-  onConfigurar: () => void
-}) {
-  const botaoRef = useRef<HTMLButtonElement>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const [posicao, setPosicao] = useState<{ top: number; left: number } | null>(null)
-
-  useEffect(() => {
-    if (!posicao) return
-    function fechar(evento: MouseEvent) {
-      const alvo = evento.target
-      if (!(alvo instanceof Node)) return
-      if (botaoRef.current?.contains(alvo) || menuRef.current?.contains(alvo)) return
-      setPosicao(null)
-    }
-    function tecla(evento: KeyboardEvent) {
-      if (evento.key === 'Escape') setPosicao(null)
-    }
-    function reposicionar() {
-      setPosicao(null)
-    }
-    document.addEventListener('mousedown', fechar)
-    document.addEventListener('keydown', tecla)
-    window.addEventListener('resize', reposicionar)
-    window.addEventListener('scroll', reposicionar, true)
-    return () => {
-      document.removeEventListener('mousedown', fechar)
-      document.removeEventListener('keydown', tecla)
-      window.removeEventListener('resize', reposicionar)
-      window.removeEventListener('scroll', reposicionar, true)
-    }
-  }, [posicao])
-
-  function alternar() {
-    if (posicao) {
-      setPosicao(null)
-      return
-    }
-    const rect = botaoRef.current?.getBoundingClientRect()
-    if (!rect) return
-    const largura = 220
-    const left = Math.max(8, Math.min(rect.right - largura, window.innerWidth - largura - 8))
-    setPosicao({ top: rect.bottom + 6, left })
-  }
-
-  return (
-    <>
-      <button
-        ref={botaoRef}
-        type="button"
-        className="btn-secundario inline-flex size-10 items-center justify-center !p-0"
-        aria-label={rotulo}
-        aria-haspopup="menu"
-        aria-expanded={Boolean(posicao)}
-        onClick={alternar}
-      >
-        <Ellipsis size={18} aria-hidden="true" />
-      </button>
-      {posicao && createPortal(
-        <div
-          ref={menuRef}
-          role="menu"
-          className="controle-dist-menu"
-          style={{ top: posicao.top, left: posicao.left }}
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setPosicao(null)
-              onConfigurar()
-            }}
-          >
-            {acao}
-          </button>
-        </div>,
-        document.body,
-      )}
-    </>
   )
 }
 
