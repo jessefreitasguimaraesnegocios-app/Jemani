@@ -122,10 +122,11 @@ function empresaDaLinha(linha: Record<string, unknown>): Empresa {
       linha.comissao_percentual != null ? Number(linha.comissao_percentual) : 10,
     stripe_account_id:
       linha.stripe_account_id != null ? String(linha.stripe_account_id) : undefined,
+    // Só preenche se a coluna veio do banco — evita sobrescrever plano local com "assinatura" inventado.
     plano_acesso:
       linha.plano_acesso === 'repasse_email' || linha.plano_acesso === 'assinatura'
         ? linha.plano_acesso
-        : 'assinatura',
+        : undefined,
     valor_mensalidade:
       linha.valor_mensalidade != null ? Number(linha.valor_mensalidade) : undefined,
     created_at: String(linha.created_at),

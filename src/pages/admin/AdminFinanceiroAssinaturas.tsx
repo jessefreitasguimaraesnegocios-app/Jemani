@@ -209,7 +209,11 @@ export function AdminFinanceiroAssinaturas() {
 
       {filtradas.length === 0 ? (
         <div className="cartao fin-vazio-caixa">
-          <p className="fin-vazio">{t('admin.financeiro.semEmpresasAssinatura')}</p>
+          <p className="fin-vazio">
+            {empresas.length === 0
+              ? t('admin.financeiro.semEmpresasAssinatura')
+              : t('admin.financeiro.semEmpresasNoFiltro')}
+          </p>
         </div>
       ) : (
         <div className="cartao fin-tabela-envolve">

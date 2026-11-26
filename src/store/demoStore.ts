@@ -208,6 +208,11 @@ interface EstadoDemo {
   pagamentos: Pagamento[]
   comissoes: Comissao[]
   mensalidades: MensalidadeEmpresa[]
+  /** Preferências locais de plano (sobrevivem ao refresh da nuvem). */
+  planosAcessoEmpresas: Record<
+    string,
+    { plano_acesso: PlanoAcessoEmpresa; valor_mensalidade?: number; updated_at: string }
+  >
   notificacoes: Notificacao[]
   avaliacoes: Avaliacao[]
   distribuicoes: HistoricoDistribuicao[]
@@ -396,6 +401,29 @@ function estadoInicial() {
     extensoesViagem: dados.extensoesViagem ?? [],
     avisosHourly: dados.avisosHourly ?? [],
     mensalidades: (dados as { mensalidades?: MensalidadeEmpresa[] }).mensalidades ?? [],
+    planosAcessoEmpresas: {} as Record<
+      string,
+      { plano_acesso: PlanoAcessoEmpresa; valor_mensalidade?: number; updated_at: string }
+    >,
+  }
+}
+
+function aplicarPlanoLocal(
+  empresa: Empresa,
+  planos: EstadoDemo['planosAcessoEmpresas'],
+): Empresa {
+  const local = planos[empresa.id]
+  if (!local) {
+    return {
+      ...empresa,
+      plano_acesso: empresa.plano_acesso ?? 'assinatura',
+    }
+  }
+  return {
+    ...empresa,
+    plano_acesso: local.plano_acesso,
+    valor_mensalidade:
+      local.valor_mensalidade != null ? local.valor_mensalidade : empresa.valor_mensalidade,
   }
 }
 
@@ -3273,17 +3301,27 @@ export const useDemoStore = create<EstadoDemo>()(
       definirPlanoEmpresa: (empresaId, plano, valorMensalidade) => {
         const atual = get().empresas.find((e) => e.id === empresaId)
         if (!atual) throw new Error('Empresa não encontrada')
+        const agora = agoraIso()
+        const valor =
+          valorMensalidade != null && Number.isFinite(valorMensalidade)
+            ? Number(valorMensalidade)
+            : atual.valor_mensalidade
         const atualizada: Empresa = {
           ...atual,
           plano_acesso: plano,
-          valor_mensalidade:
-            valorMensalidade != null && Number.isFinite(valorMensalidade)
-              ? Number(valorMensalidade)
-              : atual.valor_mensalidade,
-          updated_at: agoraIso(),
+          valor_mensalidade: valor,
+          updated_at: agora,
         }
         set((s) => ({
           empresas: s.empresas.map((e) => (e.id === empresaId ? atualizada : e)),
+          planosAcessoEmpresas: {
+            ...s.planosAcessoEmpresas,
+            [empresaId]: {
+              plano_acesso: plano,
+              valor_mensalidade: valor,
+              updated_at: agora,
+            },
+          },
         }))
         void gravarEmpresaNuvem(atualizada).catch(() => undefined)
         return atualizada
@@ -4005,6 +4043,9 @@ export const useDemoStore = create<EstadoDemo>()(
             atribuicoes: state.atribuicoes.filter((a) => a.empresa_id !== empresaId),
             comissoes: state.comissoes.filter((c) => c.empresa_id !== empresaId),
             mensalidades: state.mensalidades.filter((m) => m.empresa_id !== empresaId),
+            planosAcessoEmpresas: Object.fromEntries(
+              Object.entries(state.planosAcessoEmpresas).filter(([id]) => id !== empresaId),
+            ),
             turnos: state.turnos.filter((t) => t.empresa_id !== empresaId),
             mensagensEmpresa: state.mensagensEmpresa.filter((m) => m.empresa_id !== empresaId),
             agendamentosVeiculo: state.agendamentosVeiculo.filter((a) => a.empresa_id !== empresaId),
@@ -4204,30 +4245,26 @@ export const useDemoStore = create<EstadoDemo>()(
       aplicarEmpresasNuvem: (remotos) => {
         if (!remotos.length) return
         set((state) => {
-          const planosLocais = new Map(
-            state.empresas.map((item) => [
-              item.id,
-              {
-                plano_acesso: item.plano_acesso,
-                valor_mensalidade: item.valor_mensalidade,
-              },
-            ]),
-          )
-          const mesclar = (remoto: Empresa): Empresa => {
-            const local = planosLocais.get(remoto.id)
-            return {
+          const mesclar = (remoto: Empresa, baseLocal?: Empresa): Empresa => {
+            const comRemoto: Empresa = {
+              ...(baseLocal ?? {}),
               ...remoto,
-              plano_acesso: remoto.plano_acesso ?? local?.plano_acesso ?? 'assinatura',
-              valor_mensalidade: remoto.valor_mensalidade ?? local?.valor_mensalidade,
+              // Plano da nuvem só vale se veio preenchido; senão mantém o local.
+              plano_acesso: remoto.plano_acesso ?? baseLocal?.plano_acesso,
+              valor_mensalidade: remoto.valor_mensalidade ?? baseLocal?.valor_mensalidade,
             }
+            return aplicarPlanoLocal(comRemoto, state.planosAcessoEmpresas)
           }
           if (usarNuvemComoFonte()) {
-            return { empresas: remotos.map(mesclar) }
+            const locais = new Map(state.empresas.map((item) => [item.id, item]))
+            return {
+              empresas: remotos.map((remoto) => mesclar(remoto, locais.get(remoto.id))),
+            }
           }
           const mapa = new Map(state.empresas.map((item) => [item.id, item]))
           for (const remoto of remotos) {
             const local = mapa.get(remoto.id)
-            mapa.set(remoto.id, local ? { ...local, ...mesclar(remoto) } : mesclar(remoto))
+            mapa.set(remoto.id, mesclar(remoto, local))
           }
           return { empresas: [...mapa.values()] }
         })
@@ -4246,7 +4283,7 @@ export const useDemoStore = create<EstadoDemo>()(
     }),
     {
       name: 'jemani-demo-v5',
-      version: 17,
+      version: 18,
       storage: createJSONStorage(() => storageZustandPorAba()),
       partialize: (estado): ReturnType<typeof estadoInicial> => {
         if (usarNuvemComoFonte()) {
@@ -4280,6 +4317,7 @@ export const useDemoStore = create<EstadoDemo>()(
             agendamentosVeiculo: [],
             comissoes: [],
             mensalidades: estado.mensalidades ?? [],
+            planosAcessoEmpresas: estado.planosAcessoEmpresas ?? {},
             extensoesViagem: [],
             avisosHourly: [],
             convitesOferta: [],
@@ -4310,14 +4348,25 @@ export const useDemoStore = create<EstadoDemo>()(
         )
           ? (persistido as { mensalidades: MensalidadeEmpresa[] }).mensalidades
           : []
+        const planosSalvos =
+          (persistido as { planosAcessoEmpresas?: EstadoDemo['planosAcessoEmpresas'] })
+            .planosAcessoEmpresas &&
+          typeof (persistido as { planosAcessoEmpresas?: unknown }).planosAcessoEmpresas ===
+            'object'
+            ? ((persistido as { planosAcessoEmpresas: EstadoDemo['planosAcessoEmpresas'] })
+                .planosAcessoEmpresas ?? {})
+            : {}
         return {
           ...base,
           fotosCatalogoVeiculo: fundirCatalogoComFrota(fotosSalvas),
           mensalidades: mensalidadesSalvas,
-          empresas: (base.empresas ?? []).map((empresa) => ({
-            ...empresa,
-            plano_acesso: empresa.plano_acesso ?? 'assinatura',
-          })),
+          planosAcessoEmpresas: planosSalvos,
+          empresas: (base.empresas ?? []).map((empresa) =>
+            aplicarPlanoLocal(
+              { ...empresa, plano_acesso: empresa.plano_acesso ?? 'assinatura' },
+              planosSalvos,
+            ),
+          ),
           perfis: (base.perfis ?? []).filter(
             (p) => !fantasmas.has(p.id) && !fantasmas.has(p.email.toLowerCase()),
           ),
@@ -4371,6 +4420,7 @@ export const useDemoStore = create<EstadoDemo>()(
           viagens?: Viagem[]
           regrasPreco?: RegraPreco[]
           mensalidades?: MensalidadeEmpresa[]
+          planosAcessoEmpresas?: EstadoDemo['planosAcessoEmpresas']
         }
         const { senhas: _senhas, ...semSenha } = bruto ?? {}
 
@@ -4379,14 +4429,19 @@ export const useDemoStore = create<EstadoDemo>()(
           const perfilSessao = Array.isArray(bruto?.perfis) ? bruto.perfis : []
           const empresaSessao = Array.isArray(bruto?.empresas) ? bruto.empresas : []
           const motoristaSessao = Array.isArray(bruto?.motoristas) ? bruto.motoristas : []
+          const planos =
+            bruto?.planosAcessoEmpresas && typeof bruto.planosAcessoEmpresas === 'object'
+              ? bruto.planosAcessoEmpresas
+              : {}
           return {
             ...atual,
             sessaoId: bruto?.sessaoId ?? null,
             senhas: {},
             perfis: perfilSessao,
-            empresas: empresaSessao,
+            empresas: empresaSessao.map((empresa) => aplicarPlanoLocal(empresa, planos)),
             motoristas: motoristaSessao,
             mensalidades: Array.isArray(bruto?.mensalidades) ? bruto.mensalidades : [],
+            planosAcessoEmpresas: planos,
             viagens: [],
             pagamentos: [],
             atribuicoes: [],
