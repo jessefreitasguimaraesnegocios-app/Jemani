@@ -36,6 +36,8 @@ const CHAVES_MES: Record<number, ChaveTraducao> = {
   12: 'planilha.mes.12',
 }
 
+type EscopoRapido = 'todas' | 'parceiros' | 'empresa'
+
 export function AdminFinanceiroPage() {
   const { t, locale } = usarIdioma()
   const viagens = useDemoStore((s) => s.viagens)
@@ -111,14 +113,34 @@ export function AdminFinanceiroPage() {
     const ids = new Set(
       todosLancamentos.map((l) => l.empresa?.id).filter((id): id is string => Boolean(id)),
     )
-    return empresas.filter((e) => ids.has(e.id))
+    return empresas
+      .filter((e) => ids.has(e.id))
+      .sort((a, b) => a.nome_comercial.localeCompare(b.nome_comercial, 'pt-BR'))
   }, [empresas, todosLancamentos])
 
   const temSemEmpresa = todosLancamentos.some(
     (l) => !l.empresa && l.viagem?.status !== 'parceiro_externo',
   )
+  const qtdParceiros = useMemo(
+    () => todosLancamentos.filter((l) => l.viagem?.status === 'parceiro_externo').length,
+    [todosLancamentos],
+  )
   const focoParceiros = empresaId === 'parceiros_externos'
   const periodoAtivo = Boolean(ano && mes)
+  const escopoAtual: EscopoRapido =
+    empresaId === 'parceiros_externos'
+      ? 'parceiros'
+      : empresaId && empresaId !== 'sem_empresa'
+        ? 'empresa'
+        : 'todas'
+
+  const rotuloPeriodo = useMemo(() => {
+    if (!ano || !mes) return t('admin.financeiro.todosPeriodos')
+    const base = `${t(CHAVES_MES[mes])} ${ano}`
+    if (quinzena === 'q1') return `${base} · ${t('planilha.quinzena1')}`
+    if (quinzena === 'q2') return `${base} · ${t('planilha.quinzena2')}`
+    return base
+  }, [ano, mes, quinzena, t])
 
   function limparPeriodo() {
     setAno(null)
@@ -133,62 +155,176 @@ export function AdminFinanceiroPage() {
     setQuinzena('todas')
   }
 
+  function escolherEscopo(escopo: EscopoRapido) {
+    if (escopo === 'todas') setEmpresaId('')
+    else if (escopo === 'parceiros') setEmpresaId('parceiros_externos')
+  }
+
   return (
-    <div className="animar-entrada space-y-5">
-      <div className="fin-topo">
+    <div className="animar-entrada fin-pagina">
+      <header className="fin-topo">
         <div>
           <h1 className="fonte-display text-3xl">{t('admin.financeiro.titulo')}</h1>
           <p className="fin-sub">{t('admin.financeiro.sub')}</p>
         </div>
-        <div className="fin-topo-acoes">
-          <PlanilhaMensalCorridas
-            viagens={viagens}
-            empresas={empresas}
-            mapaClientes={mapaClientes}
-            mapaMotoristas={mapaMotoristas}
-            mapaCategorias={mapaCategorias}
-            focarParceirosExternos={focoParceiros}
-            rotuloBotao={
-              focoParceiros ? t('admin.financeiro.planilhaParceiros') : t('planilha.botao')
-            }
-          />
-          <div className="fin-visoes">
+        <PlanilhaMensalCorridas
+          key={focoParceiros ? 'parceiros' : 'geral'}
+          viagens={viagens}
+          empresas={empresas}
+          mapaClientes={mapaClientes}
+          mapaMotoristas={mapaMotoristas}
+          mapaCategorias={mapaCategorias}
+          focarParceirosExternos={focoParceiros}
+          rotuloBotao={
+            focoParceiros ? t('admin.financeiro.planilhaParceiros') : t('planilha.botao')
+          }
+        />
+      </header>
+
+      <section className="cartao fin-periodo" aria-label={t('planilha.periodo')}>
+        <div className="fin-periodo-linha">
+          <div className="fin-periodo-campos">
+            <div>
+              <label className="rotulo" htmlFor="fin-ano">
+                {t('admin.financeiro.periodoAno')}
+              </label>
+              <select
+                id="fin-ano"
+                className="campo"
+                value={ano ?? ''}
+                onChange={(e) => {
+                  const valor = e.target.value
+                  if (!valor) {
+                    limparPeriodo()
+                    return
+                  }
+                  setAno(Number(valor))
+                  if (!mes) setMes(new Date().getMonth() + 1)
+                }}
+              >
+                <option value="">{t('admin.financeiro.todosPeriodos')}</option>
+                {anosDisponiveis.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="rotulo" htmlFor="fin-mes">
+                {t('admin.financeiro.periodoMes')}
+              </label>
+              <select
+                id="fin-mes"
+                className="campo"
+                value={mes ?? ''}
+                disabled={!ano}
+                onChange={(e) => {
+                  const valor = e.target.value
+                  setMes(valor ? Number(valor) : null)
+                  if (!valor) setQuinzena('todas')
+                }}
+              >
+                <option value="">{t('admin.financeiro.todosMeses')}</option>
+                {Array.from({ length: 12 }, (_, indice) => indice + 1).map((item) => (
+                  <option key={item} value={item}>
+                    {t(CHAVES_MES[item])}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="fin-quinzenas" role="tablist" aria-label={t('planilha.periodo')}>
             {(
               [
-                ['empresas', 'admin.financeiro.porEmpresa'],
-                ['tipos', 'admin.financeiro.porTipo'],
-                ['lancamentos', 'admin.financeiro.lancamentos'],
+                ['todas', 'planilha.mesInteiro'],
+                ['q1', 'planilha.quinzena1'],
+                ['q2', 'planilha.quinzena2'],
               ] as const
             ).map(([id, chave]) => (
               <button
                 key={id}
                 type="button"
-                className={`fin-visao ${visao === id ? 'fin-visao--ativa' : ''}`}
-                onClick={() => setVisao(id)}
+                role="tab"
+                aria-selected={quinzena === id}
+                className={`fin-seg ${quinzena === id ? 'fin-seg--ativo' : ''}`}
+                disabled={!periodoAtivo}
+                onClick={() => setQuinzena(id)}
               >
                 {t(chave)}
               </button>
             ))}
           </div>
-        </div>
-      </div>
 
-      <div className="cartao fin-filtros">
-        <div>
+          <div className="fin-periodo-atalhos">
+            <button type="button" className="fin-link" onClick={ativarMesAtual}>
+              {t('admin.financeiro.mesAtual')}
+            </button>
+            {periodoAtivo && (
+              <button type="button" className="fin-link" onClick={limparPeriodo}>
+                {t('admin.financeiro.limparPeriodo')}
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="fin-periodo-resumo">
+          {t('admin.financeiro.vendoPeriodo', { periodo: rotuloPeriodo })}
+        </p>
+      </section>
+
+      <section className="fin-escopo" aria-label={t('comum.empresa')}>
+        <div className="fin-escopo-pills" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={escopoAtual === 'todas' && empresaId !== 'sem_empresa'}
+            className={`fin-pill ${!empresaId ? 'fin-pill--ativa' : ''}`}
+            onClick={() => escolherEscopo('todas')}
+          >
+            {t('admin.financeiro.todas')}
+            <span className="fin-pill-qtd">{todosLancamentos.length}</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={focoParceiros}
+            className={`fin-pill ${focoParceiros ? 'fin-pill--ativa' : ''}`}
+            onClick={() => escolherEscopo('parceiros')}
+          >
+            {t('admin.financeiro.parceirosExternos')}
+            <span className="fin-pill-qtd">{qtdParceiros}</span>
+          </button>
+          {temSemEmpresa && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={empresaId === 'sem_empresa'}
+              className={`fin-pill ${empresaId === 'sem_empresa' ? 'fin-pill--ativa' : ''}`}
+              onClick={() =>
+                setEmpresaId(empresaId === 'sem_empresa' ? '' : 'sem_empresa')
+              }
+            >
+              {t('admin.financeiro.chipSemEmpresa')}
+            </button>
+          )}
+        </div>
+
+        <div className="fin-escopo-empresa">
           <label className="rotulo" htmlFor="fin-empresa">
-            {t('comum.empresa')}
+            {t('admin.financeiro.empresaEspecifica')}
           </label>
           <select
             id="fin-empresa"
             className="campo"
-            value={empresaId}
+            value={
+              empresaId === 'parceiros_externos' || empresaId === 'sem_empresa'
+                ? ''
+                : empresaId
+            }
             onChange={(e) => setEmpresaId(e.target.value)}
           >
-            <option value="">{t('admin.financeiro.todasEmpresas')}</option>
-            <option value="parceiros_externos">{t('admin.financeiro.parceirosExternos')}</option>
-            {temSemEmpresa && (
-              <option value="sem_empresa">{t('admin.financeiro.semEmpresa')}</option>
-            )}
+            <option value="">{t('admin.financeiro.escolherEmpresa')}</option>
             {empresasComVolume.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.nome_comercial}
@@ -196,6 +332,9 @@ export function AdminFinanceiroPage() {
             ))}
           </select>
         </div>
+      </section>
+
+      <section className="cartao fin-filtros">
         <div>
           <label className="rotulo" htmlFor="fin-tipo">
             {t('admin.financeiro.tipoStatus')}
@@ -235,7 +374,7 @@ export function AdminFinanceiroPage() {
               ))}
           </select>
         </div>
-        <div>
+        <div className="fin-filtro-busca">
           <label className="rotulo" htmlFor="fin-busca">
             {t('admin.financeiro.busca')}
           </label>
@@ -247,148 +386,9 @@ export function AdminFinanceiroPage() {
             placeholder={t('admin.financeiro.buscaPlaceholder')}
           />
         </div>
-        <div>
-          <label className="rotulo" htmlFor="fin-ano">
-            {t('admin.financeiro.periodoAno')}
-          </label>
-          <select
-            id="fin-ano"
-            className="campo"
-            value={ano ?? ''}
-            onChange={(e) => {
-              const valor = e.target.value
-              if (!valor) {
-                limparPeriodo()
-                return
-              }
-              setAno(Number(valor))
-              if (!mes) setMes(new Date().getMonth() + 1)
-            }}
-          >
-            <option value="">{t('admin.financeiro.todosPeriodos')}</option>
-            {anosDisponiveis.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="rotulo" htmlFor="fin-mes">
-            {t('admin.financeiro.periodoMes')}
-          </label>
-          <select
-            id="fin-mes"
-            className="campo"
-            value={mes ?? ''}
-            disabled={!ano}
-            onChange={(e) => {
-              const valor = e.target.value
-              setMes(valor ? Number(valor) : null)
-              if (!valor) setQuinzena('todas')
-            }}
-          >
-            <option value="">{t('admin.financeiro.todosMeses')}</option>
-            {Array.from({ length: 12 }, (_, indice) => indice + 1).map((item) => (
-              <option key={item} value={item}>
-                {t(CHAVES_MES[item])}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      </section>
 
-      <div className="fin-periodo-barra">
-        <div className="fin-quinzenas" role="tablist" aria-label={t('planilha.periodo')}>
-          {(
-            [
-              ['todas', 'planilha.mesInteiro'],
-              ['q1', 'planilha.quinzena1'],
-              ['q2', 'planilha.quinzena2'],
-            ] as const
-          ).map(([id, chave]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={quinzena === id}
-              className={`fin-chip ${quinzena === id ? 'fin-chip--ativa' : ''}`}
-              disabled={!periodoAtivo}
-              onClick={() => setQuinzena(id)}
-            >
-              {t(chave)}
-            </button>
-          ))}
-        </div>
-        <div className="fin-periodo-acoes">
-          <button type="button" className="fin-chip" onClick={ativarMesAtual}>
-            {t('admin.financeiro.mesAtual')}
-          </button>
-          {periodoAtivo && (
-            <button type="button" className="fin-chip" onClick={limparPeriodo}>
-              {t('admin.financeiro.limparPeriodo')}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="fin-empresa-chips">
-        <button
-          type="button"
-          className={`fin-chip ${!empresaId ? 'fin-chip--ativa' : ''}`}
-          onClick={() => setEmpresaId('')}
-        >
-          {t('admin.financeiro.todas')}
-        </button>
-        <button
-          type="button"
-          className={`fin-chip ${empresaId === 'parceiros_externos' ? 'fin-chip--ativa' : ''}`}
-          onClick={() =>
-            setEmpresaId(empresaId === 'parceiros_externos' ? '' : 'parceiros_externos')
-          }
-        >
-          {t('admin.financeiro.parceirosExternos')}
-        </button>
-        {temSemEmpresa && (
-          <button
-            type="button"
-            className={`fin-chip ${empresaId === 'sem_empresa' ? 'fin-chip--ativa' : ''}`}
-            onClick={() => setEmpresaId(empresaId === 'sem_empresa' ? '' : 'sem_empresa')}
-          >
-            {t('admin.financeiro.chipSemEmpresa')}
-          </button>
-        )}
-        {empresasComVolume.map((e) => (
-          <button
-            key={e.id}
-            type="button"
-            className={`fin-chip ${empresaId === e.id ? 'fin-chip--ativa' : ''}`}
-            onClick={() => setEmpresaId(empresaId === e.id ? '' : e.id)}
-          >
-            {e.nome_comercial}
-          </button>
-        ))}
-      </div>
-
-      {focoParceiros && (
-        <div className="cartao fin-aviso-parceiros">
-          <div>
-            <p className="fin-aviso-titulo">{t('admin.financeiro.avisoParceirosTitulo')}</p>
-            <p className="fin-aviso-texto">{t('admin.financeiro.avisoParceirosTexto')}</p>
-          </div>
-          <PlanilhaMensalCorridas
-            viagens={viagens}
-            empresas={empresas}
-            mapaClientes={mapaClientes}
-            mapaMotoristas={mapaMotoristas}
-            mapaCategorias={mapaCategorias}
-            focarParceirosExternos
-            rotuloBotao={t('admin.financeiro.abrirPlanilhaParceiros')}
-          />
-        </div>
-      )}
-
-      <div className="fin-resumo">
+      <section className="fin-resumo" aria-label={t('admin.financeiro.titulo')}>
         <div className="cartao fin-resumo-item">
           <p className="fin-resumo-rotulo">{t('admin.financeiro.volume')}</p>
           <p className="fonte-display fin-resumo-valor">{formatarMoeda(resumo.volume, locale)}</p>
@@ -401,7 +401,7 @@ export function AdminFinanceiroPage() {
           <p className="fonte-display fin-resumo-valor">{formatarMoeda(resumo.comissao, locale)}</p>
           <p className="fin-resumo-meta">{t('admin.financeiro.plataforma')}</p>
         </div>
-        <div className="cartao fin-resumo-item">
+        <div className="cartao fin-resumo-item fin-resumo-item--destaque">
           <p className="fin-resumo-rotulo">
             {focoParceiros
               ? t('admin.financeiro.valorParceiros')
@@ -422,15 +422,42 @@ export function AdminFinanceiroPage() {
             })}
           </p>
         </div>
+      </section>
+
+      <div className="fin-lista-topo">
+        <p className="fin-lista-contagem">
+          {t('admin.financeiro.resultadoFiltro', { n: filtrados.length })}
+        </p>
+        <div className="fin-visoes" role="tablist" aria-label={t('admin.financeiro.organizar')}>
+          {(
+            [
+              ['empresas', 'admin.financeiro.porEmpresa'],
+              ['tipos', 'admin.financeiro.porTipo'],
+              ['lancamentos', 'admin.financeiro.lancamentos'],
+            ] as const
+          ).map(([id, chave]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={visao === id}
+              className={`fin-visao ${visao === id ? 'fin-visao--ativa' : ''}`}
+              onClick={() => setVisao(id)}
+            >
+              {t(chave)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {filtrados.length === 0 ? (
-        <div className="cartao">
+        <div className="cartao fin-vazio-caixa">
           <p className="fin-vazio">
             {focoParceiros
               ? t('admin.financeiro.vazioParceiros')
               : t('admin.financeiro.vazio')}
           </p>
+          <p className="fin-vazio-dica">{t('admin.financeiro.vazioDica')}</p>
         </div>
       ) : visao === 'empresas' ? (
         <div className="fin-grupos">
@@ -460,10 +487,8 @@ export function AdminFinanceiroPage() {
                   <span>{t('admin.financeiro.qtdLinha', { n: grupo.quantidade })}</span>
                 </div>
               </div>
-              <div className="fin-lista">
-                {grupo.lancamentos.map((item) => (
-                  <LinhaLancamento key={item.pagamento.id} item={item} />
-                ))}
+              <div className="fin-tabela-envolve">
+                <TabelaLancamentos itens={grupo.lancamentos} />
               </div>
             </section>
           ))}
@@ -492,68 +517,94 @@ export function AdminFinanceiroPage() {
                   </span>
                 </div>
               </div>
-              <div className="fin-lista">
-                {grupo.lancamentos.map((item) => (
-                  <LinhaLancamento key={item.pagamento.id} item={item} />
-                ))}
+              <div className="fin-tabela-envolve">
+                <TabelaLancamentos itens={grupo.lancamentos} />
               </div>
             </section>
           ))}
         </div>
       ) : (
-        <div className="fin-lista">
-          {filtrados.map((item) => (
-            <div key={item.pagamento.id} className="cartao">
-              <LinhaLancamento item={item} />
-            </div>
-          ))}
+        <div className="cartao fin-tabela-envolve">
+          <TabelaLancamentos itens={filtrados} />
         </div>
       )}
     </div>
   )
 }
 
-function LinhaLancamento({ item }: { item: LancamentoFinanceiro }) {
+function TabelaLancamentos({ itens }: { itens: LancamentoFinanceiro[] }) {
   const { t, locale } = usarIdioma()
-  const { pagamento, viagem, empresa, categoria } = item
-  const classeBadge =
-    pagamento.status === 'pago'
-      ? 'fin-badge--pago'
-      : pagamento.status === 'teste' || pagamento.provider === 'dev_simulado'
-        ? 'fin-badge--teste'
-        : pagamento.status === 'pendente' || pagamento.status === 'pending_payment'
-          ? 'fin-badge--pendente'
-          : ''
 
   return (
-    <div className="fin-item">
-      <div>
-        <p className="fin-item-codigo">{viagem?.codigo ?? pagamento.payment_id ?? pagamento.id}</p>
-        <p className="fin-item-meta">
-          {viagem?.status === 'parceiro_externo'
-            ? `${t('admin.financeiro.parceirosExternos')}${
-                empresa ? ` · ${empresa.nome_comercial}` : ''
-              }`
-            : (empresa?.nome_comercial ?? t('admin.financeiro.semEmpresa'))}
-          {categoria ? ` · ${categoria.nome}` : ''}
-          {viagem ? ` · ${formatarData(viagem.data_viagem, locale)} ${viagem.horario}` : ''}
-        </p>
-        <p className="fin-item-meta">
-          {rotuloProvedor(pagamento.provider)} · {pagamento.payment_method}
-          {pagamento.payment_id ? ` · ${pagamento.payment_id}` : ''}
-        </p>
-        <span className={`fin-badge ${classeBadge}`}>
-          {rotuloStatusPagamento(pagamento.status)}
-        </span>
-      </div>
-      <div className="fin-item-valores">
-        <strong>{formatarMoeda(pagamento.amount, locale)}</strong>
-        <p className="fin-item-fee">
-          {t('admin.financeiro.comissao')} {formatarMoeda(pagamento.platform_fee, locale)} ·{' '}
-          {t('admin.financeiro.repasseCurto')}{' '}
-          {formatarMoeda(pagamento.company_amount, locale)}
-        </p>
-      </div>
-    </div>
+    <table className="fin-tabela">
+      <thead>
+        <tr>
+          <th>{t('planilha.col.codigo')}</th>
+          <th>{t('planilha.col.data')}</th>
+          <th>{t('planilha.col.empresa')}</th>
+          <th>{t('admin.financeiro.categoria')}</th>
+          <th>{t('planilha.col.pagamento')}</th>
+          <th>{t('planilha.col.total')}</th>
+          <th>{t('planilha.col.plataforma')}</th>
+          <th>{t('admin.financeiro.repasseCurto')}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {itens.map((item) => {
+          const { pagamento, viagem, empresa, categoria } = item
+          const classeBadge =
+            pagamento.status === 'pago'
+              ? 'fin-badge--pago'
+              : pagamento.status === 'teste' || pagamento.provider === 'dev_simulado'
+                ? 'fin-badge--teste'
+                : pagamento.status === 'pendente' || pagamento.status === 'pending_payment'
+                  ? 'fin-badge--pendente'
+                  : ''
+          const nomeEmpresa =
+            viagem?.status === 'parceiro_externo'
+              ? empresa
+                ? `${t('admin.financeiro.parceiroCurto')} · ${empresa.nome_comercial}`
+                : t('admin.financeiro.parceirosExternos')
+              : (empresa?.nome_comercial ?? t('admin.financeiro.semEmpresa'))
+
+          return (
+            <tr key={pagamento.id}>
+              <td>
+                <div className="fin-item-codigo">
+                  {viagem?.codigo ?? pagamento.payment_id ?? pagamento.id}
+                </div>
+                <div className="fin-item-meta">
+                  {rotuloProvedor(pagamento.provider)}
+                  {pagamento.payment_method ? ` · ${pagamento.payment_method}` : ''}
+                </div>
+              </td>
+              <td>
+                {viagem ? (
+                  <>
+                    {formatarData(viagem.data_viagem, locale)}
+                    <br />
+                    <span className="fin-item-meta">{viagem.horario}</span>
+                  </>
+                ) : (
+                  '—'
+                )}
+              </td>
+              <td>{nomeEmpresa}</td>
+              <td>{categoria?.nome ?? '—'}</td>
+              <td>
+                <span className={`fin-badge ${classeBadge}`}>
+                  {rotuloStatusPagamento(pagamento.status)}
+                </span>
+              </td>
+              <td className="fin-num">{formatarMoeda(pagamento.amount, locale)}</td>
+              <td className="fin-num">{formatarMoeda(pagamento.platform_fee, locale)}</td>
+              <td className="fin-num fin-num--repasse">
+                {formatarMoeda(pagamento.company_amount, locale)}
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
   )
 }

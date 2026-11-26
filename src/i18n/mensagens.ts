@@ -383,14 +383,14 @@ const pt = {
 
   'admin.financeiro.titulo': 'Financeiro',
   'admin.financeiro.sub':
-    'Separe por empresa, período (mês ou quinzena), tipo de pagamento e categoria. Os totais acompanham o filtro — use a planilha para o repasse.',
+    'Escolha o período, filtre por empresa ou parceiros e use a planilha para o repasse contábil.',
   'admin.financeiro.porEmpresa': 'Por empresa',
   'admin.financeiro.porTipo': 'Por tipo',
-  'admin.financeiro.lancamentos': 'Todos os lançamentos',
+  'admin.financeiro.lancamentos': 'Lista',
   'admin.financeiro.volume': 'Volume bruto',
   'admin.financeiro.comissao': 'Comissão',
   'admin.financeiro.valorEmpresas': 'Valor empresas',
-  'admin.financeiro.valorParceiros': 'Valor parceiros',
+  'admin.financeiro.valorParceiros': 'Repasse parceiros',
   'admin.financeiro.situacao': 'Situação',
   'admin.financeiro.periodoAno': 'Ano',
   'admin.financeiro.periodoMes': 'Mês',
@@ -404,7 +404,15 @@ const pt = {
   'admin.financeiro.avisoParceirosTexto':
     'Valores mensais e por quinzena ficam na planilha, com CSV para o contador fechar o reparte com todos os registros.',
   'admin.financeiro.vazioParceiros':
-    'Nenhum lançamento de parceiro externo com esses filtros. Abra a planilha mensal para conferir por mês ou quinzena.',
+    'Nenhum lançamento de parceiro externo neste período e filtros.',
+  'admin.financeiro.vazioDica':
+    'Ajuste o mês/quinzena acima ou abra a planilha no topo para exportar o CSV do repasse.',
+  'admin.financeiro.vendoPeriodo': 'Exibindo: {periodo}',
+  'admin.financeiro.empresaEspecifica': 'Empresa específica',
+  'admin.financeiro.escolherEmpresa': 'Selecionar empresa…',
+  'admin.financeiro.resultadoFiltro': '{n} lançamentos no filtro',
+  'admin.financeiro.organizar': 'Organizar lista',
+  'admin.financeiro.parceiroCurto': 'Parceiro',
   'admin.financeiro.repasseCurto': 'Repasse',
 
   'admin.comissoes.titulo': 'Comissões',
@@ -1231,14 +1239,14 @@ const en: Record<ChaveTraducao, string> = {
 
   'admin.financeiro.titulo': 'Finance',
   'admin.financeiro.sub':
-    'Filter by company, period (month or biweekly), payment type and category. Totals follow the filter — use the sheet for payouts.',
+    'Pick the period, filter by company or partners, then use the sheet for accounting payouts.',
   'admin.financeiro.porEmpresa': 'By company',
   'admin.financeiro.porTipo': 'By type',
-  'admin.financeiro.lancamentos': 'All entries',
+  'admin.financeiro.lancamentos': 'List',
   'admin.financeiro.volume': 'Gross volume',
   'admin.financeiro.comissao': 'Commission',
   'admin.financeiro.valorEmpresas': 'Company amount',
-  'admin.financeiro.valorParceiros': 'Partner amount',
+  'admin.financeiro.valorParceiros': 'Partners payout',
   'admin.financeiro.situacao': 'Status',
   'admin.financeiro.periodoAno': 'Year',
   'admin.financeiro.periodoMes': 'Month',
@@ -1252,7 +1260,15 @@ const en: Record<ChaveTraducao, string> = {
   'admin.financeiro.avisoParceirosTexto':
     'Monthly and biweekly totals stay in the spreadsheet, with CSV so accounting can close the payout with every record.',
   'admin.financeiro.vazioParceiros':
-    'No external partner entries with these filters. Open the monthly sheet to review by month or biweekly period.',
+    'No external partner entries for this period and filters.',
+  'admin.financeiro.vazioDica':
+    'Adjust the month/biweekly period above, or open the sheet at the top to export the payout CSV.',
+  'admin.financeiro.vendoPeriodo': 'Showing: {periodo}',
+  'admin.financeiro.empresaEspecifica': 'Specific company',
+  'admin.financeiro.escolherEmpresa': 'Select company…',
+  'admin.financeiro.resultadoFiltro': '{n} entries in filter',
+  'admin.financeiro.organizar': 'Organize list',
+  'admin.financeiro.parceiroCurto': 'Partner',
   'admin.financeiro.repasseCurto': 'Payout',
 
   'admin.comissoes.titulo': 'Commissions',
@@ -2076,14 +2092,14 @@ const es: Record<ChaveTraducao, string> = {
 
   'admin.financeiro.titulo': 'Finanzas',
   'admin.financeiro.sub':
-    'Separe por empresa, período (mes o quincena), tipo de pago y categoría. Los totales siguen el filtro — use la planilla para el reparto.',
+    'Elija el período, filtre por empresa o socios y use la planilla para el reparto contable.',
   'admin.financeiro.porEmpresa': 'Por empresa',
   'admin.financeiro.porTipo': 'Por tipo',
-  'admin.financeiro.lancamentos': 'Todos los movimientos',
+  'admin.financeiro.lancamentos': 'Lista',
   'admin.financeiro.volume': 'Volumen bruto',
   'admin.financeiro.comissao': 'Comisión',
   'admin.financeiro.valorEmpresas': 'Valor empresas',
-  'admin.financeiro.valorParceiros': 'Valor socios',
+  'admin.financeiro.valorParceiros': 'Reparto socios',
   'admin.financeiro.situacao': 'Situación',
   'admin.financeiro.periodoAno': 'Año',
   'admin.financeiro.periodoMes': 'Mes',
@@ -2097,7 +2113,15 @@ const es: Record<ChaveTraducao, string> = {
   'admin.financeiro.avisoParceirosTexto':
     'Los valores mensuales y por quincena quedan en la planilla, con CSV para que contabilidad cierre el reparto con todos los registros.',
   'admin.financeiro.vazioParceiros':
-    'Ningún movimiento de socio externo con estos filtros. Abra la planilla mensual para revisar por mes o quincena.',
+    'Ningún movimiento de socio externo en este período y filtros.',
+  'admin.financeiro.vazioDica':
+    'Ajuste el mes/quincena arriba o abra la planilla arriba para exportar el CSV del reparto.',
+  'admin.financeiro.vendoPeriodo': 'Mostrando: {periodo}',
+  'admin.financeiro.empresaEspecifica': 'Empresa específica',
+  'admin.financeiro.escolherEmpresa': 'Seleccionar empresa…',
+  'admin.financeiro.resultadoFiltro': '{n} movimientos en el filtro',
+  'admin.financeiro.organizar': 'Organizar lista',
+  'admin.financeiro.parceiroCurto': 'Socio',
   'admin.financeiro.repasseCurto': 'Reparto',
 
   'admin.comissoes.titulo': 'Comisiones',
