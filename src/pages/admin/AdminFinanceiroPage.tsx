@@ -361,14 +361,17 @@ export function AdminFinanceiroPage() {
           <select
             id="fin-empresa"
             className="campo"
-            value={
-              empresaId === 'parceiros_externos' || empresaId === 'sem_empresa'
-                ? ''
-                : empresaId
-            }
+            value={empresaId}
             onChange={(e) => setEmpresaId(e.target.value)}
           >
-            <option value="">{t('admin.financeiro.escolherEmpresa')}</option>
+            <option value="">{t('admin.financeiro.todasEmpresas')}</option>
+            {(empresaId === 'parceiros_externos' || empresaId === 'sem_empresa') && (
+              <option value={empresaId}>
+                {empresaId === 'parceiros_externos'
+                  ? t('admin.financeiro.parceirosExternos')
+                  : t('admin.financeiro.chipSemEmpresa')}
+              </option>
+            )}
             {empresasOrdenadas.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.nome_comercial}
@@ -619,10 +622,12 @@ function TabelaLancamentos({ itens }: { itens: LancamentoFinanceiro[] }) {
                 <div className="fin-item-codigo">
                   {viagem?.codigo ?? pagamento.payment_id ?? pagamento.id}
                 </div>
-                <div className="fin-item-meta">
-                  {rotuloProvedor(pagamento.provider)}
-                  {pagamento.payment_method ? ` · ${pagamento.payment_method}` : ''}
-                </div>
+                {!item.daCorrida && (
+                  <div className="fin-item-meta">
+                    {rotuloProvedor(pagamento.provider)}
+                    {pagamento.payment_method ? ` · ${pagamento.payment_method}` : ''}
+                  </div>
+                )}
               </td>
               <td>
                 {viagem ? (
