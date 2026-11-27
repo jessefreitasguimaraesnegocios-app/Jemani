@@ -12,6 +12,12 @@ import {
   anexarViagemAoHistorico,
   ordenarEmpresasPorProximidade,
 } from '@/services/distribuicaoService'
+import { avancarQuedaLocal, registrarQuedaLocal } from '@/services/quedaCorridas'
+import {
+  avancarQuedaNuvem,
+  escolherEmpresaQuedaNuvem,
+  quedaNuvemAusente,
+} from '@/services/quedaCorridasNuvem'
 import { statusPeloGps } from '@/services/statusPeloGps'
 import { fundirViagemNuvem, nuvemEstaAtrasada } from '@/services/fundirViagemNuvem'
 import { calcularDistanciaKm } from '@/services/mapasService'
@@ -1785,8 +1791,19 @@ export const useDemoStore = create<EstadoDemo>()(
         )
         const hist = anexarViagemAoHistorico(historico, viagemId)
         const agora = agoraIso()
+        const fila = usarNuvemComoFonte()
+          ? []
+          : (() => {
+              const empresaId = registrarQuedaLocal({
+                viagemId,
+                elegiveis: ordenadas.map((item) => item.empresa.id),
+              })
+              return empresaId
+                ? ordenadas.filter((item) => item.empresa.id === empresaId)
+                : []
+            })()
 
-        if (ordenadas.length === 0) {
+        if (ordenadas.length === 0 || (fila.length === 0 && !usarNuvemComoFonte())) {
           const atualizada: Viagem = {
             ...viagem,
             status: 'aguardando_empresa',
@@ -1812,7 +1829,7 @@ export const useDemoStore = create<EstadoDemo>()(
           return atualizada
         }
 
-        const atribuicoes: AtribuicaoViagem[] = ordenadas.map((o, idx) => ({
+        const atribuicoes: AtribuicaoViagem[] = fila.map((o, idx) => ({
           id: gerarId(),
           viagem_id: viagemId,
           empresa_id: o.empresa.id,
@@ -1822,7 +1839,7 @@ export const useDemoStore = create<EstadoDemo>()(
           motivo: idx === 0 ? 'primeira_por_proximidade' : `ordem_${idx + 1}`,
         }))
 
-        const oferecidas: HistoricoDistribuicao[] = ordenadas.map((o) => ({
+        const oferecidas: HistoricoDistribuicao[] = fila.map((o) => ({
           id: gerarId(),
           viagem_id: viagemId,
           empresa_id: o.empresa.id,
@@ -1849,7 +1866,7 @@ export const useDemoStore = create<EstadoDemo>()(
         void gravarViagemNuvem(atualizada).catch(() => undefined)
         void gravarOfertasNuvem(atribuicoes)
 
-        for (const o of ordenadas) {
+        for (const o of fila) {
           notificar(
             set,
             get,
@@ -1916,7 +1933,26 @@ export const useDemoStore = create<EstadoDemo>()(
           viagem.categoria_id,
           get().veiculos,
         )
-        const novas = ordenadas
+        let fila = ordenadas
+        if (usarNuvemComoFonte()) {
+          try {
+            const empresaDaVez = await escolherEmpresaQuedaNuvem(viagemId)
+            if (!empresaDaVez) {
+              fila = []
+            } else {
+              const achada = ordenadas.filter((item) => item.empresa.id === empresaDaVez)
+              if (achada.length) {
+                fila = achada
+              } else {
+                const empresa = candidatos.find((item) => item.id === empresaDaVez)
+                fila = empresa ? [{ empresa, distancia_km: 0 }] : []
+              }
+            }
+          } catch (falha) {
+            if (!quedaNuvemAusente(falha)) throw falha
+          }
+        }
+        const novas = fila
           .filter((o) => !jaOferecidas.has(o.empresa.id))
           .map((o, idx) => ({
             id: gerarId(),
@@ -1962,7 +1998,7 @@ export const useDemoStore = create<EstadoDemo>()(
         }
         await gravarOfertasNuvem(ofertas)
 
-        for (const o of ordenadas.filter((item) => !jaOferecidas.has(item.empresa.id))) {
+        for (const o of fila.filter((item) => !jaOferecidas.has(item.empresa.id))) {
           notificar(
             set,
             get,
@@ -2075,17 +2111,25 @@ export const useDemoStore = create<EstadoDemo>()(
             viagem.categoria_id,
             state.veiculos,
           )
-          if (ordenadas.length === 0) continue
+          if (ordenadas.length === 0 || usarNuvemComoFonte()) continue
+          const empresaDaVez = registrarQuedaLocal({
+            viagemId: viagem.id,
+            elegiveis: ordenadas.map((item) => item.empresa.id),
+          })
+          const fila = empresaDaVez
+            ? ordenadas.filter((item) => item.empresa.id === empresaDaVez)
+            : []
+          if (fila.length === 0) continue
 
           novasAtribuicoes.push(
-            ...ordenadas.map((o, idx) => ({
+            ...fila.map((o, idx) => ({
               id: gerarId(),
               viagem_id: viagem.id,
               empresa_id: o.empresa.id,
               status: 'oferecida' as const,
               distancia_km: o.distancia_km,
               created_at: agora,
-              motivo: idx === 0 ? 'primeira_por_proximidade' : `ordem_${idx + 1}`,
+              motivo: idx === 0 ? 'queda_da_fila' : `ordem_${idx + 1}`,
             })),
           )
           atualizadas.push({
@@ -2094,7 +2138,7 @@ export const useDemoStore = create<EstadoDemo>()(
             version: viagem.version + 1,
             updated_at: agora,
           })
-          for (const o of ordenadas) {
+          for (const o of fila) {
             notificar(
               set,
               get,
@@ -2778,6 +2822,58 @@ export const useDemoStore = create<EstadoDemo>()(
           (a) => a.viagem_id === viagemId && a.empresa_id === empresaId,
         )
         void gravarOfertasNuvem(oferta)
+        const viagemRecusada = state.viagens.find((item) => item.id === viagemId)
+        if (!viagemRecusada || viagemRecusada.empresa_id) return
+        const elegiveis = state.empresas
+          .filter(
+            (empresa) =>
+              empresa.status === 'ativa' &&
+              empresa.habilitada_receber &&
+              (empresa.categorias_ids.length === 0 ||
+                empresa.categorias_ids.includes(viagemRecusada.categoria_id)),
+          )
+          .map((empresa) => empresa.id)
+        void (async () => {
+          let proxima: string | null = null
+          if (usarNuvemComoFonte()) {
+            try {
+              proxima = await avancarQuedaNuvem(viagemId, empresaId)
+            } catch (falha) {
+              if (!quedaNuvemAusente(falha)) return
+            }
+          } else {
+            proxima = avancarQuedaLocal({
+              viagemId,
+              empresaId,
+              elegiveis,
+            })
+          }
+          if (!proxima) return
+          const empresa = get().empresas.find((item) => item.id === proxima)
+          if (!empresa) return
+          const ofertaNova: AtribuicaoViagem = {
+            id: gerarId(),
+            viagem_id: viagemId,
+            empresa_id: proxima,
+            status: 'oferecida',
+            created_at: agoraIso(),
+            motivo: 'proxima_da_fila',
+          }
+          set({
+            atribuicoes: deduplicarAtribuicoes([ofertaNova, ...get().atribuicoes]),
+          })
+          void gravarOfertasNuvem([ofertaNova])
+          notificar(
+            set,
+            get,
+            empresa.usuario_id,
+            'Nova solicitação recebida',
+            `Corrida ${viagemRecusada.codigo}: ${viagemRecusada.origem} → ${viagemRecusada.destino}`,
+            'nova_solicitacao',
+            viagemId,
+            true,
+          )
+        })()
       },
 
       atribuirEquipe: (viagemId, motoristaId, veiculoId) => {

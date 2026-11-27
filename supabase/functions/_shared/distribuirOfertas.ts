@@ -61,11 +61,27 @@ export async function distribuirOfertasAposPagamento(
   )
   if (erroEmpresas) throw new Error(erroEmpresas.message)
 
+  const { data: empresaDaVez, error: erroQueda } = await admin.rpc('escolher_empresa_queda', {
+    p_viagem_id: viagemId,
+  })
+  const quedaIndisponivel = Boolean(
+    erroQueda &&
+      /escolher_empresa_queda|schema cache|does not exist|Could not find the function/i.test(
+        erroQueda.message,
+      ),
+  )
+  if (erroQueda && !quedaIndisponivel) throw new Error(erroQueda.message)
+
   const origemLat =
     viagem.origem_lat != null ? Number(viagem.origem_lat) : NaN
   const origemLng =
     viagem.origem_lng != null ? Number(viagem.origem_lng) : NaN
-  const lista = Array.isArray(empresas) ? empresas : []
+  const listaBruta = Array.isArray(empresas) ? empresas : []
+  const lista = quedaIndisponivel
+    ? listaBruta
+    : listaBruta.filter(
+        (empresa: Record<string, unknown>) => String(empresa.id) === String(empresaDaVez ?? ''),
+      )
   const ofertas = lista.map((empresa: Record<string, unknown>) => {
     const lat = empresa.latitude != null ? Number(empresa.latitude) : NaN
     const lng = empresa.longitude != null ? Number(empresa.longitude) : NaN
