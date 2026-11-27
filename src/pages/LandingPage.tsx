@@ -1,190 +1,266 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ArrowDown, ArrowRight, ArrowUpRight, Check, ChevronLeft, ChevronRight,
-  Clock3, MapPin, ShieldCheck, Smartphone, Sparkles,
+  ArrowDown, ArrowRight, ArrowUpRight, BriefcaseBusiness, ChevronDown,
+  ChevronLeft, ChevronRight, Plane, Smartphone, Users,
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { operadorasTransporteExecutivo } from '@/data/operadorasTransporteExecutivo'
 import { usarIdioma } from '@/i18n/usarIdioma'
 import './LandingPage.css'
 
+const fleet = [
+  ['Executive', '/frota/classe-s.jpg'],
+  ['Black', '/frota/lucid.jpg'],
+  ['SUV', '/frota/escalade.jpg'],
+  ['Luxe', '/frota/volvo.jpg'],
+  ['Van', '/frota/sprinter.jpg'],
+  ['Charter', '/frota/charter.jpg'],
+] as const
+
+const serviceIcons = [Plane, BriefcaseBusiness, Users]
+const operatorGroups = Object.entries(operadorasTransporteExecutivo)
+const operatorCount = operatorGroups.reduce((total, [, operators]) => total + operators.length, 0)
+
 const copy = {
   'pt-BR': {
-    nav: ['A experiência', 'A frota', 'O aplicativo'],
-    signIn: 'Entrar', create: 'Criar conta', eyebrow: 'EUA · MUNDO',
-    title: <>Chegar bem<br /><em>muda tudo.</em></>,
-    intro: 'Uma experiência de transporte executivo pensada em cada detalhe — do primeiro toque ao destino.',
-    book: 'Planejar minha viagem', baixar: 'Download', discover: 'Descobrir a Jemani', imageCaption: 'Uma frota à altura dos seus planos.',
-    strip: ['Motoristas profissionais', 'Reserva simples', 'Acompanhamento da viagem'],
-    experienceEyebrow: 'O tempo é seu', experienceTitle: <>Mais do que um trajeto.<br /><em>Um jeito melhor de viajar.</em></>,
-    experienceText: 'A Jemani conecta você a empresas parceiras selecionadas para viagens de aeroporto, compromissos importantes e momentos que pedem um cuidado especial.',
-    features: [
-      ['Uma reserva, sem complicação', 'Escolha origem, destino, horário e a categoria ideal em poucos passos.'],
-      ['Atenção em cada detalhe', 'Acompanhe a confirmação, conheça seu motorista e siga sua viagem com clareza.'],
-      ['Conforto que combina com você', 'De sedãs executivos a vans espaçosas, encontre o espaço certo para cada ocasião.'],
+    navigation: 'Navegação principal',
+    nav: ['Serviços', 'Frota', 'Aplicativo'],
+    signIn: 'Entrar',
+    service: 'Transporte executivo',
+    title: <>Motorista particular<br /><em>com hora marcada.</em></>,
+    intro: 'Reserve traslados para aeroportos, compromissos de trabalho e eventos. Escolha o veículo e acompanhe a confirmação pelo celular.',
+    book: 'Reservar viagem',
+    appLink: 'Baixar o app',
+    photo: 'Sedãs, SUVs e vans da frota Jemani',
+    services: [
+      ['Traslados de aeroporto', 'Embarque e desembarque agendados.'],
+      ['Viagens corporativas', 'Transporte para reuniões e compromissos.'],
+      ['Grupos e eventos', 'Vans e veículos para grupos maiores.'],
     ],
-    fleetEyebrow: 'Sua viagem, seu estilo', fleetTitle: <>Encontre o seu<br /><em>próximo carro.</em></>, fleetText: 'Uma seleção que vai do conforto executivo ao espaço para todo o grupo.',
-    fleet: [
-      ['JEMANI EXECUTIVE', 'Sedãs executivos', '/frota/classe-s.jpg'],
-      ['JEMANI BLACK', 'Uma experiência exclusiva', '/frota/lucid.jpg'],
-      ['JEMANI SUV', 'Espaço para ir mais longe', '/frota/escalade.jpg'],
-      ['JEMANI LUXE', 'Presença em cada chegada', '/frota/volvo.jpg'],
-      ['JEMANI VAN', 'Mais espaço para o grupo', '/frota/sprinter.jpg'],
-      ['JEMANI CHARTER', 'Viagens para grupos e eventos', '/frota/charter.jpg'],
-    ],
-    appEyebrow: 'Jemani no seu ritmo', appTitle: <>Sua próxima viagem<br /><em>começa no celular.</em></>,
-    appText: 'Reserve com facilidade, acompanhe os detalhes e tenha sua experiência Jemani sempre à mão.',
-    android: 'ANDROID', apple: 'IPHONE & IPAD', soon: 'Aplicativo em breve',
-    androidDetail: 'Instale o APK de teste do Jemani. Ainda não publicado na Play Store.', downloadApk: 'Baixar APK', androidReady: 'APK Android de teste',
-    appleReady: 'App para iPhone',
-    appleDetail: 'Instale na tela de início pelo Safari. Ainda não publicado na App Store.',
-    installIphone: 'Instalar no iPhone',
-    iphoneStepsTitle: 'Como instalar no iPhone',
-    iphoneSteps: [
-      'Abra este site no Safari do iPhone.',
-      'Toque em Compartilhar, na barra de baixo.',
-      'Escolha Adicionar à Tela de Início.',
-    ],
-    webApp: 'Acessar a Jemani agora', webNote: 'A versão web já está pronta para você conhecer.',
-    stepsEyebrow: 'Do primeiro toque à chegada', stepsTitle: <>Sua viagem, em<br /><em>três passos.</em></>,
-    steps: [['01', 'Conte para onde vai', 'Informe o embarque, o destino e quando precisa sair.'], ['02', 'Escolha sua experiência', 'Selecione o veículo que combina com a viagem.'], ['03', 'Aproveite o caminho', 'Acompanhe a confirmação e siga com tranquilidade.']],
-    finalTitle: <>O mundo espera.<br /><em>Vamos nessa?</em></>, finalCta: 'Começar minha reserva',
-    footer: 'Transporte executivo nos Estados Unidos e no mundo.', rights: '© Jemani. Todos os direitos reservados.',
+    fleetTitle: 'Escolha seu veículo',
+    fleetIntro: 'Seis categorias, do sedã executivo ao transporte de grupos.',
+    fleetDescriptions: ['Sedã executivo', 'Sedã premium', 'SUV executivo', 'Conforto premium', 'Van executiva', 'Transporte para grupos'],
+    previous: 'Veículos anteriores',
+    next: 'Próximos veículos',
+    appTitle: 'Jemani no celular',
+    appText: 'Reserve e acompanhe suas viagens pelo aplicativo.',
+    android: 'Baixar para Android',
+    androidDetail: 'Versão de teste em APK',
+    iphone: 'Instalar no iPhone',
+    iphoneDetail: 'Adicione pelo Safari',
+    iphoneSteps: ['Abra este site no Safari.', 'Toque em Compartilhar.', 'Selecione Adicionar à Tela de Início.'],
+    operatorsTitle: 'Operadoras de referência',
+    operatorsToggle: 'Ver lista',
+    operatorsDescription: 'Seleção independente de serviços de luxo com motorista, com foco em traslados, viagens corporativas e atendimento internacional.',
+    regions: { internacional: 'Internacional', americas: 'Américas', europa: 'Europa', asiaPacifico: 'Ásia-Pacífico' },
+    rights: '© Jemani. Todos os direitos reservados.',
   },
   en: {
-    nav: ['The experience', 'The fleet', 'The app'], signIn: 'Sign in', create: 'Create account', eyebrow: 'USA · WORLDWIDE',
-    title: <>Arriving well<br /><em>changes everything.</em></>, intro: 'Executive transportation with care in every detail — from your first tap to your destination.',
-    book: 'Plan my ride', baixar: 'Download', discover: 'Discover Jemani', imageCaption: 'A fleet worthy of your plans.', strip: ['Professional drivers', 'Effortless booking', 'Trip updates'],
-    experienceEyebrow: 'Your time is yours', experienceTitle: <>More than a ride.<br /><em>A better way to travel.</em></>, experienceText: 'Jemani connects you with selected partner companies for airport transfers, important meetings, and the moments that deserve extra care.',
-    features: [['One booking, made simple', 'Choose your pickup, destination, time, and ideal ride in just a few steps.'], ['Care in every detail', 'Follow your confirmation, meet your driver, and stay informed throughout your trip.'], ['Comfort that fits you', 'From executive sedans to roomy vans, find the right fit for every occasion.']],
-    fleetEyebrow: 'Your ride, your style', fleetTitle: <>Meet your<br /><em>next ride.</em></>, fleetText: 'A curated selection, from executive comfort to room for the whole group.',
-    fleet: [['JEMANI EXECUTIVE', 'Executive sedans', '/frota/classe-s.jpg'], ['JEMANI BLACK', 'An exclusive experience', '/frota/lucid.jpg'], ['JEMANI SUV', 'Room to go further', '/frota/escalade.jpg'], ['JEMANI LUXE', 'Make every arrival count', '/frota/volvo.jpg'], ['JEMANI VAN', 'More room for your group', '/frota/sprinter.jpg'], ['JEMANI CHARTER', 'Group and event travel', '/frota/charter.jpg']],
-    appEyebrow: 'Jemani, your way', appTitle: <>Your next ride<br /><em>starts on your phone.</em></>, appText: 'Book with ease, follow every detail, and keep your Jemani experience close at hand.',
-    android: 'ANDROID', apple: 'IPHONE & IPAD', soon: 'App coming soon', androidDetail: 'Install the Jemani test APK. Not yet published on Google Play.', downloadApk: 'Download APK', androidReady: 'Android test APK', appleReady: 'iPhone app', appleDetail: 'Install it on your Home Screen from Safari. Not yet on the App Store.', installIphone: 'Install on iPhone', iphoneStepsTitle: 'How to install on iPhone', iphoneSteps: ['Open this site in Safari on your iPhone.', 'Tap Share in the bottom bar.', 'Choose Add to Home Screen.'], webApp: 'Explore Jemani now', webNote: 'The web experience is ready for you.',
-    stepsEyebrow: 'From first tap to arrival', stepsTitle: <>Your trip in<br /><em>three steps.</em></>, steps: [['01', 'Tell us where you’re going', 'Enter your pickup, destination, and preferred time.'], ['02', 'Choose your experience', 'Select the vehicle that fits your trip.'], ['03', 'Enjoy the ride', 'Follow your confirmation and travel with ease.']],
-    finalTitle: <>The world is waiting.<br /><em>Shall we go?</em></>, finalCta: 'Start my booking', footer: 'Executive transportation across the United States and the world.', rights: '© Jemani. All rights reserved.',
+    navigation: 'Main navigation',
+    nav: ['Services', 'Fleet', 'App'],
+    signIn: 'Sign in',
+    service: 'Executive transportation',
+    title: <>A private driver,<br /><em>booked ahead.</em></>,
+    intro: 'Book airport transfers and rides for meetings or events. Choose your vehicle and track your booking on your phone.',
+    book: 'Book a ride',
+    appLink: 'Get the app',
+    photo: 'Sedans, SUVs and vans from the Jemani fleet',
+    services: [
+      ['Airport transfers', 'Scheduled airport pickups and drop-offs.'],
+      ['Corporate travel', 'Rides for meetings and business appointments.'],
+      ['Groups and events', 'Vans and vehicles for larger groups.'],
+    ],
+    fleetTitle: 'Choose your vehicle',
+    fleetIntro: 'Six categories, from executive sedans to group transportation.',
+    fleetDescriptions: ['Executive sedan', 'Premium sedan', 'Executive SUV', 'Premium comfort', 'Executive van', 'Group transportation'],
+    previous: 'Previous vehicles',
+    next: 'Next vehicles',
+    appTitle: 'Jemani on your phone',
+    appText: 'Book and track your rides in the app.',
+    android: 'Download for Android',
+    androidDetail: 'Test version in APK format',
+    iphone: 'Install on iPhone',
+    iphoneDetail: 'Add it from Safari',
+    iphoneSteps: ['Open this site in Safari.', 'Tap Share.', 'Select Add to Home Screen.'],
+    operatorsTitle: 'Chauffeur companies',
+    operatorsToggle: 'View list',
+    operatorsDescription: 'An independent selection of luxury chauffeur services, with a focus on transfers, business travel and international coverage.',
+    regions: { internacional: 'International', americas: 'Americas', europa: 'Europe', asiaPacifico: 'Asia-Pacific' },
+    rights: '© Jemani. All rights reserved.',
   },
   es: {
-    nav: ['La experiencia', 'La flota', 'La app'], signIn: 'Entrar', create: 'Crear cuenta', eyebrow: 'EE. UU. · MUNDO',
-    title: <>Llegar bien<br /><em>lo cambia todo.</em></>, intro: 'Transporte ejecutivo cuidado en cada detalle — desde el primer toque hasta tu destino.', book: 'Planear mi viaje', baixar: 'Download', discover: 'Descubrir Jemani', imageCaption: 'Una flota a la altura de tus planes.', strip: ['Conductores profesionales', 'Reserva sencilla', 'Seguimiento del viaje'],
-    experienceEyebrow: 'Tu tiempo es tuyo', experienceTitle: <>Más que un trayecto.<br /><em>Una mejor forma de viajar.</em></>, experienceText: 'Jemani te conecta con empresas asociadas seleccionadas para traslados al aeropuerto, compromisos importantes y momentos que merecen un cuidado especial.',
-    features: [['Una reserva, sin complicaciones', 'Elige origen, destino, horario y la categoría ideal en pocos pasos.'], ['Atención en cada detalle', 'Sigue la confirmación, conoce a tu conductor y viaja con claridad.'], ['Comodidad a tu medida', 'Desde sedanes ejecutivos hasta vans espaciosas, encuentra el vehículo ideal.']],
-    fleetEyebrow: 'Tu viaje, tu estilo', fleetTitle: <>Encuentra tu<br /><em>próximo vehículo.</em></>, fleetText: 'Una selección que va desde el confort ejecutivo hasta espacio para todo el grupo.', fleet: [['JEMANI EXECUTIVE', 'Sedanes ejecutivos', '/frota/classe-s.jpg'], ['JEMANI BLACK', 'Una experiencia exclusiva', '/frota/lucid.jpg'], ['JEMANI SUV', 'Espacio para ir más lejos', '/frota/escalade.jpg'], ['JEMANI LUXE', 'Presencia en cada llegada', '/frota/volvo.jpg'], ['JEMANI VAN', 'Más espacio para el grupo', '/frota/sprinter.jpg'], ['JEMANI CHARTER', 'Viajes para grupos y eventos', '/frota/charter.jpg']],
-    appEyebrow: 'Jemani a tu ritmo', appTitle: <>Tu próximo viaje<br /><em>empieza en tu móvil.</em></>, appText: 'Reserva fácilmente, sigue cada detalle y lleva tu experiencia Jemani contigo.', android: 'ANDROID', apple: 'IPHONE & IPAD', soon: 'App próximamente', androidDetail: 'Instala el APK de prueba de Jemani. Aún no está en Google Play.', downloadApk: 'Descargar APK', androidReady: 'APK Android de prueba', appleReady: 'App para iPhone', appleDetail: 'Instálala en la pantalla de inicio desde Safari. Aún no está en la App Store.', installIphone: 'Instalar en el iPhone', iphoneStepsTitle: 'Cómo instalar en el iPhone', iphoneSteps: ['Abre este sitio en Safari del iPhone.', 'Toca Compartir, en la barra inferior.', 'Elige Agregar a pantalla de inicio.'], webApp: 'Conocer Jemani ahora', webNote: 'La versión web ya está lista para ti.',
-    stepsEyebrow: 'Del primer toque a la llegada', stepsTitle: <>Tu viaje en<br /><em>tres pasos.</em></>, steps: [['01', 'Cuéntanos adónde vas', 'Indica el origen, el destino y el horario.'], ['02', 'Elige tu experiencia', 'Selecciona el vehículo ideal para tu viaje.'], ['03', 'Disfruta el camino', 'Sigue la confirmación y viaja con tranquilidad.']], finalTitle: <>El mundo te espera.<br /><em>¿Vamos?</em></>, finalCta: 'Empezar mi reserva', footer: 'Transporte ejecutivo en Estados Unidos y el mundo.', rights: '© Jemani. Todos los derechos reservados.',
+    navigation: 'Navegación principal',
+    nav: ['Servicios', 'Flota', 'Aplicación'],
+    signIn: 'Iniciar sesión',
+    service: 'Transporte ejecutivo',
+    title: <>Conductor privado<br /><em>a la hora acordada.</em></>,
+    intro: 'Reserva traslados al aeropuerto y viajes para reuniones o eventos. Elige tu vehículo y sigue la confirmación desde el móvil.',
+    book: 'Reservar viaje',
+    appLink: 'Descargar la app',
+    photo: 'Sedanes, SUV y vans de la flota Jemani',
+    services: [
+      ['Traslados al aeropuerto', 'Recogidas y llegadas programadas.'],
+      ['Viajes corporativos', 'Transporte para reuniones y citas de trabajo.'],
+      ['Grupos y eventos', 'Vans y vehículos para grupos grandes.'],
+    ],
+    fleetTitle: 'Elige tu vehículo',
+    fleetIntro: 'Seis categorías, desde sedanes ejecutivos hasta transporte para grupos.',
+    fleetDescriptions: ['Sedán ejecutivo', 'Sedán prémium', 'SUV ejecutivo', 'Confort prémium', 'Van ejecutiva', 'Transporte para grupos'],
+    previous: 'Vehículos anteriores',
+    next: 'Siguientes vehículos',
+    appTitle: 'Jemani en tu móvil',
+    appText: 'Reserva y sigue tus viajes desde la aplicación.',
+    android: 'Descargar para Android',
+    androidDetail: 'Versión de prueba en formato APK',
+    iphone: 'Instalar en iPhone',
+    iphoneDetail: 'Añádela desde Safari',
+    iphoneSteps: ['Abre este sitio en Safari.', 'Toca Compartir.', 'Elige Agregar a pantalla de inicio.'],
+    operatorsTitle: 'Operadores de referencia',
+    operatorsToggle: 'Ver lista',
+    operatorsDescription: 'Selección independiente de servicios de lujo con conductor, centrada en traslados, viajes corporativos y cobertura internacional.',
+    regions: { internacional: 'Internacional', americas: 'Américas', europa: 'Europa', asiaPacifico: 'Asia-Pacífico' },
+    rights: '© Jemani. Todos los derechos reservados.',
   },
 } as const
 
 export function LandingPage() {
   const { idioma } = usarIdioma()
+  const { usuario } = useAuth()
   const content = copy[idioma]
-  const fleetTrack = useRef<HTMLDivElement>(null)
-  const pausaCarrossel = useRef(0)
-  const [passosIphoneAbertos, definirPassosIphoneAbertos] = useState(false)
-  const alternarPassosIphone = () => definirPassosIphoneAbertos((aberto) => !aberto)
-  const rolarFrota = (direcao: -1 | 1) => {
-    pausaCarrossel.current = Date.now() + 5000
-    const trilho = fleetTrack.current
-    const cartao = trilho?.querySelector<HTMLElement>('.fleet-card')
-    const passo = cartao ? cartao.offsetWidth + 15 : 360
-    trilho?.scrollBy({ left: direcao * passo, behavior: 'smooth' })
+  const bookingPath = usuario?.tipo === 'cliente' ? '/app/reservar' : '/cadastrar'
+  const fleetTrack = useRef<HTMLUListElement>(null)
+
+  function scrollFleet(direction: -1 | 1) {
+    const track = fleetTrack.current
+    const first = track?.children[0] as HTMLElement | undefined
+    const second = track?.children[1] as HTMLElement | undefined
+    if (!track || !first || !second) return
+    track.scrollBy({ left: direction * (second.offsetLeft - first.offsetLeft) })
   }
 
-  useEffect(() => {
-    const trilho = fleetTrack.current
-    if (!trilho) return
-    let quadro = 0
-    let vivo = true
-    const andar = () => {
-      if (!vivo) return
-      if (Date.now() >= pausaCarrossel.current) {
-        const metade = trilho.scrollWidth / 2
-        if (metade > 0 && trilho.scrollLeft >= metade) trilho.scrollLeft -= metade
-        trilho.scrollLeft += 0.7
-      }
-      quadro = window.requestAnimationFrame(andar)
-    }
-    const pausar = () => { pausaCarrossel.current = Number.POSITIVE_INFINITY }
-    const seguir = () => { pausaCarrossel.current = 0 }
-    pausaCarrossel.current = 0
-    trilho.addEventListener('pointerenter', pausar)
-    trilho.addEventListener('pointerleave', seguir)
-    trilho.addEventListener('pointercancel', seguir)
-    quadro = window.requestAnimationFrame(andar)
-    return () => {
-      vivo = false
-      window.cancelAnimationFrame(quadro)
-      trilho.removeEventListener('pointerenter', pausar)
-      trilho.removeEventListener('pointerleave', seguir)
-      trilho.removeEventListener('pointercancel', seguir)
-    }
-  }, [])
-
   return (
-    <main className="jemani-site">
-      <header className="site-header">
-        <a className="site-brand" href="#inicio" aria-label="Jemani — início"><span className="site-brand-mark">J</span><span>JEMANI<small>EXECUTIVE MOBILITY</small></span></a>
-        <nav className="site-nav" aria-label="Main navigation">
-          <a href="#experiencia">{content.nav[0]}</a><a href="#frota">{content.nav[1]}</a><a href="#app">{content.nav[2]}</a>
+    <div className="jemani-landing" id="inicio">
+      <header className="jemani-shell jemani-header">
+        <a className="jemani-brand" href="#inicio">
+          <span className="jemani-brand-mark" aria-hidden="true">J</span>
+          <span>Jemani<small>Executive Mobility</small></span>
+        </a>
+        <nav className="jemani-nav" aria-label={content.navigation}>
+          <a href="#experiencia">{content.nav[0]}</a>
+          <a href="#frota">{content.nav[1]}</a>
+          <a href="#app">{content.nav[2]}</a>
         </nav>
-        <div className="site-actions"><Link to="/entrar" className="site-login">{content.signIn}</Link><Link to="/cadastrar" className="site-header-cta">{content.create}<ArrowUpRight size={15} /></Link></div>
-        <a className="site-mobile-cta" href="#app" aria-label={content.nav[2]}><Smartphone size={19} /></a>
+        <Link className="jemani-sign-in" to="/entrar">{content.signIn}<ArrowUpRight size={15} aria-hidden="true" /></Link>
       </header>
 
-      <section id="inicio" className="site-hero">
-        <div className="hero-copy">
-          <div className="site-eyebrow"><span />{content.eyebrow}</div>
-          <h1>{content.title}</h1>
-          <p className="hero-intro">{content.intro}</p>
-          <div className="hero-buttons"><a className="site-button site-button-gold" href="/downloads/jemani-android.apk" download="Jemani-Android.apk">{content.baixar}<ArrowDown size={17} /></a><Link to="/cadastrar" className="hero-text-link">{content.book}<ArrowRight size={16} /></Link></div>
-          <div className="hero-note"><MapPin size={15} /> EUA · Europa · América Latina · Ásia</div>
-        </div>
-        <div className="hero-image-wrap">
-          <div className="hero-image" role="img" aria-label="A frota premium da Jemani em um elegante terminal" />
-          <div className="hero-image-shade" />
-          <div className="hero-image-caption"><span className="caption-line" /><span>{content.imageCaption}</span></div>
-          <div className="hero-image-index">01 <span>/ 06</span></div>
-          <div className="hero-floating-card"><span className="floating-icon"><Sparkles size={16} /></span><span><strong>JEMANI</strong><small>Move with intention.</small></span></div>
-        </div>
-        <a className="hero-scroll" href="#experiencia"><span>SCROLL TO EXPLORE</span><ArrowDown size={14} /></a>
-      </section>
-
-      <div className="site-trust-strip">{content.strip.map((item, index) => <div key={item}><Check size={15} /><span>{item}</span>{index < 2 && <i />}</div>)}</div>
-
-      <section id="experiencia" className="experience-section site-section">
-        <div className="section-heading"><div><span className="section-kicker">01 / {content.experienceEyebrow}</span><h2>{content.experienceTitle}</h2></div><p>{content.experienceText}</p></div>
-        <div className="feature-grid">{content.features.map(([title, description], index) => {
-          const Icon = [Clock3, ShieldCheck, Sparkles][index]
-          return <article className="feature-card" key={title}><div className="feature-icon"><Icon size={21} /></div><span className="feature-index">0{index + 1}</span><h3>{title}</h3><p>{description}</p></article>
-        })}</div>
-      </section>
-
-      <section id="frota" className="fleet-section site-section">
-        <div className="fleet-top"><div><span className="section-kicker">02 / {content.fleetEyebrow}</span><h2>{content.fleetTitle}</h2></div><div className="fleet-intro"><p>{content.fleetText}</p><div className="fleet-controls"><button onClick={() => rolarFrota(-1)} aria-label="Previous vehicles"><ChevronLeft size={19} /></button><button onClick={() => rolarFrota(1)} aria-label="Next vehicles"><ChevronRight size={19} /></button></div></div></div>
-        <div className="fleet-track fleet-carrossel" ref={fleetTrack}>{[0, 1].map((copia) => content.fleet.map(([name, description, image], index) => <article className="fleet-card" key={`${copia}-${name}`} aria-hidden={copia === 1}>
-          <div className="fleet-card-image"><img src={image} alt={copia === 0 ? description : ''} loading={index > 1 || copia === 1 ? 'lazy' : 'eager'} /><span className="fleet-number">0{index + 1}</span><span className="fleet-image-glow" /></div>
-          <div className="fleet-card-copy"><div><span>{name}</span><p>{description}</p></div><Link to="/cadastrar" tabIndex={copia === 1 ? -1 : undefined} aria-label={`${content.book}: ${name}`}><ArrowUpRight size={17} /></Link></div>
-        </article>))}</div>
-        <div className="fleet-bottom"><span>JEMANI FLEET · LOS ANGELES</span><span>01 — 06</span></div>
-      </section>
-
-      <section id="app" className="app-section">
-        <div className="app-orbit app-orbit-one" /><div className="app-orbit app-orbit-two" />
-        <div className="app-copy"><span className="section-kicker">03 / {content.appEyebrow}</span><h2>{content.appTitle}</h2><p>{content.appText}</p>
-          <div className="app-platforms">
-            <article className="platform-card platform-card-ready"><div className="platform-label"><Smartphone size={17} />{content.android}</div><strong>{content.androidReady}</strong><p>{content.androidDetail}</p><a className="platform-download" href="/downloads/jemani-android.apk" download="Jemani-Android.apk">{content.downloadApk}<ArrowDown size={13} /></a></article>
-            <article className="platform-card platform-card-ready"><div className="platform-label"><Smartphone size={17} />{content.apple}</div><strong>{content.appleReady}</strong><p>{content.appleDetail}</p><button type="button" className="platform-download" aria-expanded={passosIphoneAbertos} aria-controls="instalar-iphone" onClick={alternarPassosIphone}>{content.installIphone}<ArrowDown size={13} /></button></article>
-            {passosIphoneAbertos && <div className="iphone-passos" id="instalar-iphone"><strong>{content.iphoneStepsTitle}</strong><ol>{content.iphoneSteps.map((passo) => <li key={passo}>{passo}</li>)}</ol></div>}
+      <main className="jemani-shell jemani-main">
+        <section className="jemani-hero" aria-labelledby="jemani-title">
+          <div className="jemani-hero-copy">
+            <p className="jemani-service-label">{content.service}</p>
+            <h1 id="jemani-title">{content.title}</h1>
+            <p className="jemani-intro">{content.intro}</p>
+            <div className="jemani-hero-actions">
+              <Link className="jemani-button jemani-button-primary" to={bookingPath}>
+                {content.book}<ArrowRight size={18} aria-hidden="true" />
+              </Link>
+              <a className="jemani-button jemani-button-secondary" href="#app">
+                {content.appLink}<ArrowDown size={16} aria-hidden="true" />
+              </a>
+            </div>
           </div>
-          <Link to="/cadastrar" className="site-button site-button-light">{content.webApp}<ArrowRight size={17} /></Link><span className="app-note">{content.webNote}</span>
-        </div>
-        <div className="app-visual"><div className="phone-halo" /><div className="phone-device"><div className="phone-island" /><div className="phone-screen-top"><span>JEMANI</span><span>9:41</span></div><div className="phone-screen-image" /><div className="phone-screen-content"><small>YOUR RIDE, REFINED</small><strong>Where to?</strong><div className="phone-route"><span /><span /><i /></div><div className="phone-car-mini"><img src="/frota/classe-s.jpg" alt="" /><span><b>Jemani Executive</b><small>Premium sedan</small></span><ArrowRight size={15} /></div><div className="phone-book-button">PLAN YOUR RIDE <ArrowRight size={12} /></div></div></div><div className="app-visual-caption"><span>JEMANI</span><span>YOUR CITY, IN GOOD HANDS.</span></div></div>
-      </section>
+          <div className="jemani-hero-image">
+            <img src="/images/jemani-fleet-hero.jpg" alt={content.photo} fetchPriority="high" />
+          </div>
+        </section>
 
-      <section className="steps-section site-section"><div className="steps-heading"><span className="section-kicker">04 / {content.stepsEyebrow}</span><h2>{content.stepsTitle}</h2></div><div className="steps-list">{content.steps.map(([number, title, description]) => <article key={number} className="step-item"><span>{number}</span><div><h3>{title}</h3><p>{description}</p></div><ArrowUpRight size={17} /></article>)}</div></section>
+        <ul className="jemani-services" id="experiencia" aria-label={content.nav[0]}>
+          {content.services.map(([title, description], i) => {
+            const Icon = serviceIcons[i]
+            return (
+              <li key={title}>
+                <Icon size={21} aria-hidden="true" />
+                <div><strong>{title}</strong><p>{description}</p></div>
+              </li>
+            )
+          })}
+        </ul>
 
-      <section className="closing-section"><div className="closing-image" /><div className="closing-content"><span className="section-kicker">JEMANI · LOS ANGELES</span><h2>{content.finalTitle}</h2><Link to="/cadastrar" className="site-button site-button-gold">{content.finalCta}<ArrowRight size={17} /></Link></div></section>
+        <section className="jemani-fleet" id="frota" aria-labelledby="jemani-fleet-title">
+          <div className="jemani-section-head">
+            <div>
+              <h2 id="jemani-fleet-title">{content.fleetTitle}</h2>
+              <p>{content.fleetIntro}</p>
+            </div>
+            <div className="jemani-fleet-controls">
+              <button type="button" aria-label={content.previous} aria-controls="jemani-fleet-track" onClick={() => scrollFleet(-1)}>
+                <ChevronLeft size={19} aria-hidden="true" />
+              </button>
+              <button type="button" aria-label={content.next} aria-controls="jemani-fleet-track" onClick={() => scrollFleet(1)}>
+                <ChevronRight size={19} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          <ul className="jemani-fleet-track" id="jemani-fleet-track" ref={fleetTrack}>
+            {fleet.map(([name, image], i) => (
+              <li key={name}>
+                <Link className="jemani-vehicle" to={bookingPath} aria-label={content.book + ' · Jemani ' + name}>
+                  <img src={image} alt="" loading="lazy" />
+                  <div className="jemani-vehicle-caption">
+                    <div><h3>Jemani {name}</h3><p>{content.fleetDescriptions[i]}</p></div>
+                    <ArrowUpRight size={17} aria-hidden="true" />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-      <footer className="site-footer"><a className="site-brand site-brand-footer" href="#inicio"><span className="site-brand-mark">J</span><span>JEMANI<small>EXECUTIVE MOBILITY</small></span></a><p>{content.footer}</p><span>{content.rights}</span><a className="back-top" href="#inicio" aria-label="Back to top"><ArrowDown size={16} /></a></footer>
-    </main>
+        <section className="jemani-app" id="app" aria-labelledby="jemani-app-title">
+          <div className="jemani-app-heading">
+            <span className="jemani-app-icon"><Smartphone size={24} aria-hidden="true" /></span>
+            <div><h2 id="jemani-app-title">{content.appTitle}</h2><p>{content.appText}</p></div>
+          </div>
+          <div className="jemani-platforms">
+            <a className="jemani-platform jemani-platform-android" href="/downloads/jemani-android.apk" download="Jemani-Android.apk">
+              <span><strong>{content.android}</strong><small>{content.androidDetail}</small></span>
+              <ArrowDown size={18} aria-hidden="true" />
+            </a>
+            <details className="jemani-iphone">
+              <summary className="jemani-platform">
+                <span><strong>{content.iphone}</strong><small>{content.iphoneDetail}</small></span>
+                <ChevronDown size={18} aria-hidden="true" />
+              </summary>
+              <ol>{content.iphoneSteps.map((step) => <li key={step}>{step}</li>)}</ol>
+            </details>
+          </div>
+        </section>
+
+        <details className="jemani-operators">
+          <summary>
+            <h2>{content.operatorsTitle} <span>{operatorCount}</span></h2>
+            <span className="jemani-operators-toggle">{content.operatorsToggle}<ChevronDown size={19} aria-hidden="true" /></span>
+          </summary>
+          <p>{content.operatorsDescription}</p>
+          <div className="jemani-operator-groups">
+            {operatorGroups.map(([region, operators]) => (
+              <div key={region}>
+                <h3>{content.regions[region as keyof typeof content.regions]}</h3>
+                <ul>
+                  {operators.map(([name, url]) => (
+                    <li key={name}><a href={url}>{name}<ArrowUpRight size={14} aria-hidden="true" /></a></li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </details>
+      </main>
+
+      <footer className="jemani-shell jemani-footer">
+        <p>{content.rights}</p>
+        <Link to={bookingPath}>{content.book}<ArrowRight size={15} aria-hidden="true" /></Link>
+      </footer>
+    </div>
   )
 }
